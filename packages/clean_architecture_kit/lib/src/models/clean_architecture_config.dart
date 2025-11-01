@@ -3,15 +3,10 @@ import 'package:clean_architecture_kit/src/models/inheritance_config.dart';
 import 'package:clean_architecture_kit/src/models/layer_config.dart';
 import 'package:clean_architecture_kit/src/models/naming_config.dart';
 import 'package:clean_architecture_kit/src/models/type_safety_config.dart';
+import 'package:clean_architecture_kit/src/utils/map_parsing_extension.dart';
 
-Map<String, dynamic> _getMap(Map<String, dynamic> source, String key) {
-  final value = source[key];
-  if (value is Map) return Map<String, dynamic>.from(value);
-  return {};
-}
-
-/// The main configuration class that parses the entire `architecture_kit` block
-/// from the `analysis_options.yaml` file.
+/// The main configuration class that parses the entire `architecture_kit` block from the
+/// `analysis_options.yaml` file.
 class CleanArchitectureConfig {
   final LayerConfig layers;
   final NamingConfig naming;
@@ -29,13 +24,11 @@ class CleanArchitectureConfig {
 
   factory CleanArchitectureConfig.fromMap(Map<String, dynamic> map) {
     return CleanArchitectureConfig(
-      // LayerConfig is smart enough to parse the top-level keys
       layers: LayerConfig.fromMap(map),
-      // The other models expect their specific sub-maps
-      naming: NamingConfig.fromMap(_getMap(map, 'naming_conventions')),
-      typeSafety: TypeSafetyConfig.fromMap(_getMap(map, 'type_safety')),
-      inheritance: InheritanceConfig.fromMap(_getMap(map, 'inheritance')),
-      generation: GenerationOptionsConfig.fromMap(_getMap(map, 'generation_options')),
+      naming: NamingConfig.fromMap(map.getMap('naming_conventions')),
+      typeSafety: TypeSafetyConfig.fromMap(map.getMap('type_safety')),
+      inheritance: InheritanceConfig.fromMap(map.getMap('inheritance')),
+      generation: GenerationOptionsConfig.fromMap(map.getMap('generation_options')),
     );
   }
 }

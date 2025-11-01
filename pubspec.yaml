@@ -19,6 +19,12 @@ dev_dependencies:
 
 melos:
   scripts:
+    analyze:
+      packageFilters:
+        scope:
+          - example
+      run: dart run custom_lint
+
     generate:
       run: dart run build_runner build --delete-conflicting-outputs
       exec:
@@ -29,5 +35,3 @@ melos:
           #- console_example
     test:
       run: dart test
-    analyze:
-      run: dart analyze

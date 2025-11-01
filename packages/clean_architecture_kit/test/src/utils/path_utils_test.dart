@@ -158,7 +158,7 @@ void main() {
       p.join(projectRoot, 'lib', 'features', 'feature_a', 'domain', 'entities'),
     );
     await entityDir.create(recursive: true);
-    final entityFile = File(p.join(entityDir.path, 'user.dart'));
+    final entityFile = File(p.join(entityDir.path, 'user_entity.dart'));
     await entityFile.writeAsString('// entity');
 
     final insidePath = p.normalize(entityFile.absolute.path);

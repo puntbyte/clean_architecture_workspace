@@ -1,4 +1,5 @@
 // lib/src/models/layer_config.dart
+import 'package:clean_architecture_kit/src/utils/map_parsing_extension.dart';
 
 class LayerConfig {
   final String projectStructure;
@@ -40,50 +41,40 @@ class LayerConfig {
   });
 
   factory LayerConfig.fromMap(Map<String, dynamic> map) {
-    final layerFirst = _getMap(map, 'layer_first_paths');
-    final featureFirst = _getMap(map, 'feature_first_paths');
-    final layerDefinitions = _getMap(map, 'layer_definitions');
+    // Now use the extension methods for cleaner parsing
+    final layerFirst = map.getMap('layer_first_paths');
+    final featureFirst = map.getMap('feature_first_paths');
+    final layerDefinitions = map.getMap('layer_definitions');
 
-    final domainDefinitions = _getMap(layerDefinitions, 'domain');
-    final dataDefinitions = _getMap(layerDefinitions, 'data');
-    final presentationDefinitions = _getMap(layerDefinitions, 'presentation');
+    final domainDefinitions = layerDefinitions.getMap('domain');
+    final dataDefinitions = layerDefinitions.getMap('data');
+    final presentationDefinitions = layerDefinitions.getMap('presentation');
 
     return LayerConfig(
-      projectStructure: map['project_structure'] as String? ?? 'feature_first',
-      featuresRootPath: _sanitize(featureFirst['features_root'] as String? ?? 'features'),
+      projectStructure: map.getString('project_structure', orElse: 'feature_first'),
+      featuresRootPath: _sanitize(featureFirst.getString('features_root', orElse: 'features')),
 
-      domainPath: _sanitize(layerFirst['domain'] as String? ?? 'domain'),
-      domainEntitiesPaths: _getList(domainDefinitions, 'entities'),
-      domainUseCasesPaths: _getList(domainDefinitions, 'usecases'),
-      domainRepositoriesPaths: _getList(domainDefinitions, 'repositories'),
+      domainPath: _sanitize(layerFirst.getString('domain', orElse: 'domain')),
+      domainEntitiesPaths: domainDefinitions.getList('entities'),
+      domainUseCasesPaths: domainDefinitions.getList('usecases'),
+      domainRepositoriesPaths: domainDefinitions.getList('repositories'),
 
-      dataPath: _sanitize(layerFirst['data'] as String? ?? 'data'),
-      dataModelsPaths: _getList(dataDefinitions, 'models'),
-      dataDataSourcesPaths: _getList(dataDefinitions, 'data_sources'),
-      dataRepositoriesPaths: _getList(dataDefinitions, 'repositories'),
+      dataPath: _sanitize(layerFirst.getString('data', orElse: 'data')),
+      dataModelsPaths: dataDefinitions.getList('models'),
+      dataDataSourcesPaths: dataDefinitions.getList('data_sources'),
+      dataRepositoriesPaths: dataDefinitions.getList('repositories'),
 
-      presentationPath: _sanitize(layerFirst['presentation'] as String? ?? 'presentation'),
-      presentationManagersPaths: _getList(presentationDefinitions, 'managers'),
-      presentationWidgetsPaths: _getList(presentationDefinitions, 'widgets'),
-      presentationPagesPaths: _getList(presentationDefinitions, 'pages'),
+      presentationPath: _sanitize(layerFirst.getString('presentation', orElse: 'presentation')),
+      presentationManagersPaths: presentationDefinitions.getList('managers'),
+      presentationWidgetsPaths: presentationDefinitions.getList('widgets'),
+      presentationPagesPaths: presentationDefinitions.getList('pages'),
     );
   }
 
   static String _sanitize(String path) {
-    if (path.startsWith('lib/')) path = path.substring(4);
-    if (path.startsWith('/')) path = path.substring(1);
-    return path;
-  }
-
-  static Map<String, dynamic> _getMap(Map<String, dynamic> source, String key) {
-    final value = source[key];
-    if (value is Map) return Map<String, dynamic>.from(value);
-    return {};
-  }
-
-  static List<String> _getList(Map<String, dynamic> source, String key) {
-    final value = source[key];
-    if (value is List) return value.whereType<String>().toList();
-    return [];
+    var sanitizedPath = path.trim();
+    if (path.startsWith('lib/')) sanitizedPath = path.substring(4);
+    if (path.startsWith('/')) sanitizedPath = path.substring(1);
+    return sanitizedPath;
   }
 }

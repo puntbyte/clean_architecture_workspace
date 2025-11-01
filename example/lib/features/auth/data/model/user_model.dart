@@ -1,13 +1,16 @@
-import '../../domain/entities/user.dart';
+// example/lib/features/auth/data/model/user_model.dart
 
-// This is a data Model (or DTO). It represents the data structure from the API.
-// It is NOT a pure domain Entity.
-class UserModel extends User {
+import 'package:example/features/auth/domain/entities/user_entity.dart';
+
+// A compliant model.
+// Its name `UserModel` matches the `{{name}}Model` convention.
+class UserModel extends UserEntity {
   final String id;
   final String name;
 
-  const UserModel({required this.id, required this.name}) : super(id: '', name: '');
+  const UserModel({required this.id, required this.name})
+      : super(id: id, name: name);
 
   // The mapping logic that converts the "impure" Model to a "pure" Entity.
-  User toEntity() => User(id: id, name: name);
+  UserEntity toEntity() => UserEntity(id: id, name: name);
 }

@@ -23,18 +23,19 @@ class NamingConfig {
 
   factory NamingConfig.fromMap(Map<String, dynamic> map) {
     return NamingConfig(
-      entity: map['entity'] as String? ?? '{{name}}Entity',
+      entity: map['entity'] as String? ?? '{{name}}',
       model: map['model'] as String? ?? '{{name}}Model',
+
       useCase: map['use_case'] as String? ?? '{{name}}Usecase',
       useCaseRecordParameter: map['use_case_record_parameter'] as String? ?? '_{{name}}Parameter',
 
       repositoryInterface: map['repository_interface'] as String? ?? '{{name}}Repository',
-      repositoryImplementation:
-          map['repository_implementation'] as String? ?? '{{name}}RepositoryImpl',
+      repositoryImplementation: map['repository_implementation'] as String?
+          ?? '{{name}}RepositoryImpl',
 
       dataSourceInterface: map['data_source_interface'] as String? ?? '{{name}}DataSource',
-      dataSourceImplementation:
-          map['data_source_implementation'] as String? ?? '{{name}}DataSourceImpl',
+      dataSourceImplementation: map['data_source_implementation'] as String?
+          ?? '{{name}}DataSourceImpl',
     );
   }
 }

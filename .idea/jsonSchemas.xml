@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JsonSchemaMappingsProjectConfiguration">
+    <state>
+      <map>
+        <entry key="melos.yaml.schema">
+          <value>
+            <SchemaInfo>
+              <option name="generatedName" value="New Schema" />
+              <option name="name" value="melos.yaml.schema" />
+              <option name="relativePathToSchema" value="https://raw.githubusercontent.com/blaugold/melos-code/main/melos.yaml.schema.json" />
+              <option name="schemaVersion" value="JSON Schema 7" />
+            </SchemaInfo>
+          </value>
+        </entry>
+      </map>
+    </state>
+  </component>
+</project>

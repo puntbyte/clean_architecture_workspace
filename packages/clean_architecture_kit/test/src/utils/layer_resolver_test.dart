@@ -152,7 +152,7 @@ void main() {
 
       test('should return ArchSubLayer.unknown for a file in a non-sublayer directory', () {
         // 'entities' is not a configured sub-layer for our resolver's purpose.
-        const path = '/project/lib/features/auth/domain/entities/user.dart';
+        const path = '/project/lib/features/auth/domain/entities/user_entity.dart';
         expect(
           resolver.getSubLayer(path),
           ArchSubLayer.entity,

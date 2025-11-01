@@ -1,17 +1,16 @@
+import 'package:example/core/utils/types.dart';
+import 'package:example/features/auth/data/sources/auth_remote_data_source.dart';
+import 'package:example/features/auth/domain/contracts/auth_repository.dart';
+import 'package:example/features/auth/domain/entities/user_entity.dart';
 import 'package:fpdart/fpdart.dart';
-
-import '../../../../core/utils/types.dart';
-import '../../domain/contracts/auth_repository.dart';
-import '../../domain/entities/user.dart';
-import '../sources/auth_remote_data_source.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource _remoteDataSource;
   const AuthRepositoryImpl(this._remoteDataSource);
 
   @override
-  FutureEither<User> getUser(int id) async {
-    return Right(User(id: '1', name: 'test'));
+  FutureEither<UserEntity> getUser(int id) async {
+    return Right(UserEntity(id: '1', name: 'test'));
   }
 
   @override
@@ -20,5 +19,5 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  FutureEither<User?> getCurrentUser() async => const Right(null);
+  FutureEither<UserEntity?> getCurrentUser() async => const Right(null);
 }

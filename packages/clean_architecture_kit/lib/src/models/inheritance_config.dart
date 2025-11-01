@@ -1,12 +1,10 @@
 // lib/src/models/inheritance_config.dart
 
+import 'package:clean_architecture_kit/src/utils/map_parsing_extension.dart';
+
 /// A private class to hold the default values for the core package.
 class _CoreDefaults {
-  /// The path to the main export file of the core package.
-  /// This provides an excellent, stable default for all base classes.
   static const corePackagePath = 'package:clean_architecture_core/clean_architecture_core.dart';
-
-  /// The default names of the base classes inside the core package.
   static const repositoryBaseName = 'Repository';
   static const unaryUseCaseName = 'UnaryUseCase';
   static const nullaryUseCaseName = 'NullaryUseCase';
@@ -31,17 +29,29 @@ class InheritanceConfig {
 
   factory InheritanceConfig.fromMap(Map<String, dynamic> map) {
     return InheritanceConfig(
-      repositoryBasePath: map['repository_base_path'] as String? ?? _CoreDefaults.corePackagePath,
-      repositoryBaseName:
-          map['repository_base_name'] as String? ?? _CoreDefaults.repositoryBaseName,
+      repositoryBasePath: map.getString(
+        'repository_base_path',
+        orElse: _CoreDefaults.corePackagePath,
+      ),
+      repositoryBaseName: map.getString(
+        'repository_base_name',
+        orElse: _CoreDefaults.repositoryBaseName,
+      ),
 
-      // Both use case types are in the same file in the core package.
-      unaryUseCasePath: map['unary_use_case_path'] as String? ?? _CoreDefaults.corePackagePath,
-      unaryUseCaseName: map['unary_use_case_name'] as String? ?? _CoreDefaults.unaryUseCaseName,
+      unaryUseCasePath: map.getString('unary_use_case_path', orElse: _CoreDefaults.corePackagePath),
+      unaryUseCaseName: map.getString(
+        'unary_use_case_name',
+        orElse: _CoreDefaults.unaryUseCaseName,
+      ),
 
-      nullaryUseCasePath: map['nullary_use_case_path'] as String? ?? _CoreDefaults.corePackagePath,
-      nullaryUseCaseName:
-          map['nullary_use_case_name'] as String? ?? _CoreDefaults.nullaryUseCaseName,
+      nullaryUseCasePath: map.getString(
+        'nullary_use_case_path',
+        orElse: _CoreDefaults.corePackagePath,
+      ),
+      nullaryUseCaseName: map.getString(
+        'nullary_use_case_name',
+        orElse: _CoreDefaults.nullaryUseCaseName,
+      ),
     );
   }
 }

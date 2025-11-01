@@ -1,5 +1,5 @@
 import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart';
-import 'package:glob/glob.dart';
+import 'package:path/path.dart' as p;
 
 enum ArchLayer { domain, data, presentation, unknown }
 
@@ -18,6 +18,7 @@ enum ArchSubLayer {
   manager,
   widget,
   pages,
+
   unknown,
 }
 
@@ -26,39 +27,81 @@ class LayerResolver {
 
   LayerResolver(this._config);
 
-  String? _getRelativePath(String absolutePath) {
-    final normalized = absolutePath.replaceAll(r'\', '/');
-    final libIndex = normalized.indexOf('/lib/');
+  /// A robust helper that returns the path segments of an absolute path,
+  /// starting from within the `lib/` directory.
+  List<String>? _getRelativePathSegments(String absolutePath) {
+    // Use the path package for robust normalization across platforms
+    final normalized = p.normalize(absolutePath);
+    final segments = p.split(normalized);
+    final libIndex = segments.lastIndexOf('lib');
     if (libIndex == -1) return null;
-    return normalized.substring(libIndex + 5); // Path from inside 'lib/'
+
+    return segments.sublist(libIndex + 1);
   }
 
   ArchLayer getLayer(String path) {
-    final relativePath = _getRelativePath(path);
-    if (relativePath == null) return ArchLayer.unknown;
+    final segments = _getRelativePathSegments(path);
+    if (segments == null) return ArchLayer.unknown;
 
     final layerConfig = _config.layers;
 
     if (layerConfig.projectStructure == 'layer_first') {
-      if (relativePath.startsWith('${layerConfig.domainPath}/')) return ArchLayer.domain;
-      if (relativePath.startsWith('${layerConfig.dataPath}/')) return ArchLayer.data;
-      if (relativePath.startsWith('${layerConfig.presentationPath}/')) {
-        return ArchLayer.presentation;
+      if (segments.isNotEmpty) {
+        if (segments.first == layerConfig.domainPath) return ArchLayer.domain;
+        if (segments.first == layerConfig.dataPath) return ArchLayer.data;
+        if (segments.first == layerConfig.presentationPath) return ArchLayer.presentation;
       }
     } else {
-      final domainGlob = Glob('${layerConfig.featuresRootPath}/*/domain/**');
-      final dataGlob = Glob('${layerConfig.featuresRootPath}/*/data/**');
-      final presentationGlob = Glob('${layerConfig.featuresRootPath}/*/presentation/**');
-
-      if (domainGlob.matches(relativePath)) return ArchLayer.domain;
-      if (dataGlob.matches(relativePath)) return ArchLayer.data;
-      if (presentationGlob.matches(relativePath)) return ArchLayer.presentation;
+      // feature_first
+      // Path must be like: features / [feature_name] / [layer_name] / ...
+      if (segments.length > 2 && segments[0] == layerConfig.featuresRootPath) {
+        final layerName = segments[2];
+        if (layerName == 'domain') return ArchLayer.domain;
+        if (layerName == 'data') return ArchLayer.data;
+        if (layerName == 'presentation') return ArchLayer.presentation;
+      }
     }
-
     return ArchLayer.unknown;
   }
 
-  // Normalization helpers
+  // Your existing getSubLayer and helper methods were well-written.
+  // They just needed the correct segments to work with.
+  ArchSubLayer getSubLayer(String path) {
+    final layer = getLayer(path);
+    if (layer == ArchLayer.unknown) return ArchSubLayer.unknown;
+
+    final pathSegments = _getRelativePathSegments(path);
+    if (pathSegments == null) return ArchSubLayer.unknown;
+
+    final layerConfig = _config.layers;
+
+    if (layer == ArchLayer.domain) {
+      if (_firstMatchInOrder(layerConfig.domainEntitiesPaths, pathSegments))
+        return ArchSubLayer.entity;
+      if (_firstMatchInOrder(layerConfig.domainUseCasesPaths, pathSegments))
+        return ArchSubLayer.useCase;
+      if (_firstMatchInOrder(layerConfig.domainRepositoriesPaths, pathSegments))
+        return ArchSubLayer.domainRepository;
+    } else if (layer == ArchLayer.data) {
+      if (_firstMatchInOrder(layerConfig.dataModelsPaths, pathSegments)) return ArchSubLayer.model;
+      if (_firstMatchInOrder(layerConfig.dataRepositoriesPaths, pathSegments))
+        return ArchSubLayer.dataRepository;
+      if (_firstMatchInOrder(layerConfig.dataDataSourcesPaths, pathSegments))
+        return ArchSubLayer.dataSource;
+    } else if (layer == ArchLayer.presentation) {
+      if (_firstMatchInOrder(layerConfig.presentationManagersPaths, pathSegments))
+        return ArchSubLayer.manager;
+      if (_firstMatchInOrder(layerConfig.presentationWidgetsPaths, pathSegments))
+        return ArchSubLayer.widget;
+      if (_firstMatchInOrder(layerConfig.presentationPagesPaths, pathSegments))
+        return ArchSubLayer.pages;
+    }
+
+    return ArchSubLayer.unknown;
+  }
+
+  // --- Fuzzy Matching Helpers ---
+
   String _normalize(String s) => s.toLowerCase().replaceAll(RegExp(r'[_\-]'), '');
 
   String _stripPlural(String s) =>
@@ -70,104 +113,17 @@ class LayerResolver {
 
     if (seg == name) return true;
     if (_stripPlural(seg) == _stripPlural(name)) return true;
-    // tolerant fallback to allow close naming variants (small prefixes/suffixes)
     if (seg.startsWith(name) || name.startsWith(seg)) return true;
     return false;
   }
 
-  // Check configuredNames in order and return the first matching configured name found
-  // (this respects ordering: earlier configured names are primary).
-  bool _firstMatchInOrder(List<String>? configuredNames, List<String> pathSegments) {
-    if (configuredNames == null || configuredNames.isEmpty) return false;
+  bool _firstMatchInOrder(List<String> configuredNames, List<String> pathSegments) {
+    if (configuredNames.isEmpty) return false;
     for (final cfgName in configuredNames) {
       for (final seg in pathSegments) {
         if (_segmentMatchesName(seg, cfgName)) return true;
       }
     }
-
     return false;
-  }
-
-  // Helper: read a list from config or fall back to defaults.
-  List<String>? _listOrNull(List<String>? fromConfig, List<String> defaults) {
-    if (fromConfig == null || fromConfig.isEmpty) return defaults;
-
-    return fromConfig;
-  }
-
-  ArchSubLayer getSubLayer(String path) {
-    final relativePath = _getRelativePath(path);
-    if (relativePath == null) return ArchSubLayer.unknown;
-
-    final pathSegments = relativePath.split('/');
-    final layerConfig = _config.layers;
-    final layer = getLayer(path);
-
-    // --- Determine candidate names for each sublayer (try config first, else defaults)
-    final domainEntityNames = _listOrNull(
-      layerConfig.domainEntitiesPaths,
-      ['entities'],
-    );
-
-    final domainUseCaseNames = _listOrNull(
-      layerConfig.domainUseCasesPaths,
-      ['usecases', 'interactors', 'use_cases'],
-    );
-
-    final domainRepositoryNames = _listOrNull(
-      layerConfig.domainRepositoriesPaths,
-      ['repositories', 'contracts'],
-    );
-
-    final dataModelNames = _listOrNull(
-      layerConfig.dataModelsPaths,
-      ['models'],
-    );
-
-    final dataSourceNames = _listOrNull(
-      layerConfig.dataDataSourcesPaths,
-      ['datasources', 'sources', 'data_sources'],
-    );
-
-    final dataRepositoryNames = _listOrNull(
-      layerConfig.dataRepositoriesPaths,
-      ['repositories'],
-    );
-
-    final presentationManagerNames = _listOrNull(
-      layerConfig.presentationManagersPaths,
-      ['managers', 'controllers', 'blocs', 'cubit'],
-    );
-
-    final presentationWidgetNames = _listOrNull(
-      layerConfig.presentationWidgetsPaths,
-      ['widgets', 'components'],
-    );
-
-    final presentationPagesNames = _listOrNull(
-      layerConfig.presentationPagesPaths,
-      ['pages', 'screens', 'views'],
-    );
-
-    // --- Matching logic, respecting list ordering (primary/default first)
-    if (layer == ArchLayer.domain) {
-      if (_firstMatchInOrder(domainEntityNames, pathSegments)) return ArchSubLayer.entity;
-      if (_firstMatchInOrder(domainUseCaseNames, pathSegments)) return ArchSubLayer.useCase;
-      if (_firstMatchInOrder(domainRepositoryNames, pathSegments)) {
-        return ArchSubLayer.domainRepository;
-      }
-    } else if (layer == ArchLayer.data) {
-      // <<-- REORDERED: check repositories before data sources to avoid
-      // accidental source matches on 'repositories' paths.
-      if (_firstMatchInOrder(dataModelNames, pathSegments)) return ArchSubLayer.model;
-      if (_firstMatchInOrder(dataRepositoryNames, pathSegments)) return ArchSubLayer.dataRepository;
-      if (_firstMatchInOrder(dataSourceNames, pathSegments)) return ArchSubLayer.dataSource;
-    } else if (layer == ArchLayer.presentation) {
-      if (_firstMatchInOrder(presentationManagerNames, pathSegments)) return ArchSubLayer.manager;
-      if (_firstMatchInOrder(presentationWidgetNames, pathSegments)) return ArchSubLayer.widget;
-      if (_firstMatchInOrder(presentationPagesNames, pathSegments)) return ArchSubLayer.pages;
-    }
-
-    return ArchSubLayer.unknown;
   }
 }

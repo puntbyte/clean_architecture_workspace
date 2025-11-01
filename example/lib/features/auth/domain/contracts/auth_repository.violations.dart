@@ -1,10 +1,11 @@
 // example/lib/features/auth/domain/contracts/auth_repository.violations.dart
 
-import '../../../../core/repository/repository.dart';
-import '../../../../core/utils/types.dart';
+import 'package:example/core/repository/repository.dart';
+import 'package:example/core/utils/types.dart';
 // VIOLATION: enforce_layer_independence (importing from the data layer)
-import '../../data/model/user_model.dart';
-import '../entities/user.dart';
+import 'package:example/features/auth/data/model/user_model.dart';
+import 'package:example/features/auth/domain/entities/user_entity.dart';
+
 
 // VIOLATION: enforce_repository_inheritance (does not extend Repository)
 abstract interface class IAnalyticsRepository {
@@ -13,7 +14,7 @@ abstract interface class IAnalyticsRepository {
 
 // VIOLATION: enforce_custom_return_type (returns Future<User> instead of FutureEither)
 abstract interface class BadReturnTypeRepository implements Repository {
-  Future<User> getUser(int id); // <-- LINT WARNING HERE
+  Future<UserEntity> getUser(int id); // <-- LINT WARNING HERE
 }
 
 // VIOLATION: enforce_naming_conventions (name does not end with "Repository")

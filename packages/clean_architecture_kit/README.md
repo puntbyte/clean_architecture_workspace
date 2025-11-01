@@ -161,7 +161,7 @@ will guide you.
 ```dart
 // 1. Import the base classes provided by the kit.
 import 'package:clean_architecture_kit/clean_architecture_kit.dart';
-import 'package:my_app/features/auth/domain/entities/user.dart';
+import 'package:my_app/features/auth/domain/entities/user_entity.dart';
 
 // 2. Extend the `Repository` base class.
 abstract interface class AuthRepository extends Repository {

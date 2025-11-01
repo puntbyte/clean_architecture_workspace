@@ -42,11 +42,16 @@ class EnforceNamingConventions extends DartLintRule {
   /// Selects the correct naming convention template based on the file's sub-layer
   /// and whether the class itself is abstract or concrete.
   String? _getTemplate(ArchSubLayer subLayer, bool isAbstract) => switch (subLayer) {
+    ArchSubLayer.entity => config.naming.entity,
+    ArchSubLayer.model => config.naming.model,
+
     ArchSubLayer.domainRepository => isAbstract ? config.naming.repositoryInterface : null,
     ArchSubLayer.dataRepository => isAbstract ? null : config.naming.repositoryImplementation,
-    ArchSubLayer.dataSource =>
-      isAbstract ? config.naming.dataSourceInterface : config.naming.dataSourceImplementation,
+    ArchSubLayer.dataSource => isAbstract
+        ? config.naming.dataSourceInterface
+        : config.naming.dataSourceImplementation,
     ArchSubLayer.useCase => isAbstract ? null : config.naming.useCase,
+
     _ => null,
   };
 }
