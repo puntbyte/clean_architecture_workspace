@@ -19,7 +19,6 @@ class BadDependencyRepositoryImpl implements AuthRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-
 class BadMappingRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource dataSource;
 
@@ -27,7 +26,8 @@ class BadMappingRepositoryImpl implements AuthRepository {
 
   @override
   // VIOLATION: repository_implementation_purity (must return Entity `User`, not Model `UserModel`)
-  FutureEither<UserModel> getUser(int id) async { // <-- LINT ERROR HERE
+  FutureEither<UserModel> getUser(int id) async {
+    // <-- LINT ERROR HERE
     // This implementation "forgets" to map the model to an entity.
     return const Right(UserModel(id: '1', name: 'Bad User'));
   }
