@@ -75,8 +75,9 @@ class LayerConfig {
   }
 
   static String _sanitize(String path) {
-    if (path.startsWith('lib/')) path = path.substring(4);
-    if (path.startsWith('/')) path = path.substring(1);
-    return path;
+    var sanitized = path;
+    if (sanitized.startsWith('lib/')) sanitized = sanitized.substring(4);
+    if (sanitized.startsWith('/')) sanitized = sanitized.substring(1);
+    return sanitized;
   }
 }
