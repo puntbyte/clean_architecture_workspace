@@ -1,6 +1,6 @@
 // lib/src/models/inheritance_config.dart
 
-import 'package:clean_architecture_kit/src/utils/map_parsing_extension.dart';
+import 'package:clean_architecture_kit/src/utils/json_map_extension.dart';
 
 /// A private class to hold the default values for the core package.
 class _CoreDefaults {

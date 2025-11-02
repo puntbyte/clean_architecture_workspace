@@ -1,6 +1,7 @@
+// lib/src/utils/json_map_extension.dart
 /// An extension on `Map<String, dynamic>` to provide safe, reusable methods
 /// for parsing configuration values from a YAML file.
-extension ConfigParsingExtension on Map<String, dynamic> {
+extension JsonMapExtension on Map<String, dynamic> {
   /// Safely retrieves a nested map for a given [key].
   ///
   /// If the value for the key is not a map or is null, this returns an

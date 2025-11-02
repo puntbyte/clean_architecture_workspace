@@ -1,3 +1,5 @@
+// example/lib/features/auth/domain/entities/user_entity.violations.dart
+
 // VIOLATION: disallow_flutter_imports_in_domain
 import 'package:flutter/material.dart';
 

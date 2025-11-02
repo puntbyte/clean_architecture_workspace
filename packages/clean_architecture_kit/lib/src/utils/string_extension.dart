@@ -1,5 +1,6 @@
+// lib/src/utils/string_extension.dart
 /// A utility extension on [String] for common case conversions.
-extension StringCaseUtils on String {
+extension StringExtension on String {
   /// Converts a string from camelCase or snake_case to PascalCase.
   ///
   /// Examples:

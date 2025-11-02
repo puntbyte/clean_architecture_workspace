@@ -23,18 +23,21 @@ custom_lint:
     # --- ENABLE/DISABLE INDIVIDUAL LINT RULES ---
     # To disable a rule, set its value to `false`.
 
-    # Purity Rules
-    - domain_layer_purity: true
-    - data_source_purity: true
-    - presentation_layer_purity: true
-    - repository_implementation_purity: true
+    # Purity & Responsibility Rules
+    - disallow_model_in_domain: true
+    - disallow_entity_in_data_source: true
+    - disallow_repository_in_presentation: true
+    - disallow_model_return_from_repository: true
+    - disallow_use_case_in_widget: true
     - disallow_flutter_imports_in_domain: true
     - disallow_flutter_types_in_domain: true
+    - enforce_model_to_entity_mapping: true
 
     # Dependency & Structure Rules
     - enforce_layer_independence: true
     - enforce_abstract_data_source_dependency: true
     - enforce_file_and_folder_location: true
+    - enforce_model_inherits_entity: true
 
     # Naming, Type Safety & Inheritance Rules
     - enforce_naming_conventions: true
@@ -76,7 +79,7 @@ custom_lint:
         presentation:
           pages: ['pages']
           widgets: ['widgets']
-          managers: ['bloc', 'cubit', 'provider']
+          managers: ['managers', 'bloc', 'cubit', 'provider']
 
       # [SECTION 3: NAMING CONVENTIONS]
       # Use {{name}} as a placeholder for the base name (e.g., 'Auth' in 'AuthRepository').
@@ -97,7 +100,7 @@ custom_lint:
         # Uses the `FutureEither` typedef provided by `architecture_kit`.
         return_type_name: ['FutureEither']
         import_path: ['/core/utils/types.dart']
-        apply_to: ['use_case', 'repository_interface']
+        apply_to: ['usecases', 'repository_interface']
 
       # [SECTION 5: INHERITANCE AND BASE CLASSES]
       # These paths point to the base classes provided by `architecture_kit` itself,

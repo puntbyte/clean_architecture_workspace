@@ -1,6 +1,6 @@
 name: example
 description: A demonstration project for the clean_architecture_kit package.
-version: 1.0.0
+version: 2.0.0
 
 publish_to: 'none'
 
@@ -11,7 +11,8 @@ resolution: workspace
 
 dependencies:
   bloc: any
-  clean_architecture_core: any
+  clean_architecture_core:
+    path: ../packages/clean_architecture_core
   flutter_bloc: any
 
   flutter:
@@ -23,7 +24,8 @@ dependencies:
 dev_dependencies:
   custom_lint: any
 
-  clean_architecture_kit: any
+  clean_architecture_kit:
+    path: ../packages/clean_architecture_kit
 
 flutter:
   uses-material-design: true

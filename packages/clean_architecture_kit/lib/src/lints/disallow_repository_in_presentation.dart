@@ -6,20 +6,18 @@ import 'package:clean_architecture_kit/src/utils/layer_resolver.dart';
 import 'package:clean_architecture_kit/src/utils/naming_utils.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-class PresentationLayerPurity extends DartLintRule {
+class DisallowRepositoryInPresentation extends DartLintRule {
   static const _code = LintCode(
-    name: 'presentation_layer_purity',
+    name: 'disallow_repository_in_presentation', // <-- RENAMED LINT CODE
     problemMessage: 'Presentation layer purity violation: Do not depend directly on a Repository.',
-    correctionMessage:
-        'The presentation layer should depend on a specific UseCase, not the entire '
-        'repository.',
+    correctionMessage: 'The presentation layer should depend on a specific UseCase, not the entire repository.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   final CleanArchitectureConfig config;
   final LayerResolver layerResolver;
 
-  const PresentationLayerPurity({
+  const DisallowRepositoryInPresentation({
     required this.config,
     required this.layerResolver,
   }) : super(code: _code);

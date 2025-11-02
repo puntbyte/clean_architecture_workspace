@@ -1,29 +1,30 @@
 // lib/clean_architecture_kit.dart
-
-// The main config class now directly represents the `clean_architecture` block.
-import 'package:clean_architecture_kit/src/lints/data_source_purity.dart';
+import 'package:clean_architecture_kit/src/lints/disallow_entity_in_data_source.dart';
 import 'package:clean_architecture_kit/src/lints/disallow_flutter_imports_in_domain.dart';
 import 'package:clean_architecture_kit/src/lints/disallow_flutter_types_in_domain.dart';
-import 'package:clean_architecture_kit/src/lints/domain_layer_purity.dart';
+import 'package:clean_architecture_kit/src/lints/disallow_use_case_in_widget.dart';
+import 'package:clean_architecture_kit/src/lints/disallow_model_in_domain.dart';
 import 'package:clean_architecture_kit/src/lints/enforce_abstract_data_source_dependency.dart';
 import 'package:clean_architecture_kit/src/lints/enforce_custom_return_type.dart';
 import 'package:clean_architecture_kit/src/lints/enforce_file_and_folder_location.dart';
 import 'package:clean_architecture_kit/src/lints/enforce_layer_independence.dart';
+import 'package:clean_architecture_kit/src/lints/enforce_model_inherits_entity.dart';
+import 'package:clean_architecture_kit/src/lints/enforce_model_to_entity_mapping.dart';
 import 'package:clean_architecture_kit/src/lints/enforce_naming_conventions.dart';
 import 'package:clean_architecture_kit/src/lints/enforce_repository_inheritance.dart';
 import 'package:clean_architecture_kit/src/lints/enforce_use_case_inheritance.dart';
 import 'package:clean_architecture_kit/src/lints/missing_use_case.dart';
-import 'package:clean_architecture_kit/src/lints/presentation_layer_purity.dart';
-import 'package:clean_architecture_kit/src/lints/repository_implementation_purity.dart';
+import 'package:clean_architecture_kit/src/lints/disallow_repository_in_presentation.dart';
+import 'package:clean_architecture_kit/src/lints/disallow_model_return_from_repository.dart';
 import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart';
 import 'package:clean_architecture_kit/src/utils/layer_resolver.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 /// This is the entry point for the plugin.
-PluginBase createPlugin() => _CleanArchitectureKitPlugin();
+PluginBase createPlugin() => CleanArchitectureKitPlugin();
 
 /// The main plugin class for the `clean_architecture_kit` package.
-class _CleanArchitectureKitPlugin extends PluginBase {
+class CleanArchitectureKitPlugin extends PluginBase {
   /// This is the designated initialization method for lints.
   @override
   List<LintRule> getLintRules(CustomLintConfigs configs) {
@@ -45,17 +46,23 @@ class _CleanArchitectureKitPlugin extends PluginBase {
     // 5. Create and return the list of all lints, now using the local 'config' variable.
     return [
       // Purity Rules
-      DomainLayerPurity(config: config, layerResolver: layerResolver),
-      DataSourcePurity(config: config, layerResolver: layerResolver),
-      PresentationLayerPurity(config: config, layerResolver: layerResolver),
-      RepositoryImplementationPurity(config: config, layerResolver: layerResolver),
+      DisallowModelInDomain(config: config, layerResolver: layerResolver),
+      DisallowEntityInDataSource(config: config, layerResolver: layerResolver),
+      DisallowRepositoryInPresentation(config: config, layerResolver: layerResolver),
+      DisallowModelReturnFromRepository(config: config, layerResolver: layerResolver),
       DisallowFlutterImportsInDomain(config: config, layerResolver: layerResolver),
       DisallowFlutterTypesInDomain(config: config, layerResolver: layerResolver),
+
+      DisallowUseCaseInWidget(config: config, layerResolver: layerResolver),
+      EnforceModelToEntityMapping(config: config, layerResolver: layerResolver),
 
       // Dependency & Structure Rules
       EnforceLayerIndependence(config: config, layerResolver: layerResolver),
       EnforceAbstractDataSourceDependency(config: config, layerResolver: layerResolver),
       EnforceFileAndFolderLocation(config: config),
+
+      EnforceModelInheritsEntity(config: config, layerResolver: layerResolver),
+
 
       // Naming, Type Safety & Inheritance Rules
       EnforceNamingConventions(config: config, layerResolver: layerResolver),

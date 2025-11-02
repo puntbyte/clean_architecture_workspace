@@ -1,6 +1,6 @@
 // lib/src/models/type_safety_config.dart
 
-import 'package:clean_architecture_kit/src/utils/map_parsing_extension.dart';
+import 'package:clean_architecture_kit/src/utils/json_map_extension.dart';
 
 class TypeSafetyConfig {
   final List<String> returnTypeNames;

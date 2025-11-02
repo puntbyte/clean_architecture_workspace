@@ -1,9 +1,9 @@
+// example/lib/features/auth/presentation/bloc/auth_bloc.violations.dart
 import 'package:bloc/bloc.dart';
+import 'package:example/features/auth/domain/contracts/auth_repository.dart';
+import 'package:example/features/auth/presentation/managers/bloc/auth_bloc.dart';
 
-import '../../domain/contracts/auth_repository.dart';
-import 'auth_bloc.dart';
-
-// VIOLATION: presentation_layer_purity
+// VIOLATION: disallow_repository_in_presentation
 // This BLoC incorrectly depends on the entire AuthRepository.
 class AuthBlocViolations extends Bloc<AuthEvent, AuthState> {
   // It should depend on a specific UseCase instead.

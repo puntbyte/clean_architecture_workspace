@@ -1,5 +1,5 @@
 // lib/src/models/layer_config.dart
-import 'package:clean_architecture_kit/src/utils/map_parsing_extension.dart';
+import 'package:clean_architecture_kit/src/utils/json_map_extension.dart';
 
 class LayerConfig {
   final String projectStructure;
@@ -54,16 +54,19 @@ class LayerConfig {
       projectStructure: map.getString('project_structure', orElse: 'feature_first'),
       featuresRootPath: _sanitize(featureFirst.getString('features_root', orElse: 'features')),
 
+      // === Domain Layer Paths ===
       domainPath: _sanitize(layerFirst.getString('domain', orElse: 'domain')),
       domainEntitiesPaths: domainDefinitions.getList('entities'),
-      domainUseCasesPaths: domainDefinitions.getList('usecases'),
+      domainUseCasesPaths: domainDefinitions.getList('use_cases'),
       domainRepositoriesPaths: domainDefinitions.getList('repositories'),
 
+      // === Data Layer Paths ===
       dataPath: _sanitize(layerFirst.getString('data', orElse: 'data')),
       dataModelsPaths: dataDefinitions.getList('models'),
       dataDataSourcesPaths: dataDefinitions.getList('data_sources'),
       dataRepositoriesPaths: dataDefinitions.getList('repositories'),
 
+      // === Presentation Layer Paths ===
       presentationPath: _sanitize(layerFirst.getString('presentation', orElse: 'presentation')),
       presentationManagersPaths: presentationDefinitions.getList('managers'),
       presentationWidgetsPaths: presentationDefinitions.getList('widgets'),
@@ -72,9 +75,8 @@ class LayerConfig {
   }
 
   static String _sanitize(String path) {
-    var sanitizedPath = path.trim();
-    if (path.startsWith('lib/')) sanitizedPath = path.substring(4);
-    if (path.startsWith('/')) sanitizedPath = path.substring(1);
-    return sanitizedPath;
+    if (path.startsWith('lib/')) path = path.substring(4);
+    if (path.startsWith('/')) path = path.substring(1);
+    return path;
   }
 }

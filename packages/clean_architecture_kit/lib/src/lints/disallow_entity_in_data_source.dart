@@ -6,20 +6,18 @@ import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart
 import 'package:clean_architecture_kit/src/utils/layer_resolver.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-class DataSourcePurity extends DartLintRule {
+class DisallowEntityInDataSource extends DartLintRule {
   static const _code = LintCode(
-    name: 'data_source_purity',
+    name: 'disallow_entity_in_data_source', // <-- RENAMED LINT CODE
     problemMessage: 'DataSource purity violation: DataSources should not use domain Entities.',
-    correctionMessage:
-        'DataSources should return Models/DTOs, not Entities. The repository '
-        'implementation is responsible for mapping.',
+    correctionMessage: 'DataSources should return Models/DTOs, not Entities. The repository is responsible for mapping.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   final CleanArchitectureConfig config;
   final LayerResolver layerResolver;
 
-  const DataSourcePurity({required this.config, required this.layerResolver}) : super(code: _code);
+  const DisallowEntityInDataSource({required this.config, required this.layerResolver}) : super(code: _code);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {

@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:clean_architecture_kit/src/lints/data_source_purity.dart';
+import 'package:clean_architecture_kit/src/lints/disallow_entity_in_data_source.dart';
 import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart';
 import 'package:clean_architecture_kit/src/utils/layer_resolver.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
@@ -54,7 +54,7 @@ MockDiagnosticReporter runTest({
     () => layerResolver.getLayer(any(that: isNot(contains('/domain/entities/')))),
   ).thenReturn(ArchLayer.data);
 
-  final rule = DataSourcePurity(config: config, layerResolver: layerResolver);
+  final rule = DisallowEntityInDataSource(config: config, layerResolver: layerResolver);
   final resolver = FakeCustomLintResolver(path: path, content: content);
   final registry = TestLintRuleNodeRegistry();
   final context = makeContext(registry);

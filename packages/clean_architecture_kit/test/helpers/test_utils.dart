@@ -9,6 +9,8 @@ class TestLintRuleNodeRegistry implements LintRuleNodeRegistry {
   // Callback for ClassDeclaration visitor
   void Function(ClassDeclaration)? _classCb;
 
+  void Function(MethodInvocation)? _methodInvocationCb;
+
   // ▼▼▼ ADD THIS SECTION ▼▼▼
   // Callback for MethodDeclaration visitor
   void Function(MethodDeclaration)? _methodCb;
@@ -16,6 +18,15 @@ class TestLintRuleNodeRegistry implements LintRuleNodeRegistry {
   @override
   void addClassDeclaration(void Function(ClassDeclaration) cb) {
     _classCb = cb;
+  }
+
+  @override
+  void addMethodInvocation(void Function(MethodInvocation) cb) {
+    _methodInvocationCb = cb;
+  }
+
+  void runMethodInvocation(MethodInvocation node) {
+    _methodInvocationCb?.call(node);
   }
 
   // ▼▼▼ AND THIS METHOD ▼▼▼
