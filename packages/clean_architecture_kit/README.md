@@ -90,29 +90,29 @@ In your IDE, restart the Dart analysis server to activate the linter.
 
 ## Rules Overview
 
-| Rule | Quick Fix |
-| :--- | :---: |
-| **Purity & Responsibility Rules** | |
-| `disallow_model_in_domain` | |
-| `disallow_entity_in_data_source` | |
-| `disallow_repository_in_presentation`| |
-| `disallow_model_return_from_repository` | |
-| `disallow_use_case_in_widget` | |
-| `disallow_flutter_imports_in_domain`| |
-| `disallow_flutter_types_in_domain`| |
-| `enforce_model_to_entity_mapping`| ✅ |
-| `enforce_model_inherits_entity` | |
-| **Dependency & Structure Rules** | |
-| `enforce_layer_independence` | |
-| `enforce_abstract_data_source_dependency` | |
-| `enforce_file_and_folder_location`| |
-| **Naming, Type Safety & Inheritance** | |
-| `enforce_naming_conventions` | |
-| `enforce_custom_return_type`| |
-| `enforce_use_case_inheritance`| |
-| `enforce_repository_inheritance`| |
-| **Code Generation** | |
-| `missing_use_case` | ✅ |
+| Rule                                      | Quick Fix |
+|:------------------------------------------|:---------:|
+| **Purity & Responsibility Rules**         |           |
+| `disallow_model_in_domain`                |           |
+| `disallow_entity_in_data_source`          |           |
+| `disallow_repository_in_presentation`     |           |
+| `disallow_model_return_from_repository`   |           |
+| `disallow_use_case_in_widget`             |           |
+| `disallow_flutter_imports_in_domain`      |           |
+| `disallow_flutter_types_in_domain`        |           |
+| `enforce_model_to_entity_mapping`         |     ✅     |
+| `enforce_model_inherits_entity`           |           |
+| **Dependency & Structure Rules**          |           |
+| `enforce_layer_independence`              |           |
+| `enforce_abstract_data_source_dependency` |           |
+| `enforce_file_and_folder_location`        |           |
+| **Naming, Type Safety & Inheritance**     |           |
+| `enforce_naming_conventions`              |           |
+| `enforce_custom_return_type`              |           |
+| `enforce_use_case_inheritance`            |           |
+| `enforce_repository_inheritance`          |           |
+| **Code Generation**                       |           |
+| `missing_use_case`                        |     ✅     |
 
 ---
 
@@ -597,7 +597,7 @@ abstract interface class AuthRepository implements Repository {
 
 ## Full Configuration
 
-For a complete, well-documented configuration file with all available options, please refer to the `analysis_options.yaml` in our [example project](../example/analysis_options.yaml).
+For a complete, well-documented configuration file with all available options, please refer to the `analysis_options.yaml` in our [example project](../../example/analysis_options.yaml).
 
 ---
 
