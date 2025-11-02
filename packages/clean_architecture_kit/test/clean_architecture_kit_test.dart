@@ -1,4 +1,3 @@
-
 import 'package:clean_architecture_kit/clean_architecture_kit.dart';
 import 'package:clean_architecture_kit/src/lints/disallow_entity_in_data_source.dart';
 import 'package:clean_architecture_kit/src/lints/disallow_flutter_imports_in_domain.dart';

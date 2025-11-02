@@ -1,5 +1,4 @@
 // lib/src/lints/enforce_naming_conventions.dart
-
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart';

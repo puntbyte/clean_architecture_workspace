@@ -1,7 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
-
+// Deliberate import of internal AST locator utility used by many analyzer plugins.
 // ignore: implementation_imports
 import 'package:analyzer/src/dart/ast/utilities.dart';
 import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart';

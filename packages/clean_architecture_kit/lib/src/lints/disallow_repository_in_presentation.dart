@@ -8,9 +8,10 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class DisallowRepositoryInPresentation extends DartLintRule {
   static const _code = LintCode(
-    name: 'disallow_repository_in_presentation', // <-- RENAMED LINT CODE
+    name: 'disallow_repository_in_presentation',
     problemMessage: 'Presentation layer purity violation: Do not depend directly on a Repository.',
-    correctionMessage: 'The presentation layer should depend on a specific UseCase, not the entire repository.',
+    correctionMessage:
+        'The presentation layer should depend on a specific UseCase, not the entire repository.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 

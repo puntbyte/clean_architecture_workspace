@@ -8,16 +8,19 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class DisallowEntityInDataSource extends DartLintRule {
   static const _code = LintCode(
-    name: 'disallow_entity_in_data_source', // <-- RENAMED LINT CODE
+    name: 'disallow_entity_in_data_source',
     problemMessage: 'DataSource purity violation: DataSources should not use domain Entities.',
-    correctionMessage: 'DataSources should return Models/DTOs, not Entities. The repository is responsible for mapping.',
+    correctionMessage:
+        'DataSources should return Models/DTOs, not Entities. The repository is responsible for '
+        'mapping.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   final CleanArchitectureConfig config;
   final LayerResolver layerResolver;
 
-  const DisallowEntityInDataSource({required this.config, required this.layerResolver}) : super(code: _code);
+  const DisallowEntityInDataSource({required this.config, required this.layerResolver})
+    : super(code: _code);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {

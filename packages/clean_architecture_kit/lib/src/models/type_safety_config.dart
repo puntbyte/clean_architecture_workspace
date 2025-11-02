@@ -1,5 +1,4 @@
 // lib/src/models/type_safety_config.dart
-
 import 'package:clean_architecture_kit/src/utils/json_map_extension.dart';
 
 class TypeSafetyConfig {

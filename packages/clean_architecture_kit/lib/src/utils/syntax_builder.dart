@@ -1,8 +1,6 @@
 // lib/src/utils/syntax_builder.dart
-
 import 'package:code_builder/code_builder.dart';
 
-// Your brilliant SyntaxBuilder class, almost verbatim.
 class SyntaxBuilder {
   const SyntaxBuilder._();
 

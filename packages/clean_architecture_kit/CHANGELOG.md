@@ -1,6 +1,48 @@
+## 2.0.1
+
+### 🧹 Cleanup & Removals
+
+- **Removed unnecessary dependency:** Removed `collection`, `yaml`, and `glob` packages from the 
+  lint package. The internal usage was replaced with a small, self-contained helper
+  (`_firstWhereOrNull`) to avoid an external dependency for a single helper function.
+
+- **Removed unnecessary code:** Deleted redundant code paths and trimmed record/helper types that 
+  were only used for a narrow internal purpose (e.g., replaced a single-use record with a small 
+  POD class or helper). This reduces code surface and improves maintainability.
+
+### 🐛 Fixes
+
+- **EnforceFileAndFolderLocation:** Fixed a bug where `enforce_file_and_folder_location` could 
+  misclassify classes when naming templates were ambiguous (for example, when users set templates 
+  like `{{name}}` for multiple concepts). The rule now:
+
+  * Refuses to treat a plain `{{name}}` template as a reliable name-based match (avoids incorrect 
+    matches).
+
+  * Falls back to checking inheritance (`extends` / `implements` / `with`) against configured base 
+    class names (e.g. `unaryUseCaseName`, `nullaryUseCaseName`, `repositoryBaseName`) to reliably 
+    identify UseCases, Repositories, etc.
+
+  * Normalizes path checks (lowercasing, accepts simple plural forms such as `usecases`) and 
+    reliably handles Windows path separators.
+
+  * Reduces false positives (e.g. Entities being flagged as UseCases) and improves lint accuracy 
+    across platforms.
+
+### ⚙️ Impact & Migration
+
+- **Action required:** Action required: None for most users. This is an internal cleanup — existing 
+  configs will continue to work.
+
+- **Recommendation:** If you use ambiguous naming templates like `{{name}}`, prefer explicit 
+  suffixes (e.g. `{{name}}Usecase`) or configure the inheritance block so the linter can perform 
+  inheritance-based detection.
+
 ## 2.0.0
 
-This is a major release that significantly improves the linter's consistency, power, and user experience. It includes **breaking changes** to the package structure and lint names that will require users to update their configurations.
+This is a major release that significantly improves the linter's consistency, power, and user 
+experience. It includes **breaking changes** to the package structure and lint names that will 
+require users to update their configurations.
 
 ### 💥 Breaking Changes
 

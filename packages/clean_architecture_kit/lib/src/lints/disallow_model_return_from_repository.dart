@@ -1,5 +1,4 @@
 // lib/src/lints/disallow_model_return_from_repository.dart
-
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -13,8 +12,10 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class DisallowModelReturnFromRepository extends DartLintRule {
   static const _code = LintCode(
-    name: 'disallow_model_return_from_repository', // <-- RENAMED LINT CODE
-    problemMessage: 'Repository implementation purity violation: Overridden methods must return domain Entities, not Models.',
+    name: 'disallow_model_return_from_repository',
+    problemMessage:
+        'Repository implementation purity violation: Overridden methods must return domain '
+        'Entities, not Models.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 

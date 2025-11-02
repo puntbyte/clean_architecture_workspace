@@ -16,8 +16,8 @@ class EnforceAbstractDataSourceDependency extends DartLintRule {
   static const _code = LintCode(
     name: 'enforce_abstract_data_source_dependency',
     problemMessage:
-        'Repository implementations must depend on data source abstractions, not '
-        'concrete implementations.',
+        'Repository implementations must depend on data source abstractions, not concrete '
+        'implementations.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 

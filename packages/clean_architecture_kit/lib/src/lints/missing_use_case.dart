@@ -1,5 +1,4 @@
 // lib/src/lints/missing_use_case.dart
-
 import 'dart:io';
 
 import 'package:analyzer/dart/ast/ast.dart';

@@ -1,5 +1,4 @@
 // lib/src/utils/path_utils.dart
-
 import 'dart:io';
 import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart';
 import 'package:clean_architecture_kit/src/utils/naming_utils.dart';

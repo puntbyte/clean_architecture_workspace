@@ -1,7 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
-// <-- ADD THIS IMPORT
 import 'package:clean_architecture_kit/src/fixes/create_to_entity_method_fix.dart';
 import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart';
 import 'package:clean_architecture_kit/src/utils/layer_resolver.dart';
@@ -12,7 +11,8 @@ class EnforceModelToEntityMapping extends DartLintRule {
   static const _code = LintCode(
     name: 'enforce_model_to_entity_mapping',
     problemMessage: 'Models must have a `toEntity()` conversion method.',
-    correctionMessage: 'Add the method `YourEntity toEntity()` to map this Model to its corresponding Entity.',
+    correctionMessage:
+        'Add the method `YourEntity toEntity()` to map this Model to its corresponding Entity.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 

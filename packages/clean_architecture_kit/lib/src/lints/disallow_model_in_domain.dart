@@ -12,8 +12,9 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 /// it only deals with pure domain Entities.
 class DisallowModelInDomain extends DartLintRule {
   static const _code = LintCode(
-    name: 'disallow_model_in_domain', // <-- RENAMED LINT CODE
-    problemMessage: 'Domain layer purity violation: Do not use a Model in a domain layer signature.',
+    name: 'disallow_model_in_domain',
+    problemMessage:
+        'Domain layer purity violation: Do not use a Model in a domain layer signature.',
     correctionMessage: 'Replace this Model with a pure domain Entity.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );

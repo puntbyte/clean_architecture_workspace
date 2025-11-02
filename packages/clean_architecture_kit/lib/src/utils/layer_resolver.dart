@@ -1,4 +1,4 @@
-import 'dart:io';
+//import 'dart:io';
 
 import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart';
 import 'package:path/path.dart' as p;
@@ -30,46 +30,6 @@ class LayerResolver {
 
   LayerResolver(this._config);
 
-  // A cache to avoid repeatedly searching the filesystem for the project root.
-  static final Map<String, String?> _projectRootCache = {};
-
-  /// A robust method to find the project root directory by searching upwards
-  /// from a given file's path for a `pubspec.yaml` file.
-  String? _findProjectRoot(String absolutePath) {
-    var dir = Directory(p.dirname(absolutePath));
-    // Check cache first to avoid redundant I/O.
-    if (_projectRootCache.containsKey(dir.path)) {
-      return _projectRootCache[dir.path];
-    }
-
-    while (true) {
-      final pubspec = File(p.join(dir.path, 'pubspec.yaml'));
-      if (pubspec.existsSync()) {
-        _projectRootCache[absolutePath] = dir.path;
-        return dir.path;
-      }
-      // Stop if we reach the filesystem root.
-      if (p.equals(dir.parent.path, dir.path)) {
-        _projectRootCache[absolutePath] = null;
-        return null;
-      }
-      dir = dir.parent;
-    }
-  }
-
-  /// Calculates the relative path of a file from inside the `lib/` directory.
-  /// Returns `null` if the project root or `lib` directory cannot be found.
-  String? _getRelativePath(String absolutePath) {
-    final projectRoot = _findProjectRoot(absolutePath);
-    if (projectRoot == null) return null;
-
-    final libDir = Directory(p.join(projectRoot, 'lib'));
-    if (!libDir.existsSync()) return null;
-
-    // Use the path package to reliably calculate the relative path.
-    return p.relative(absolutePath, from: libDir.path);
-  }
-
   List<String>? _getRelativePathSegments(String absolutePath) {
     final normalized = p.normalize(absolutePath);
     final segments = p.split(normalized);
@@ -88,7 +48,8 @@ class LayerResolver {
         if (segments.first == layerConfig.dataPath) return ArchLayer.data;
         if (segments.first == layerConfig.presentationPath) return ArchLayer.presentation;
       }
-    } else { // feature_first
+    } else {
+      // feature_first
       if (segments.length > 2 && segments[0] == layerConfig.featuresRootPath) {
         final layerName = segments[2];
         if (layerName == 'domain') return ArchLayer.domain;
@@ -107,17 +68,33 @@ class LayerResolver {
     final layerConfig = _config.layers;
 
     if (layer == ArchLayer.domain) {
-      if (_firstMatchInOrder(layerConfig.domainEntitiesPaths, pathSegments)) return ArchSubLayer.entity;
-      if (_firstMatchInOrder(layerConfig.domainUseCasesPaths, pathSegments)) return ArchSubLayer.useCase;
-      if (_firstMatchInOrder(layerConfig.domainRepositoriesPaths, pathSegments)) return ArchSubLayer.domainRepository;
+      if (_firstMatchInOrder(layerConfig.domainEntitiesPaths, pathSegments)) {
+        return ArchSubLayer.entity;
+      }
+      if (_firstMatchInOrder(layerConfig.domainUseCasesPaths, pathSegments)) {
+        return ArchSubLayer.useCase;
+      }
+      if (_firstMatchInOrder(layerConfig.domainRepositoriesPaths, pathSegments)) {
+        return ArchSubLayer.domainRepository;
+      }
     } else if (layer == ArchLayer.data) {
       if (_firstMatchInOrder(layerConfig.dataModelsPaths, pathSegments)) return ArchSubLayer.model;
-      if (_firstMatchInOrder(layerConfig.dataRepositoriesPaths, pathSegments)) return ArchSubLayer.dataRepository;
-      if (_firstMatchInOrder(layerConfig.dataDataSourcesPaths, pathSegments)) return ArchSubLayer.dataSource;
+      if (_firstMatchInOrder(layerConfig.dataRepositoriesPaths, pathSegments)) {
+        return ArchSubLayer.dataRepository;
+      }
+      if (_firstMatchInOrder(layerConfig.dataDataSourcesPaths, pathSegments)) {
+        return ArchSubLayer.dataSource;
+      }
     } else if (layer == ArchLayer.presentation) {
-      if (_firstMatchInOrder(layerConfig.presentationManagersPaths, pathSegments)) return ArchSubLayer.manager;
-      if (_firstMatchInOrder(layerConfig.presentationWidgetsPaths, pathSegments)) return ArchSubLayer.widget;
-      if (_firstMatchInOrder(layerConfig.presentationPagesPaths, pathSegments)) return ArchSubLayer.pages;
+      if (_firstMatchInOrder(layerConfig.presentationManagersPaths, pathSegments)) {
+        return ArchSubLayer.manager;
+      }
+      if (_firstMatchInOrder(layerConfig.presentationWidgetsPaths, pathSegments)) {
+        return ArchSubLayer.widget;
+      }
+      if (_firstMatchInOrder(layerConfig.presentationPagesPaths, pathSegments)) {
+        return ArchSubLayer.pages;
+      }
     }
     return ArchSubLayer.unknown;
   }

@@ -12,9 +12,11 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 /// from the UI layer.
 class DisallowUseCaseInWidget extends DartLintRule {
   static const _code = LintCode(
-    name: 'disallow_use_case_in_widget', // <-- RENAMED LINT CODE
+    name: 'disallow_use_case_in_widget',
     problemMessage: 'Widgets should not call UseCases directly.',
-    correctionMessage: 'Call the UseCase from a presentation manager (Bloc, Cubit, Provider) and expose state to the widget.',
+    correctionMessage:
+        'Call the UseCase from a presentation manager (Bloc, Cubit, Provider) and expose state to '
+        'the widget.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
