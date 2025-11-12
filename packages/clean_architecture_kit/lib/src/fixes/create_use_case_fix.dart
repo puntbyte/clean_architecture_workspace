@@ -162,7 +162,7 @@ class CreateUseCaseFix extends Fix {
     }
 
     final useCaseNamePascal = methodName.toPascalCase();
-    final recordName = config.naming.useCaseRecordParameter.pattern.replaceAll(
+    final recordName = config.naming.useCaseParameter.pattern.replaceAll(
       '{{name}}',
       useCaseNamePascal,
     );

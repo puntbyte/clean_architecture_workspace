@@ -21,7 +21,8 @@ dependencies:
   analyzer_plugin: ">=0.12.0 <1.0.0"
   code_builder: ^4.10.0
   custom_lint_builder: ">=0.7.0 <1.0.0"
-  dart_style: "^3.1.0"
+  dart_style: ^3.1.0
+  dictionaryx: ^0.3.5
   path: ^1.9.1
 
 dev_dependencies:

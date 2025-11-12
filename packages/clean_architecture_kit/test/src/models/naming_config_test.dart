@@ -14,7 +14,7 @@ void main() {
         final config = NamingConfig.fromMap(map);
 
         expect(config.entity.pattern, '{{name}}Data');
-        expect(config.entity.antiPatterns, isEmpty);
+        expect(config.entity.antipatterns, isEmpty);
         expect(config.model.pattern, '{{name}}TransferObject');
         expect(config.useCase.pattern, '{{name}}'); // Default
       });
@@ -33,9 +33,9 @@ void main() {
         final config = NamingConfig.fromMap(map);
 
         expect(config.entity.pattern, '{{name}}');
-        expect(config.entity.antiPatterns, ['{{name}}Entity']);
+        expect(config.entity.antipatterns, ['{{name}}Entity']);
         expect(config.useCase.pattern, '{{name}}Action');
-        expect(config.useCase.antiPatterns, ['{{name}}UseCase']);
+        expect(config.useCase.antipatterns, ['{{name}}UseCase']);
       });
 
       test('should use all default values when map is empty', () {
@@ -45,8 +45,8 @@ void main() {
         expect(config.entity.pattern, '{{name}}');
         expect(config.model.pattern, '{{name}}Model');
         expect(config.useCase.pattern, '{{name}}');
-        expect(config.repositoryInterface.pattern, '{{name}}Repository');
-        expect(config.entity.antiPatterns, isEmpty);
+        expect(config.repository.pattern, '{{name}}Repository');
+        expect(config.entity.antipatterns, isEmpty);
       });
     });
   });

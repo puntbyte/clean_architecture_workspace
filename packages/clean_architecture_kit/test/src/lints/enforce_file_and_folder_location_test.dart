@@ -62,7 +62,7 @@ void main() {
         reason: 'domainRepositoriesPaths should not be empty',
       );
       expect(config.layers.domainRepositoriesPaths, equals(['contracts']));
-      expect(config.naming.repositoryInterface, equals('{{name}}Repository'));
+      expect(config.naming.repository, equals('{{name}}Repository'));
     });
 
     // === Your Original Tests, Now More Robust ===

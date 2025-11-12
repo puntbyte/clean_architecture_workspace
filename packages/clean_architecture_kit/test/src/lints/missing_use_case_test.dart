@@ -88,7 +88,7 @@ void main() {
           projectStructure: 'feature_first',
           domainRepositoriesPaths: ['contracts'],
         );
-        final lint = MissingUseCase(config: config, layerResolver: LayerResolver(config));
+        final lint = MissingUseCase(config: config, componentResolver: LayerResolver(config));
         final repoPath = p.join(
           projectRoot,
           'lib',
@@ -117,7 +117,7 @@ void main() {
           projectStructure: 'feature_first',
           domainRepositoriesPaths: ['contracts'],
         );
-        final lint = MissingUseCase(config: config, layerResolver: LayerResolver(config));
+        final lint = MissingUseCase(config: config, componentResolver: LayerResolver(config));
         final repoPath = p.join(
           projectRoot,
           'lib',
@@ -154,7 +154,7 @@ void main() {
           projectStructure: 'layer_first',
           domainRepositoriesPaths: ['repositories'],
         );
-        final lint = MissingUseCase(config: config, layerResolver: LayerResolver(config));
+        final lint = MissingUseCase(config: config, componentResolver: LayerResolver(config));
         final repoPath = p.join(
           projectRoot,
           'lib',
@@ -181,7 +181,7 @@ void main() {
           projectStructure: 'layer_first',
           domainRepositoriesPaths: ['repositories'],
         );
-        final lint = MissingUseCase(config: config, layerResolver: LayerResolver(config));
+        final lint = MissingUseCase(config: config, componentResolver: LayerResolver(config));
         final repoPath = p.join(
           projectRoot,
           'lib',

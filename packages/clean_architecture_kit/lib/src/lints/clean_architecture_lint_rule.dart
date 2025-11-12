@@ -1,4 +1,4 @@
-// lib/src/lints/clean_architecture_lint_rule.dart
+// lib/src/lints/architecture_lint_rule.dart
 
 import 'package:clean_architecture_kit/src/analysis/layer_resolver.dart';
 import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart';

@@ -1,6 +1,7 @@
-// lib/src/analysis/layer_resolver.dart
+// lib/src/analysis/component_resolver.dart
 
 import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart';
+import 'package:clean_architecture_kit/src/utils/naming_utils.dart';
 import 'package:path/path.dart' as p;
 
 enum ArchLayer {
@@ -15,27 +16,54 @@ enum ArchLayer {
 }
 
 enum ArchSubLayer {
-  // domain
+  // Domain
   entity('Entity'),
-  useCase('UseCase'),
+  useCase('Use Case'),
   domainRepository('Repository Interface'),
 
-  // data
+  // Data
   model('Model'),
-  dataSource('DataSource'),
+  dataSource('Data Source'),
   dataRepository('Repository Implementation'),
 
-  // presentation
+  // Presentation
   manager('Manager'),
   widget('Widget'),
   pages('Page'),
 
-  // undefined
+  // Undefined
   unknown('Unknown');
 
   final String label;
 
   const ArchSubLayer(this.label);
+
+  Set<SubLayerComponent> get components => switch (this) {
+    ArchSubLayer.manager => SubLayerComponent.manager,
+    _ => {},
+  };
+}
+
+enum SubLayerComponent {
+  // Manager
+  event('Event'),
+  eventImplementation('Event Implementation'),
+  state('State'),
+  stateImplementation('State Implementation'),
+
+  // Undefined
+  unknown('Unknown');
+
+  final String label;
+
+  const SubLayerComponent(this.label);
+
+  static Set<SubLayerComponent> get manager => {
+    event,
+    eventImplementation,
+    state,
+    stateImplementation,
+  };
 }
 
 /// A utility class to resolve the architectural layer and sub-layer of a given file path.
@@ -107,6 +135,35 @@ class LayerResolver {
     }
 
     return ArchSubLayer.unknown;
+  }
+
+  /// Resolves the specific component type within a sub-layer (e.g., Event, State).
+  ///
+  /// This requires both the file path (to determine the sub-layer) and the
+  /// class name (to determine the component type).
+  SubLayerComponent getSubLayerComponent(String path, String className) {
+    final subLayer = getSubLayer(path);
+
+    // Component logic only applies to the 'manager' sub-layer for now.
+    if (subLayer != ArchSubLayer.manager) return SubLayerComponent.unknown;
+
+    final naming = _config.naming;
+
+    // Check the class name against the configured naming patterns.
+    if (NamingUtils.validateName(name: className, template: naming.event.pattern)) {
+      return SubLayerComponent.event;
+    }
+    if (NamingUtils.validateName(name: className, template: naming.eventImplementation.pattern)) {
+      return SubLayerComponent.eventImplementation;
+    }
+    if (NamingUtils.validateName(name: className, template: naming.state.pattern)) {
+      return SubLayerComponent.state;
+    }
+    if (NamingUtils.validateName(name: className, template: naming.stateImplementation.pattern)) {
+      return SubLayerComponent.stateImplementation;
+    }
+
+    return SubLayerComponent.unknown;
   }
 
   /// Gets the path segments relative to the `lib` directory.

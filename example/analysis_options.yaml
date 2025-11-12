@@ -33,9 +33,9 @@ custom_lint:
     # --- Contract & Inheritance Rules ---
     - enforce_model_to_entity_mapping: true
     - enforce_model_inherits_entity: true
-    - enforce_entity_contract: true
     - enforce_repository_contract: true
     - enforce_use_case_contract: true
+    - enforce_entity_contract: true
     - enforce_repository_implementation_contract: true
 
     # --- Dependency & Structure Rules ---
@@ -48,7 +48,10 @@ custom_lint:
     - enforce_type_safety: true
     - enforce_try_catch_in_repository: true
     - enforce_exception_on_data_source: true
-    - enforce_annotation: true
+
+    # --- Naming Convention Rules ---
+    - enforce_naming_conventions: true
+    - enforce_semantic_naming: true
 
     # --- Code Generation Rule ---
     - missing_use_case: true
@@ -88,28 +91,165 @@ custom_lint:
           pages: ['pages']
           widgets: ['widgets']
 
+      modules:
+        core:
+          label: 'Core Module'
+          path: 'lib/core/**'
+
+        feature:
+          label: 'Feature Module'
+          path: 'lib/features/*'
+
+        shared:
+          label: 'Shared Module'
+          path: 'lib/shared/**'
+
+      components:
+        domain:
+          label: 'Domain Layer'
+          module: 'feature'
+          kind: 'domain_layer'
+          directory: 'domain'
+          components:
+            entity:
+              label: 'Entity'
+              kind: 'business_object'
+              directory: 'entities'
+
+            contract:
+              label: 'Contract'
+              kind: 'business_contract'
+              directory: 'contracts'
+              components:
+                repository:
+                  label: 'Repository Interface'
+                  kind: 'repository_contract'
+                source:
+                  label: 'Source Interface'
+                  kind: 'source_contract'
+
+            usecase:
+              label: 'Use Case'
+              kind: 'business_logic'
+              directory: 'usecases'
+
+        data:
+          label: 'Data Layer'
+          kind: 'data_layer'
+          directory: 'data'
+          components:
+            model:
+              label: 'Model'
+              kind: 'data_model'
+              directory: 'models'
+
+            repository:
+              label: 'Data Repository Implementation'
+              kind: 'repository_implementation'
+              directory: 'repositories'
+
+            source:
+              label: 'Data Source Implementation'
+              kind: 'source_implementation'
+              directory: 'sources'
+
+        presentation:
+          label: 'Presentation Layer'
+          kind: 'presentation_layer'
+          directory: 'presentation'
+          components:
+            manager:
+              label: 'State Manager'
+              kind: 'state_manager'
+              directory: ['managers', 'bloc', 'cubit']
+              components:
+                event:
+                  label: 'View Event'
+                  kind: 'view_event'
+                  components:
+                    interface:
+                      label: 'View Event Interface'
+                      kind: 'view_event_interface'
+                    implementation:
+                      label: 'View Event Implementation'
+                      kind: 'view_event_implementation'
+                state:
+                  label: 'View State'
+                  kind: 'view_state'
+                  components:
+                    interface:
+                      label: 'View State Interface'
+                      kind: 'view_sate_interface'
+                    implementation:
+                      label: 'View State Implementation'
+                      kind: 'view_state_implementation'
+
+            page:
+              label: 'User Interface Layout'
+              kind: 'ui_layout'
+              directory: 'pages'
+
+            widget:
+              label: 'User Interface Component'
+              kind: 'ui_component'
+              directory: 'widgets'
+
       # [SECTION 3: NAMING CONVENTIONS]
       # Use {{name}} as a placeholder for the base name (e.g., 'Auth' in 'AuthRepository').
+
       naming_conventions:
-        entity:
+        # --- DOMAIN LAYER ---
+        - on: domain.entity # Targets ArchSubLayer.entity
           pattern: '{{name}}'
-          anti_pattern: [ '{{name}}Entity' ]
+          antipattern: '{{name}}Entity'
 
-        model:
+        - on: domain.usecase # Targets ArchSubLayer.useCase
+          pattern: '{{name}}'
+          antipattern: '{{name}}Use(C|c)ase'
+          grammar: '{{verb.present}}{{noun.phrase}}'
+          parameters:
+            method: call
+            pattern: '_{{name}}Param'
+
+        - on: domain.repository
+          pattern: '{{name}}Repository'
+
+        # --- DATA LAYER ---
+        - on: data.model # Targets ArchSubLayer.model
           pattern: '{{name}}Model'
+          grammar: '{{noun.singular}}Model'
 
-        use_case:
+        - on: data.contract.source
+          pattern: '{{name}}DataSource'
+
+        - on: data.repository
+          pattern: '{{kind}}{{name}}Repository'
+
+        # Special rule for implementations, identified by checking if a class is concrete.
+        - on: data.source
+          pattern: 'Default{{name}}DataSource'
+
+        # --- PRESENTATION LAYER ---
+        - on: presentation.manager
+          pattern: '{{name}}(Bloc|Cubit|Manager)'
+          grammar: '{{noun.phrase}}(Bloc|Cubit|Manager)'
+
+        # Rules for manager components, targeting SubLayerComponent enums.
+        - on: presentation.manager.event.interface # Targets SubLayerComponent.event
+          pattern: '{{name}}Event'
+          grammar: '{{noun.phrase}}Event'
+
+        - on: presentation.manager.event.implementation
           pattern: '{{name}}'
-          anti_pattern: ['{{name}}UseCase', '{{name}}Usecase']
+          grammar: '{{subject}}{{noun.phrase}}?{{verb.past}}'
 
-        use_case_record_parameter: '_{{name}}Params'
+        - on: presentation.manager.state.interface # Targets SubLayerComponent.state
+          pattern: '{{name}}State'
+          grammar: '{{noun.singular}}State'
 
-        data_source_interface: '{{name}}DataSource'
-        data_source_implementation: 'Default{{name}}DataSource'
-
-        repository_interface: '{{name}}Repository'
-        repository_implementation: '{{type}}{{name}}Repository'
-
+        - on: presentation.manager.state.implementation
+          pattern: '{{name}}'
+          grammar: '{{subject}}({{adjective}}|{{verb.gerund}}|{{verb.past}})'
 
       # [SECTION 4: TYPE SAFETY RULES]
       # Enforce that methods in certain layers return specific types.
@@ -135,6 +275,33 @@ custom_lint:
             where: [ 'data_source' ]
             identifier: 'model'
 
+      type_safeties:
+        - on: [ domain.usecase, domain.repository ]
+          returns:
+            safe_type: 'FutureEither'
+            import: 'package:example/core/utils/types.dart'
+
+          # Enforce that all Repository methods that take an ID
+          # must use a specific `Id` value object, not a raw `int`.
+        - on: domain.contract.repository
+          parameters:
+            - safe_type: 'NumId'
+              unsafe_type: 'int'
+              import: 'package:example/core/types.dart'
+              identifier: 'id'
+
+            - safe_type: 'CodeId'
+              unsafe_type: 'String'
+              import: 'package:example/core/types.dart'
+              identifier: 'id'
+
+        # Enforce that all methods in a DataSource that
+        # save data must accept a `Model` as a parameter.
+        - on: data.source
+          parameters:
+            safe_type: '{{name}}Model' # You can even use placeholders!
+            identifier: 'model'
+
       # [SECTION 5: INHERITANCE AND BASE CLASSES]
       # These paths point to the base classes provided by `architecture_kit` itself,
       # allowing for an out-of-the-box experience.
@@ -151,8 +318,39 @@ custom_lint:
         repository_base_name: 'Repository'
         repository_base_path: 'package:example/core/repository/repository.dart'
 
-      # [SECTION 6: SERVICE]
+      # A list of rules to enforce inheritance contracts on architectural components.
+      inheritances:
+        # Rule 1: All concrete classes in an 'entity' directory must be a subtype of 'Entity'.
+        - on: domain.entity
+          required:
+            class: 'Entity'
+            import: 'package:example/core/entity/entity.dart'
 
+        # Rule 2: All interfaces in a 'domain_repository' directory must be a subtype of 'Repository'.
+        - on: domain.repository
+          required:
+            name: 'Repository'
+            import: 'package:example/core/repository/repository.dart'
+
+        # Rule 3: All concrete classes in a 'use_case' directory must be a subtype of EITHER Unary or Nullary.
+        # A list in the `required` block is treated as an "OR" condition.
+        - on: domain.usecase
+          required:
+            - name: 'UnaryUsecase'
+              import: 'package:example/core/usecase/usecase.dart'
+            - name: 'NullaryUsecase'
+              import: 'package:example/core/usecase/usecase.dart'
+
+        - on: [ presentation.page, presentation.widget ]
+          suggested:
+            name: 'HookWidget'
+            import: 'package:flutter_hooks/flutter_hooks.dart'
+          forbidden:
+            name: 'StatefulWidget'
+            import: 'package:flutter/widgets.dart'
+
+
+      # [SECTION 6: SERVICE]
       services:
         dependency_injection:
           service_locator_names: [ 'getIt', 'locator', 'sl' ]
@@ -160,26 +358,23 @@ custom_lint:
 
       # [SECTION 7: ANNOTATIONS]
       annotations:
+        - on: domain.entity
+          forbidden: ['injectable', 'Singleton']
+
         # Rule 1: For UseCases
-        - on: 'use_case'
+        - on: domain.usecase
           required:
-            - text: 'Injectable()'
-              import: 'package:injectable/injectable.dart'
-              generate: true
+            name: 'Injectable'
+            import: 'package:injectable/injectable.dart'
 
         # Rule 2: For Repository Implementations
-        - on: 'data_repository'
+        - on: data.repository
           required:
-            - text: 'LazySingleton()'
-              import: 'package:injectable/injectable.dart'
-
-        - on: 'entity'
-          forbidden:
-            - text: 'Injectable()'
-            - text: 'Singleton()'
+            name: 'LazySingleton'
+            import: 'package:injectable/injectable.dart'
 
         # Rule 3: For Models that use json_serializable
-        - on: 'model'
-          optional:
-            - text: 'JsonSerializable()'
-              import: 'package:json_annotation/json_annotation.dart'
+        - on: data.model
+          suggested:
+            name: 'JsonSerializable'
+            import: 'package:json_annotation/json_annotation.dart'

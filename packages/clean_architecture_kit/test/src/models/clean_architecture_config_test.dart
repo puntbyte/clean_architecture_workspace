@@ -52,7 +52,7 @@ void main() {
 
         // Check NamingConfig
         expect(config.naming.model.pattern, '{{name}}Dto');
-        expect(config.naming.entity.antiPatterns, ['{{name}}Entity']);
+        expect(config.naming.entity.antipatterns, ['{{name}}Entity']);
 
         // Check InheritanceConfig
         expect(config.inheritance.entityBaseName, 'BaseDomainObject');
@@ -83,7 +83,7 @@ void main() {
 
         // Check NamingConfig defaults
         expect(config.naming.model.pattern, '{{name}}Model');
-        expect(config.naming.entity.antiPatterns, isEmpty);
+        expect(config.naming.entity.antipatterns, isEmpty);
 
         // Check InheritanceConfig defaults
         expect(config.inheritance.repositoryBaseName, 'Repository');

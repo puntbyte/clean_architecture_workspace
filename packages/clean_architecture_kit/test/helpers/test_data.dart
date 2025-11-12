@@ -1,6 +1,7 @@
 // test/helpers/test_data.dart
 import 'package:clean_architecture_kit/src/models/clean_architecture_config.dart';
-import 'package:clean_architecture_kit/src/models/type_safety_config.dart';
+import 'package:clean_architecture_kit/src/models/rules/parameter_rule.dart';
+import 'package:clean_architecture_kit/src/models/rules/return_rule.dart';
 
 /// A single, powerful test data factory for creating a complete and valid
 /// [CleanArchitectureConfig] object for use in unit tests.

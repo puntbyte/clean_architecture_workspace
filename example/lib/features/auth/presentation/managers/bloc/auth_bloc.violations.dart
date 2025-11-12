@@ -10,7 +10,9 @@ import 'package:example/features/auth/domain/usecases/get_user.dart';
 dynamic getIt<T>() => throw UnimplementedError();
 
 sealed class AuthEvent {}
+
 sealed class AuthState {}
+
 class AuthInitial extends AuthState {}
 
 class BadDependencyBloc extends Bloc<AuthEvent, AuthState> {

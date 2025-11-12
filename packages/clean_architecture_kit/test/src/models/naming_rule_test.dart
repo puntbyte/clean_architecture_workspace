@@ -12,7 +12,7 @@ void main() {
         final rule = NamingRule.from(data, defaultPattern);
 
         expect(rule.pattern, equals(data));
-        expect(rule.antiPatterns, isEmpty);
+        expect(rule.antipatterns, isEmpty);
       });
 
       // --- Test Cases 2: Parsing from a Map ---
@@ -24,8 +24,8 @@ void main() {
         final rule = NamingRule.from(data, defaultPattern);
 
         expect(rule.pattern, equals('{{name}}'));
-        expect(rule.antiPatterns, hasLength(2));
-        expect(rule.antiPatterns, containsAll(['{{name}}Entity', '{{name}}UseCase']));
+        expect(rule.antipatterns, hasLength(2));
+        expect(rule.antipatterns, containsAll(['{{name}}Entity', '{{name}}UseCase']));
       });
 
       test('should create from a map with only a pattern', () {
@@ -33,7 +33,7 @@ void main() {
         final rule = NamingRule.from(data, defaultPattern);
 
         expect(rule.pattern, equals('{{name}}Model'));
-        expect(rule.antiPatterns, isEmpty);
+        expect(rule.antipatterns, isEmpty);
       });
 
       test('should use default pattern when map is missing "pattern" key', () {
@@ -43,7 +43,7 @@ void main() {
         final rule = NamingRule.from(data, defaultPattern);
 
         expect(rule.pattern, equals(defaultPattern));
-        expect(rule.antiPatterns, equals(['{{name}}Suffix']));
+        expect(rule.antipatterns, equals(['{{name}}Suffix']));
       });
 
       test('should create from an empty map using defaults', () {
@@ -51,7 +51,7 @@ void main() {
         final rule = NamingRule.from(data, defaultPattern);
 
         expect(rule.pattern, equals(defaultPattern));
-        expect(rule.antiPatterns, isEmpty);
+        expect(rule.antipatterns, isEmpty);
       });
 
       // --- Test Cases 3: Fallback Behavior ---
@@ -60,7 +60,7 @@ void main() {
         final rule = NamingRule.from(data, defaultPattern);
 
         expect(rule.pattern, equals(defaultPattern));
-        expect(rule.antiPatterns, isEmpty);
+        expect(rule.antipatterns, isEmpty);
       });
 
       test('should use default pattern for invalid data types like int', () {
@@ -68,7 +68,7 @@ void main() {
         final rule = NamingRule.from(data, defaultPattern);
 
         expect(rule.pattern, equals(defaultPattern));
-        expect(rule.antiPatterns, isEmpty);
+        expect(rule.antipatterns, isEmpty);
       });
 
       test('should use default pattern for invalid data types like List', () {
@@ -76,7 +76,7 @@ void main() {
         final rule = NamingRule.from(data, defaultPattern);
 
         expect(rule.pattern, equals(defaultPattern));
-        expect(rule.antiPatterns, isEmpty);
+        expect(rule.antipatterns, isEmpty);
       });
     });
   });

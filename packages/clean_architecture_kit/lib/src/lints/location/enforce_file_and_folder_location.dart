@@ -90,7 +90,7 @@ class EnforceFileAndFolderLocation extends CleanArchitectureLintRule {
 
     _LocationRule(
       classType: 'Repository Interface',
-      namingTemplate: config.naming.repositoryInterface.pattern,
+      namingTemplate: config.naming.repository.pattern,
       expectedSubLayer: ArchSubLayer.domainRepository,
       isInterface: true,
     ),
@@ -103,7 +103,7 @@ class EnforceFileAndFolderLocation extends CleanArchitectureLintRule {
 
     _LocationRule(
       classType: 'DataSource Interface',
-      namingTemplate: config.naming.dataSourceInterface.pattern,
+      namingTemplate: config.naming.dataSource.pattern,
       expectedSubLayer: ArchSubLayer.dataSource,
       isInterface: true,
     ),

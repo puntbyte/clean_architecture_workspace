@@ -4,6 +4,7 @@
     <modules>
 <module fileurl="file://$PROJECT_DIR$/packages/clean_architecture_core/melos_clean_architecture_core.iml" filepath="$PROJECT_DIR$/packages/clean_architecture_core/melos_clean_architecture_core.iml"/>
 <module fileurl="file://$PROJECT_DIR$/packages/clean_architecture_kit/melos_clean_architecture_kit.iml" filepath="$PROJECT_DIR$/packages/clean_architecture_kit/melos_clean_architecture_kit.iml"/>
+<module fileurl="file://$PROJECT_DIR$/packages/clean_architecture_lints/melos_clean_architecture_lints.iml" filepath="$PROJECT_DIR$/packages/clean_architecture_lints/melos_clean_architecture_lints.iml"/>
 <module fileurl="file://$PROJECT_DIR$/example/melos_example.iml" filepath="$PROJECT_DIR$/example/melos_example.iml"/>
 <module fileurl="file://$PROJECT_DIR$/melos_clean_architecture_workspace.iml" filepath="$PROJECT_DIR$/melos_clean_architecture_workspace.iml"/>
 <module fileurl="file://$PROJECT_DIR$/.idea/clean_architecture_workspace.iml" filepath="$PROJECT_DIR$/.idea/clean_architecture_workspace.iml"/>

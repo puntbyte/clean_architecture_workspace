@@ -5,9 +5,14 @@ import 'package:clean_architecture_kit/src/utils/extensions/json_map_extension.d
 /// Represents a single naming rule with allowed and forbidden patterns.
 class NamingRule {
   final String pattern;
-  final List<String> antiPatterns;
+  final String? antipattern;
+  final String? grammar;
 
-  const NamingRule({required this.pattern, this.antiPatterns = const []});
+  const NamingRule({
+    required this.pattern,
+    this.antipattern,
+    this.grammar,
+  });
 
   factory NamingRule.from(dynamic data, String defaultPattern) {
     if (data is String) return NamingRule(pattern: data);
@@ -15,7 +20,8 @@ class NamingRule {
     if (data is Map<String, dynamic>) {
       return NamingRule(
         pattern: data.getString('pattern', defaultPattern),
-        antiPatterns: data.getList('anti_pattern'), // CORRECTED
+        antipattern: data.getOptionalString('antipattern'),
+        grammar: data.getOptionalString('grammar'),
       );
     }
 

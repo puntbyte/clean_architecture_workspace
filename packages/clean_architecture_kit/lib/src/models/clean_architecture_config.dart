@@ -1,4 +1,4 @@
-// lib/src/models/clean_architecture_config.dart
+// lib/src/models/architecture_config.dart
 
 import 'package:clean_architecture_kit/src/models/annotations_config.dart';
 import 'package:clean_architecture_kit/src/models/inheritance_config.dart';
@@ -32,7 +32,8 @@ class CleanArchitectureConfig {
       layers: LayerConfig.fromMap(map),
       naming: NamingConfig.fromMap(map.getMap('naming_conventions')),
       typeSafety: TypeSafetyConfig.fromMap(map.getMap('type_safety')),
-      inheritance: InheritanceConfig.fromMap(map.getMap('inheritance')),
+      //inheritance: InheritanceConfig.fromMap(map.getMap('inheritance')),
+      inheritance: InheritanceConfig.fromMap(map.getMap('inheritances')),
       services: ServicesConfig.fromMap(map.getMap('services')),
       annotations: AnnotationsConfig.fromMap(map.getMap('annotations')),
     );

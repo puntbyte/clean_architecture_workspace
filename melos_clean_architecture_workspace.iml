@@ -7,6 +7,9 @@
       <excludeFolder url="file://$MODULE_DIR$/.dart_tool" />
       <excludeFolder url="file://$MODULE_DIR$/.pub" />
       <excludeFolder url="file://$MODULE_DIR$/build" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/clean_architecture_lints/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/clean_architecture_lints/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/clean_architecture_lints/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Dart SDK" level="project" />

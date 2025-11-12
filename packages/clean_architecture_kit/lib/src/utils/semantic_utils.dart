@@ -82,7 +82,7 @@ class SemanticUtils {
     if (typeName == null) return false;
     return NamingUtils.validateName(
       name: typeName,
-      template: namingConfig.repositoryInterface.pattern,
+      template: namingConfig.repository.pattern,
     );
   }
 
