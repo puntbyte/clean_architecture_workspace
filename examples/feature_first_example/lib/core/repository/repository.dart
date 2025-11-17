@@ -1,4 +1,6 @@
-// Base class for all contracts, used by the `enforce_repository_inheritance` lint.
+// example/lib/core/repository/repository.dart
+
+/// A base class for all domain repository contracts.
 abstract interface class Repository {
   const Repository();
 }
