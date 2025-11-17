@@ -132,7 +132,7 @@ custom_lint:
           identifier: 'id'
           unsafe_type: 'int'
           safe_type: 'IntId'
-          import: 'package:example/core/utils/types.dart' # Hypothetical value object
+          import: 'package:example/core/utils/types.dart'
 
       # A list of custom, user-defined inheritance rules, enforced by `enforce_inheritance`.
       # Core rules (Entity, Repository, UseCase) are handled by their own lints but can be overridden here.
@@ -173,15 +173,15 @@ custom_lint:
       annotations:
         - on: 'usecase'
           required:
-            - text: '@Injectable()'
+            - text: 'Injectable'
               import: 'package:injectable/injectable.dart'
         - on: 'repository' # Targets the implementation
           required:
-            - text: '@LazySingleton()'
+            - text: 'LazySingleton'
               import: 'package:injectable/injectable.dart'
         - on: 'entity'
           forbidden:
-            - text: '@Injectable()'
+            - text: 'Injectable'
 
       # Configuration for service-related lints.
       services:
