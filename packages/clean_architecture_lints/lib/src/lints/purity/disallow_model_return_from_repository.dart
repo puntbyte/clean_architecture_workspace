@@ -1,4 +1,4 @@
-// lib/src/lints/purity/disallow_model_return_from_repository.dart
+// lib/srcs/lints/purity/disallow_model_return_from_repository.dart
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -24,28 +24,26 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
-  /// A cached set of wrapper type names for efficiency, built from the configuration.
-  late final Set<String> _wrapperTypeNames = {
+  /// A cached set of wrapper type names, built from the configuration.
+  final Set<String> _wrapperTypeNames;
+
+  DisallowModelReturnFromRepository({required super.config, required super.layerResolver})
+      : _wrapperTypeNames = {
     // Get all configured "safe" return types from the central config.
     ...config.typeSafeties.rules
-        .where((r) => r.target == TypeSafetyTarget.return$)
-        .map((r) => r.safeType),
+        .expand((rule) => rule.returns)
+        .map((detail) => detail.safeType),
     // Also include common implementation wrappers like `Right` from fpdart.
     'Right',
-  };
-
-  DisallowModelReturnFromRepository({
-    required super.config,
-    required super.layerResolver,
-  }) : super(code: _code);
+  },
+        super(code: _code);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    // This rule only applies to repository implementations.
+    // This rule only applies to files identified as repository implementations.
     final component = layerResolver.getComponent(resolver.source.fullName);
     if (component != ArchComponent.repository) return;
 
-    // This is the core of the lint: inspect every return statement.
     context.registry.addReturnStatement((node) {
       final expression = node.expression;
       if (expression == null) return;
@@ -67,19 +65,27 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
     });
   }
 
-  /// Recursively unwraps a type (e.g., `Future<Either<L, R>>` or `Right<R>`) to get `R`.
-  /// This now uses the centrally configured wrapper types for maximum flexibility.
+  /// Recursively unwraps a type (e.g., `Future<Either<L, R>>` or `Right<R>`) to get `R`,
+  /// using the centrally configured wrapper types for maximum flexibility.
   DartType? _extractSuccessType(DartType? type) {
     if (type is! InterfaceType) return type;
 
-    // Check if the type's name is in our set of known wrappers.
-    if (_wrapperTypeNames.contains(type.element.name)) {
-      // If it's a wrapper, recurse on its last type argument (the "success" type).
-      if (type.typeArguments.isEmpty) return null;
-      return _extractSuccessType(type.typeArguments.last);
+    final name = type.element.name;
+
+    // Always unwrap Future/FutureOr — they are universal in repository contracts
+    if (name == 'Future' || name == 'FutureOr') {
+      return type.typeArguments.isEmpty
+          ? null
+          : _extractSuccessType(type.typeArguments.single);
     }
 
-    // If it's not a known wrapper, it's the core type we want to inspect.
+    // Configurable wrappers (Either, Right, Result, etc.)
+    if (_wrapperTypeNames.contains(name)) {
+      return type.typeArguments.isEmpty
+          ? null
+          : _extractSuccessType(type.typeArguments.last);
+    }
+
     return type;
   }
 }

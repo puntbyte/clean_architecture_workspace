@@ -1,7 +1,6 @@
 // lib/srcs/lints/structure/enforce_type_safety.dart
 
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
@@ -10,108 +9,110 @@ import 'package:clean_architecture_lints/src/models/type_safeties_config.dart';
 import 'package:clean_architecture_lints/src/utils/ast_utils.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-/// A powerful lint that enforces strong types in method signatures, migrating
+/// A lint that enforces strong types in method signatures, migrating
 /// away from unsafe primitives based on the `type_safeties` configuration.
 class EnforceTypeSafety extends ArchitectureLintRule {
-  static const _code = LintCode(
-    name: 'enforce_type_safety',
-    problemMessage: 'Architectural type safety violation.', // Message is generated dynamically.
+  static const _returnCode = LintCode(
+    name: 'enforce_type_safety_return',
+    problemMessage: 'The return type should be `{0}`, not `{1}`.',
+    correctionMessage: 'Consider refactoring to use the safer `{0}` type.',
+    errorSeverity: DiagnosticSeverity.WARNING,
+  );
+  static const _parameterCode = LintCode(
+    name: 'enforce_type_safety_parameter',
+    problemMessage: 'The parameter `{0}` should be of type `{1}`, not `{2}`.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
-  const EnforceTypeSafety({
-    required super.config,
-    required super.layerResolver,
-  }) : super(code: _code);
+  const EnforceTypeSafety({required super.config, required super.layerResolver})
+    : super(code: _returnCode);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
     if (config.typeSafeties.rules.isEmpty) return;
 
     context.registry.addMethodDeclaration((node) {
-      final component = layerResolver.getComponent(
-        resolver.source.fullName,
-        className: node.parent is ClassDeclaration
-            ? (node.parent as ClassDeclaration?)?.name.lexeme
-            : null,
-      );
+      final parent = node.parent;
+      final className = parent is ClassDeclaration ? parent.name.lexeme : null;
+      final component = layerResolver.getComponent(resolver.source.fullName, className: className);
       if (component == ArchComponent.unknown) return;
 
-      final componentId = component.id;
-
-      // Filter to get only the rules that apply to the current component.
-      final applicableRules = config.typeSafeties.rules.where(
-        (rule) => rule.on.contains(componentId),
-      );
+      // Pre-filter rules to get only those applicable to this component.
+      final applicableRules = config.typeSafeties.rulesFor(component.id);
       if (applicableRules.isEmpty) return;
 
-      // Separate rules by what they check.
-      final returnRules = applicableRules.where((r) => r.target == TypeSafetyTarget.return$);
-      final paramRules = applicableRules.where((r) => r.target == TypeSafetyTarget.parameter);
+      // Check return types
+      _validateReturnType(node, applicableRules, reporter);
 
-      for (final rule in returnRules) {
-        _validateReturnType(node, rule, reporter);
-      }
-      for (final rule in paramRules) {
-        _validateParameters(node, rule, reporter);
-      }
+      // Check parameters
+      _validateParameters(node, applicableRules, reporter);
     });
   }
 
   void _validateReturnType(
     MethodDeclaration node,
-    TypeSafetyRule rule,
+    List<TypeSafetyRule> rules,
     DiagnosticReporter reporter,
   ) {
-    final element = node.declaredFragment?.element;
-    if (element is ConstructorElement || element is SetterElement) return;
-
     final returnTypeNode = node.returnType;
-    if (returnTypeNode == null) return;
+    final returnType = returnTypeNode?.type;
+    if (returnTypeNode == null || returnType == null) return;
 
-    // Check if the return type's source text starts with the unsafe type.
-    final returnTypeSource = returnTypeNode.toSource();
-    if (returnTypeSource.startsWith(rule.unsafeType)) {
-      reporter.atNode(
-        returnTypeNode,
-        LintCode(
-          name: 'unsafe_return_type',
-          problemMessage: 'The return type should be `${rule.safeType}`, not `${rule.unsafeType}`.',
-          correctionMessage: 'Consider refactoring to use the safer `${rule.safeType}` type.',
-        ),
-      );
+    final returnTypeName = returnType.element?.name;
+    if (returnTypeName == null) return;
+
+    // Check against all applicable return rules.
+    for (final rule in rules) {
+      for (final detail in rule.returns) {
+        if (returnTypeName == detail.unsafeType) {
+          reporter.atNode(
+            returnTypeNode,
+            _returnCode,
+            arguments: [detail.safeType, detail.unsafeType],
+          );
+          return; // Report once per return type.
+        }
+      }
     }
   }
 
   void _validateParameters(
     MethodDeclaration node,
-    TypeSafetyRule rule,
+    List<TypeSafetyRule> rules,
     DiagnosticReporter reporter,
   ) {
-    for (final parameter in node.parameters?.parameters ?? <FormalParameter>[]) {
+    if (node.parameters == null) return;
+
+    for (final parameter in node.parameters!.parameters) {
       final paramName = parameter.name?.lexeme;
       final typeNode = AstUtils.getParameterTypeNode(parameter);
-      if (paramName == null || typeNode == null) continue;
+      final paramType = typeNode?.type;
 
-      // If an identifier is specified, the parameter name must match.
-      if (rule.identifier != null) {
-        if (!paramName.toLowerCase().contains(rule.identifier!.toLowerCase())) {
-          continue;
+      if (paramName == null || typeNode == null || paramType == null) continue;
+
+      final paramTypeName = paramType.element?.name;
+      if (paramTypeName == null) continue;
+
+      // Check against all applicable parameter rules.
+      for (final rule in rules) {
+        for (final detail in rule.parameters) {
+          // Check if both the type and (if specified) the identifier match.
+          if (paramTypeName == detail.unsafeType) {
+            final identifierMatches =
+                detail.identifier == null ||
+                paramName.toLowerCase().contains(detail.identifier!.toLowerCase());
+
+            if (identifierMatches) {
+              reporter.atNode(
+                typeNode,
+                _parameterCode,
+                arguments: [paramName, detail.safeType, detail.unsafeType],
+              );
+              // Break inner loops to report only once per parameter.
+              break;
+            }
+          }
         }
-      }
-
-      // Check if the parameter's type source text starts with the unsafe type.
-      final typeSource = typeNode.toSource();
-      if (typeSource.startsWith(rule.unsafeType)) {
-        reporter.atNode(
-          typeNode,
-          LintCode(
-            name: 'unsafe_parameter_type',
-            problemMessage:
-                'The parameter `$paramName` should be of type `${rule.safeType}`, not '
-                '`${rule.unsafeType}`.',
-          ),
-        );
       }
     }
   }
