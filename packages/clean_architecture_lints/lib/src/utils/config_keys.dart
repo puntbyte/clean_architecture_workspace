@@ -13,6 +13,7 @@ class ConfigKey {
   static const layer = _LayerKeys();
   static const rule = _RuleKeys();
   static const service = _ServiceKeys();
+  static const proxy = _ProxyKeys();
 }
 
 /// Keys for the top-level blocks within the `clean_architecture` configuration.
@@ -116,4 +117,11 @@ class _ServiceKeys {
 
   String get dependencyInjection => 'dependency_injection';
   String get serviceLocator => 'service_locator';
+}
+
+class _ProxyKeys {
+  const _ProxyKeys();
+
+  String get package => 'package:';
+  String get lib => 'lib/';
 }

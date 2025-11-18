@@ -84,6 +84,39 @@ custom_lint:
           widget: 'widgets'
           manager: [ 'managers', 'bloc', 'cubit' ]
 
+      # A list of custom, user-defined inheritance rules, enforced by `enforce_inheritance`.
+      # Core rules (Entity, Repository, UseCase) are handled by their own lints but can be overridden here.
+      inheritances:
+        # Overriding the default Entity contract to user defined.
+        - on: 'entity'
+          required:
+            name: 'Entity'
+            import: 'package:example/core/entity/entity.dart'
+
+        # Example of overriding the default UseCase contract.
+        - on: 'usecase'
+          required:
+            - name: 'MyBaseUseCase'
+              import: 'package:my_core/my_core.dart'
+            - name: 'MyOtherUseCase'
+              import: 'package:my_core/my_core.dart'
+
+        # Example of a suggested inheritance rule.
+        - on: 'manager'
+          allowed:
+            name: 'Bloc'
+            import: 'package:bloc/bloc.dart'
+
+        # We can use both `suggested` and `forbidden` in a single rule for widget.
+        - on: 'widget'
+          allowed:
+            name: 'HookWidget'
+            import: 'package:flutter_hooks/flutter_hooks.dart'
+
+          forbidden:
+            name: 'StatefulWidget'
+            import: 'package:flutter/widgets.dart'
+
       # in all configurations `on` can accept a single string or a list of strings.
 
       # [Section 3] Defines syntactic (`pattern`/`antipattern`) and semantic (`grammar`)
@@ -126,40 +159,6 @@ custom_lint:
         - on: state.implementation
           pattern: '{{name}}'
           grammar: '{{subject}}({{adjective}}|{{verb.gerund}}|{{verb.past}})'
-
-      # A list of custom, user-defined inheritance rules, enforced by `enforce_inheritance`.
-      # Core rules (Entity, Repository, UseCase) are handled by their own lints but can be overridden here.
-      inheritances:
-        # Example of overriding the default Entity contract.
-        - on: 'entity'
-          required:
-            name: 'Entity'
-            import: 'package:example/core/entity/entity.dart'
-
-        # Example of overriding the default UseCase contract.
-        - on: 'usecase'
-          required:
-            - name: 'MyBaseUseCase'
-              import: 'package:my_core/my_core.dart'
-            - name: 'MyOtherUseCase'
-              import: 'package:my_core/my_core.dart'
-
-        # Example of a suggested inheritance rule.
-        - on: 'manager'
-          allowed:
-            name: 'Bloc'
-            import: 'package:bloc/bloc.dart'
-
-        # We can use both `suggested` and `forbidden` in a single rule for widget.
-        - on: 'widget'
-          allowed:
-            name: 'HookWidget'
-            import: 'package:flutter_hooks/flutter_hooks.dart'
-
-          forbidden:
-            name: 'StatefulWidget'
-            import: 'package:flutter/widgets.dart'
-
 
       # A unified list of rules to enforce strong types and migrate away from unsafe primitives.
       type_safeties:

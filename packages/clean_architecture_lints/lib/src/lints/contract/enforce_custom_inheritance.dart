@@ -30,7 +30,13 @@ class EnforceCustomInheritance extends ArchitectureLintRule {
   final Map<String, InheritanceRule> _rules;
 
   EnforceCustomInheritance({required super.config, required super.layerResolver})
-    : _rules = {for (final rule in config.inheritances.rules) rule.on: rule},
+    : _rules = {
+        for (final rule in config.inheritances.rules)
+          if (rule.on != ArchComponent.entity.id &&
+              rule.on != ArchComponent.contract.id &&
+              rule.on != ArchComponent.usecase.id)
+            rule.on: rule,
+      },
       super(code: _requiredCode);
 
   @override
@@ -52,18 +58,14 @@ class EnforceCustomInheritance extends ArchitectureLintRule {
 
       // --- 1. CHECK FOR ALLOWED (OVERRIDE) ---
       if (rule.allowed.isNotEmpty) {
-        final hasAllowed = rule.allowed.any(
-          (allowed) => _hasSupertype(classElement, allowed, context),
-        );
-        if (hasAllowed) {
+        if (rule.allowed.any((allowed) => _hasSupertype(classElement, allowed, context))) {
           return; // This class is explicitly allowed, so we're done.
         }
       }
 
       // --- 2. CHECK FOR REQUIRED INHERITANCE ---
       if (rule.required.isNotEmpty) {
-        final hasRequired = rule.required.any((req) => _hasSupertype(classElement, req, context));
-        if (!hasRequired) {
+        if (!rule.required.any((req) => _hasSupertype(classElement, req, context))) {
           final requiredNames = rule.required.map((r) => r.name).join(' or ');
           reporter.atToken(node.name, _requiredCode, arguments: [component.label, requiredNames]);
         }

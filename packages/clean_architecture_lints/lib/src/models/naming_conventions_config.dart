@@ -19,10 +19,7 @@ class NamingConventionsConfig {
     final ruleList = map.asMapList(ConfigKey.root.namings);
 
     return NamingConventionsConfig(
-      rules: ruleList
-          .map(NamingRule.tryFromMap)
-          .whereType<NamingRule>()
-          .toList(),
+      rules: ruleList.map(NamingRule.tryFromMap).whereType<NamingRule>().toList(),
     );
   }
 
@@ -30,9 +27,7 @@ class NamingConventionsConfig {
   ///
   /// It searches the list of rules to find one where the `on` property
   /// contains the component's string identifier.
-  NamingRule? getRuleFor(ArchComponent component) {
-    return rules.firstWhereOrNull(
-          (rule) => rule.on.contains(component.id),
-    );
-  }
+  NamingRule? getRuleFor(ArchComponent component) => rules.firstWhereOrNull(
+    (rule) => rule.on.contains(component.id),
+  );
 }

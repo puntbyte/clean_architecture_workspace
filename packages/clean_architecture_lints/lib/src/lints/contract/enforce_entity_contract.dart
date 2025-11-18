@@ -1,56 +1,93 @@
-// lib/srcs/lints/contract/enforce_entity_contract.dart
+// lib/srcs/lints/contract/enforce_entity_contract.dart (Main class)
 
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
+import 'package:clean_architecture_lints/src/models/inheritances_config.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class EnforceEntityContract extends ArchitectureLintRule {
-  static const _code = LintCode(
-    name: 'enforce_entity_contract',
-    problemMessage: 'Entities must extend the base entity class `{0}`.',
-    correctionMessage: 'Add `extends {0}` to the class definition.',
-    errorSeverity: DiagnosticSeverity.WARNING,
-  );
+  static const _meta = EnforceEntityContractMeta();
 
-  static const _defaultBaseName = 'Entity';
-  static const _defaultCorePackagePath =
-      'package:clean_architecture_core/clean_architecture_core.dart';
-
-  final bool _isIgnored;
-
-  EnforceEntityContract({required super.config, required super.layerResolver})
-    : _isIgnored = config.inheritances.rules.any((r) => r.on == ArchComponent.entity.id),
-      super(code: _code);
+  const EnforceEntityContract({
+    required super.config,
+    required super.layerResolver,
+  }) : super(code: _meta);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    if (_isIgnored) return;
     if (layerResolver.getComponent(resolver.source.fullName) != ArchComponent.entity) return;
 
     context.registry.addClassDeclaration((node) {
       if (node.abstractKeyword != null) return;
-
       final classElement = node.declaredFragment?.element;
       if (classElement == null) return;
 
-      // Define the expected URI for the local project's base Entity.
-      final expectedLocalUri = 'package:${context.pubspec.name}/core/entity/entity.dart';
+      final customRule = config.inheritances.ruleFor(ArchComponent.entity.id);
+      final List<InheritanceDetail> requiredSupertypes;
 
-      final hasCorrectSupertype = classElement.allSupertypes.any((supertype) {
-        final superElement = supertype.element;
-        final libraryUri = superElement.library.firstFragment.source.uri.toString();
+      if (customRule != null && customRule.required.isNotEmpty) {
+        requiredSupertypes = customRule.required;
+      } else {
+        requiredSupertypes = [
+          _meta.defaultRule,
+          InheritanceDetail(
+            name: _meta.defaultRule.name,
+            import: 'package:${context.pubspec.name}/core/entity/entity.dart',
+          ),
+        ];
+      }
 
-        // Check if the supertype matches the required name and comes from either
-        // the official core package or the local project's core directory.
-        return superElement.name == _defaultBaseName &&
-            (libraryUri == _defaultCorePackagePath || libraryUri == expectedLocalUri);
-      });
+      final hasCorrectSupertype = requiredSupertypes.any(
+            (detail) => _hasSupertype(classElement, detail, context),
+      );
 
       if (!hasCorrectSupertype) {
-        reporter.atToken(node.name, _code, arguments: [_defaultBaseName]);
+        final requiredNames = requiredSupertypes.map((r) => r.name).toSet().join(' or ');
+        // FIX: Pass the static code object directly.
+        reporter.atToken(node.name, _meta, arguments: [requiredNames, requiredNames]);
       }
     });
   }
+
+  bool _hasSupertype(ClassElement element, InheritanceDetail detail, CustomLintContext context) {
+    final expectedUri = _buildExpectedUri(detail.import, context);
+    return element.allSupertypes.any((supertype) {
+      final superElement = supertype.element;
+      final libraryUri = superElement.library.firstFragment.source.uri.toString();
+      return superElement.name == detail.name && libraryUri == expectedUri;
+    });
+  }
+
+  // FIX: Simplified URI builder.
+  String _buildExpectedUri(String configPath, CustomLintContext context) {
+    if (configPath.startsWith('package:')) return configPath;
+    final packageName = context.pubspec.name;
+    return 'package:$packageName/$configPath';
+  }
+}
+
+class EnforceEntityContractMeta extends LintCode {
+  static const _name = 'enforce_entity_contract';
+  static const _problemMessage = 'Entities must extend or implement one of: {0}.';
+  static const _correctionMessage = 'Add `extends {1}` to the class definition.'; // Parameterized
+  static const DiagnosticSeverity _errorSeverity = DiagnosticSeverity.WARNING;
+
+  const EnforceEntityContractMeta()
+      : super(
+    name: _name,
+    problemMessage: _problemMessage,
+    correctionMessage: _correctionMessage,
+    errorSeverity: _errorSeverity,
+  );
+
+  static String get lintName => _name;
+  static String problemMessageFor(String name) => _problemMessage.replaceFirst('{0}', name);
+
+  InheritanceDetail get defaultRule => const InheritanceDetail(
+    name: 'Entity',
+    import: 'package:clean_architecture_core/clean_architecture_core.dart',
+  );
 }

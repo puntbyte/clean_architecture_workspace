@@ -1,11 +1,14 @@
 // lib/src/fixes/create_use_case_fix.dart
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
-// Deliberate import of internal AST locator utility used by many analyzer plugins.
+
+// Intentionally imported (still common in plugin code)
 // ignore: implementation_imports
-import 'package:analyzer/src/dart/ast/utilities.dart';
+import 'package:analyzer/src/dart/ast/utilities.dart' show NodeLocator2;
+import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_dart.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/models/architecture_config.dart';
@@ -18,46 +21,22 @@ import 'package:code_builder/code_builder.dart' as cb;
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:dart_style/dart_style.dart';
 
-/// A private data class to hold the configuration derived from method parameters.
-class _UseCaseGenerationConfig {
-  final cb.Reference baseClassName;
-  final List<cb.Reference> genericTypes;
-  final List<cb.Parameter> callParams;
-  final List<cb.Expression> repoCallPositionalArgs;
-  final Map<String, cb.Expression> repoCallNamedArgs;
-  final cb.TypeDef? recordTypeDef;
-
-  _UseCaseGenerationConfig({
-    required this.baseClassName,
-    required this.genericTypes,
-    required this.callParams,
-    this.repoCallPositionalArgs = const [],
-    this.repoCallNamedArgs = const {},
-    this.recordTypeDef,
-  });
-}
-
-/// A quick fix that generates a complete UseCase file for a repository method
-/// flagged by the `missing_use_case` lint.
-class CreateUseCaseFix extends Fix {
+class CreateUseCaseFix extends DartFix {
   final ArchitectureConfig config;
+
   CreateUseCaseFix({required this.config});
 
   @override
-  List<String> get filesToAnalyze => const ['**.dart'];
-
-  @override
   void run(
-      CustomLintResolver resolver,
-      ChangeReporter reporter,
-      CustomLintContext context,
-      Diagnostic diagnostic,
-      List<Diagnostic> others,
-      ) {
+    CustomLintResolver resolver,
+    ChangeReporter reporter,
+    CustomLintContext context,
+    Diagnostic diagnostic,
+    List<Diagnostic> others,
+  ) {
     context.addPostRunCallback(() async {
       final resolvedUnit = await resolver.getResolvedUnitResult();
-      final locator = NodeLocator2(diagnostic.problemMessage.offset);
-      final node = locator.searchWithin(resolvedUnit.unit);
+      final node = NodeLocator2(diagnostic.offset).searchWithin(resolvedUnit.unit);
       final methodNode = node?.thisOrAncestorOfType<MethodDeclaration>();
       if (methodNode == null) return;
       final repoNode = methodNode.thisOrAncestorOfType<ClassDeclaration>();
@@ -65,86 +44,116 @@ class CreateUseCaseFix extends Fix {
 
       final useCaseFilePath = PathUtils.getUseCaseFilePath(
         methodName: methodNode.name.lexeme,
-        repoPath: diagnostic.problemMessage.filePath,
+        repoPath: diagnostic.source.fullName,
         config: config,
       );
       if (useCaseFilePath == null) return;
 
-      final changeBuilder = reporter.createChangeBuilder(
-        message: 'Create UseCase for `${methodNode.name.lexeme}`',
-        priority: 90,
-      )
+      reporter
+          .createChangeBuilder(
+            message: 'Create UseCase for `${methodNode.name.lexeme}`',
+            priority: 90,
+          )
+          // Use named parameter `customPath` to write to a new file path.
+          .addDartFileEdit(
+            (DartFileEditBuilder builder) {
+              final library = _buildUseCaseLibrary(method: methodNode, repoNode: repoNode);
+              _addImports(
+                builder: builder,
+                method: methodNode,
+                repoNode: repoNode,
+                context: context,
+              );
 
-      ..addDartFileEdit(customPath: useCaseFilePath, (builder) {
-        _addImports(builder: builder, method: methodNode, repoNode: repoNode, context: context);
-        final library = _buildUseCaseLibrary(method: methodNode, repoNode: repoNode);
-        final emitter = cb.DartEmitter(useNullSafetySyntax: true);
-        final formattedCode = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion)
-            .format(library.accept(emitter).toString());
-        builder.addInsertion(0, (editBuilder) => editBuilder.write(formattedCode));
-      });
+              final emitter = cb.DartEmitter();
+              final raw = library.accept(emitter).toString();
+
+              final formattedCode = DartFormatter(
+                languageVersion: DartFormatter.latestLanguageVersion,
+              ).format(raw);
+
+              builder.addInsertion(
+                0,
+                (EditBuilder editBuilder) => editBuilder.write(formattedCode),
+              );
+            },
+            customPath: useCaseFilePath,
+          );
     });
   }
 
-  /// The main orchestrator method for building the UseCase library.
   cb.Library _buildUseCaseLibrary({
     required MethodDeclaration method,
     required ClassDeclaration repoNode,
   }) {
     final bodyElements = <cb.Spec>[];
     final methodName = method.name.lexeme;
-    final returnType = cb.refer(method.returnType?.toSource() ?? 'void');
-    final outputType = cb.refer(_extractOutputType(returnType.symbol!));
+    final returnType = method.returnType?.type;
+    final returnTypeRef = cb.refer(returnType?.getDisplayString() ?? 'void');
+    final outputType = extractOutputType(returnType);
 
-    final paramConfig = _buildParameterConfig(
+    final paramConfig = buildParameterConfigFromParams(
       params: method.parameters?.parameters ?? [],
       methodName: methodName,
       outputType: outputType,
+      // use config to derive names if available
+      unaryName:
+          config.inheritances
+              .ruleFor(ArchComponent.usecase.id)
+              ?.required
+              .firstWhereOrNull((d) => d.name.contains('Unary'))
+              ?.name ??
+          'UnaryUsecase',
+      nullaryName:
+          config.inheritances
+              .ruleFor(ArchComponent.usecase.id)
+              ?.required
+              .firstWhereOrNull((d) => d.name.contains('Nullary'))
+              ?.name ??
+          'NullaryUsecase',
     );
 
     if (paramConfig.recordTypeDef != null) {
       bodyElements.add(paramConfig.recordTypeDef!);
     }
 
-    // Get the required annotations from the central `annotations` config.
-    final requiredAnnotations = config.annotations.requiredFor(ArchComponent.usecase.id);
-
-    final annotations = requiredAnnotations
-        .where((a) => a.name.isNotEmpty)
-        .map((a) => cb.CodeExpression(cb.Code(a.name)))
-        .toList();
+    final annotationRule = config.annotations.ruleFor(ArchComponent.usecase.id);
+    final annotations =
+        annotationRule?.required.map((a) => cb.refer(a.name).call([])).toList() ?? [];
 
     final useCaseName = NamingUtils.getExpectedUseCaseClassName(methodName, config);
 
-    bodyElements.addAll(SyntaxBuilder.useCase(
-      useCaseName: useCaseName,
-      repoClassName: repoNode.name.lexeme,
-      methodName: methodName,
-      returnType: returnType,
-      baseClassName: paramConfig.baseClassName,
-      genericTypes: paramConfig.genericTypes,
-      callParams: paramConfig.callParams,
-      repoCallPositionalArgs: paramConfig.repoCallPositionalArgs,
-      repoCallNamedArgs: paramConfig.repoCallNamedArgs,
-      annotations: annotations,
-    ));
+    bodyElements.addAll(
+      SyntaxBuilder.useCase(
+        useCaseName: useCaseName,
+        repoClassName: repoNode.name.lexeme,
+        methodName: methodName,
+        returnType: returnTypeRef,
+        baseClassName: paramConfig.baseClassName,
+        genericTypes: paramConfig.genericTypes,
+        callParams: paramConfig.callParams,
+        repoCallPositionalArgs: paramConfig.repoCallPositionalArgs,
+        repoCallNamedArgs: paramConfig.repoCallNamedArgs,
+        annotations: annotations,
+      ),
+    );
 
     return SyntaxBuilder.library(body: bodyElements);
   }
 
-  /// A dedicated method to handle the logic for 0, 1, or multiple parameters.
-  _UseCaseGenerationConfig _buildParameterConfig({
+  /// Public — made testable.
+  ///
+  /// This is robust both for resolved ASTs (where `declaredElement` is present)
+  /// and for unresolved ASTs (where we fallback to reading the type/name from the AST).
+  static UseCaseGenerationConfig buildParameterConfigFromParams({
     required List<FormalParameter> params,
     required String methodName,
     required cb.Reference outputType,
+    required String unaryName,
+    required String nullaryName,
   }) {
-    // Find the configured base class names from the custom inheritance rules, with defaults.
-    final useCaseRule = config.inheritances.rules.firstWhereOrNull((r) => r.on == ArchComponent.usecase.id);
-    final unaryName = useCaseRule?.required.firstWhereOrNull((d) => d.name.contains('Unary'))?.name ?? 'UnaryUsecase';
-    final nullaryName = useCaseRule?.required.firstWhereOrNull((d) => d.name.contains('Nullary'))?.name ?? 'NullaryUsecase';
-
     if (params.isEmpty) {
-      return _UseCaseGenerationConfig(
+      return UseCaseGenerationConfig(
         baseClassName: cb.refer(nullaryName),
         genericTypes: [outputType],
         callParams: [],
@@ -153,48 +162,128 @@ class CreateUseCaseFix extends Fix {
 
     if (params.length == 1) {
       final param = params.first;
-      final paramType = cb.refer(param.toSource().split(' ').first);
-      final paramName = param.name?.lexeme ?? 'param';
-      return _UseCaseGenerationConfig(
+
+      // Prefer resolved element when available
+      final paramElement = _getParameterElement(param);
+      if (paramElement != null && paramElement.name != null) {
+        final paramType = cb.refer(
+          paramElement.type.getDisplayString(),
+        ); // DartType.getDisplayString exists
+        final paramName = paramElement.name!;
+        final isPositional = paramElement.isPositional && !paramElement.isOptionalPositional;
+        final isNamed = paramElement.isNamed;
+
+        return UseCaseGenerationConfig(
+          baseClassName: cb.refer(unaryName),
+          genericTypes: [outputType, paramType],
+          callParams: [SyntaxBuilder.parameter(name: paramName, type: paramType)],
+          repoCallPositionalArgs: isPositional ? [cb.refer(paramName)] : [],
+          repoCallNamedArgs: isNamed ? {paramName: cb.refer(paramName)} : {},
+        );
+      }
+
+      // Fallback: extract info from AST for unresolved units
+      final astInfo = _extractParamFromAst(param);
+      if (astInfo.name == null) {
+        return UseCaseGenerationConfig.empty(nullaryName, outputType);
+      }
+
+      final paramType = cb.refer(astInfo.type ?? 'dynamic');
+      final paramName = astInfo.name!;
+      final isNamed = astInfo.isNamed;
+      final isOptionalPositional = astInfo.isOptionalPositional;
+      final isPositional = !isNamed;
+
+      return UseCaseGenerationConfig(
         baseClassName: cb.refer(unaryName),
         genericTypes: [outputType, paramType],
         callParams: [SyntaxBuilder.parameter(name: paramName, type: paramType)],
-        repoCallPositionalArgs: param.isPositional ? [cb.refer(paramName)] : [],
-        repoCallNamedArgs: param.isNamed ? {paramName: cb.refer(paramName)} : {},
+        repoCallPositionalArgs: (isPositional && !isOptionalPositional)
+            ? [cb.refer(paramName)]
+            : [],
+        repoCallNamedArgs: isNamed ? {paramName: cb.refer(paramName)} : {},
       );
     }
 
+    // multi params -> record param wrapper
     final useCaseNamePascal = methodName.toPascalCase();
-    final recordName = config.namingConventions.getRuleFor(ArchComponent.usecaseParameter)!.pattern
-        .replaceAll('{{name}}', useCaseNamePascal);
+    final recordName = '_${useCaseNamePascal}Params';
     final recordRef = cb.refer(recordName);
 
-    final namedFields = <String, cb.Reference>{};
-    final repoCallNamedArgs = <String, cb.Expression>{};
-
+    final recordFields = <String, cb.Reference>{};
+    final repoCallArgs = <String, cb.Expression>{};
     for (final p in params) {
-      final element = p.declaredFragment?.element;
-      if (element == null) continue;
-      final displayName = element.displayName;
-      namedFields[displayName] = cb.refer(element.type.getDisplayString());
-      repoCallNamedArgs[displayName] = cb.refer('params').property(displayName);
+      final element = _getParameterElement(p);
+      if (element != null && element.name != null) {
+        final name = element.name!;
+
+        recordFields[name] = cb.refer(element.runtimeType.toString());
+        repoCallArgs[name] = cb.refer('params').property(name);
+        continue;
+      }
+
+      // fallback from AST
+      final astInfo = _extractParamFromAst(p);
+      if (astInfo.name == null) continue;
+      final name = astInfo.name!;
+      recordFields[name] = cb.refer(astInfo.type ?? 'dynamic');
+      repoCallArgs[name] = cb.refer('params').property(name);
     }
 
     final recordTypeDef = SyntaxBuilder.typeDef(
       name: recordName,
-      definition: SyntaxBuilder.recordType(namedFields: namedFields),
+      definition: SyntaxBuilder.recordType(namedFields: recordFields),
     );
-
-    return _UseCaseGenerationConfig(
+    return UseCaseGenerationConfig(
       baseClassName: cb.refer(unaryName),
       genericTypes: [outputType, recordRef],
       callParams: [SyntaxBuilder.parameter(name: 'params', type: recordRef)],
-      repoCallNamedArgs: repoCallNamedArgs,
+      repoCallNamedArgs: repoCallArgs,
       recordTypeDef: recordTypeDef,
     );
   }
 
-  /// Adds all necessary imports to the file, preventing duplicates.
+  // Replace the old helper with this:
+  static FormalParameterElement? _getParameterElement(FormalParameter param) {
+    // Unwrap DefaultFormalParameter to get the inner normalized node
+    final actual = param is DefaultFormalParameter ? param.parameter : param;
+
+    // Try fragment-based element (analyzer 8.x)
+    final fragment = actual.declaredFragment;
+    if (fragment != null) {
+      final elem = fragment.element;
+      return elem;
+    }
+
+    // No resolved element available
+    return null;
+  }
+
+  static _AstParamInfo _extractParamFromAst(FormalParameter param) {
+    final actual = param is DefaultFormalParameter ? param.parameter : param;
+
+    final name = actual.name?.lexeme;
+    String? typeSource;
+
+    if (actual is SimpleFormalParameter) {
+      typeSource = actual.type?.toSource();
+    } else if (actual is FieldFormalParameter) {
+      typeSource = actual.type?.toSource();
+    } else if (actual is FunctionTypedFormalParameter) {
+      typeSource = actual.returnType?.toSource();
+    }
+
+    final isNamed = param.isNamed;
+    final isOptionalPositional = param.isOptionalPositional;
+
+    return _AstParamInfo(
+      name: name,
+      type: typeSource,
+      isNamed: isNamed,
+      isOptionalPositional: isOptionalPositional,
+    );
+  }
+
   void _addImports({
     required DartFileEditBuilder builder,
     required MethodDeclaration method,
@@ -203,67 +292,95 @@ class CreateUseCaseFix extends Fix {
   }) {
     final importedUris = <String>{};
     void importLibraryChecked(Uri uri) {
-      final uriString = uri.toString();
-      if (uriString.isNotEmpty && importedUris.add(uriString)) {
+      if (uri.isScheme('dart')) return;
+      if (importedUris.add(uri.toString())) {
         builder.importLibrary(uri);
       }
     }
 
-    String buildUri(String configPath) {
-      if (configPath.startsWith('package:')) return configPath;
-      final packageName = context.pubspec.name;
-      final sanitized = configPath.startsWith('/') ? configPath.substring(1) : configPath;
-      return 'package:$packageName/$sanitized';
+    final repoLibrary = repoNode.declaredFragment?.libraryFragment.element;
+    if (repoLibrary != null) {
+      final src = repoLibrary.firstFragment.source;
+      importLibraryChecked(src.uri);
     }
 
-    final repoLibrary = repoNode.declaredFragment?.element.library;
-    if (repoLibrary != null) importLibraryChecked(repoLibrary.uri);
+    config.annotations.ruleFor(ArchComponent.usecase.id)?.required.forEach((detail) {
+      if (detail.import != null) importLibraryChecked(Uri.parse(detail.import!));
+    });
+    config.inheritances.ruleFor(ArchComponent.usecase.id)?.required.forEach((detail) {
+      if (detail.import.isNotEmpty) importLibraryChecked(Uri.parse(detail.import));
+    });
 
-    // Add imports for required annotations.
-    final requiredAnnotations = config.annotations.requiredFor(ArchComponent.usecase.id);
-    for (final annotation in requiredAnnotations) {
-      if (annotation.import != null) importLibraryChecked(Uri.parse(annotation.import!));
-    }
-
-    // Add imports for base use case classes.
-    final useCaseRule = config.inheritances.rules.firstWhereOrNull((r) => r.on == ArchComponent.usecase.id);
-    if (useCaseRule != null) {
-      for (final detail in useCaseRule.required) {
-        importLibraryChecked(Uri.parse(buildUri(detail.import)));
-      }
-    } else {
-      // Sensible default if no custom rule is defined.
-      importLibraryChecked(Uri.parse('package:clean_architecture_core/usecase/usecase.dart'));
-    }
-
-    // Add imports for type safety wrappers.
     for (final rule in config.typeSafeties.rules) {
-      if (rule.import != null) importLibraryChecked(Uri.parse(buildUri(rule.import!)));
+      for (final detail in rule.returns) {
+        if (detail.import != null) importLibraryChecked(Uri.parse(detail.import!));
+      }
+      for (final detail in rule.parameters) {
+        if (detail.import != null) importLibraryChecked(Uri.parse(detail.import!));
+      }
     }
 
-    // Recursively add imports for all types in the method signature.
-    for (final param in method.parameters?.parameters ?? <FormalParameter>[]) {
-      _importType(param.declaredFragment?.element.type, importLibraryChecked);
-    }
     _importType(method.returnType?.type, importLibraryChecked);
+    for (final param in method.parameters?.parameters ?? <FormalParameter>[]) {
+      _importType(_getParameterElement(param)?.type, importLibraryChecked);
+    }
   }
 
-  /// Recursively analyzes a type to import all necessary files.
   void _importType(DartType? type, void Function(Uri) importLibrary) {
-    if (type == null) return;
-    if (type is InterfaceType) {
-      for (final arg in type.typeArguments) _importType(arg, importLibrary);
+    if (type == null || (type.element?.library?.isInSdk ?? false)) return;
+
+    final source = type.element?.library?.firstFragment.source;
+    if (source != null) {
+      importLibrary(source.uri);
     }
-    final library = type.element?.library;
-    if (library != null && !library.isInSdk) {
-      importLibrary(library.uri);
+    if (type is InterfaceType) {
+      for (final arg in type.typeArguments) {
+        _importType(arg, importLibrary);
+      }
     }
   }
 
-  /// Extracts the "success" type from a wrapper like Future<Either<L, R>>.
-  String _extractOutputType(String returnTypeSource) {
-    final regex = RegExp(r'<.*,\s*([^>]+)>|<([^>]+)>');
-    final match = regex.firstMatch(returnTypeSource);
-    return match?.group(2)?.trim() ?? match?.group(1)?.trim() ?? 'void';
+  cb.Reference extractOutputType(DartType? returnType) {
+    if (returnType is! InterfaceType) return cb.refer('void');
+    final futureArg = returnType.typeArguments.isNotEmpty ? returnType.typeArguments.first : null;
+    if (futureArg is! InterfaceType) return cb.refer('void');
+    final successArg = futureArg.typeArguments.isNotEmpty ? futureArg.typeArguments.last : null;
+    return cb.refer(successArg?.getDisplayString() ?? 'void');
   }
+}
+
+/// Public config returned from the parameter builder.
+class UseCaseGenerationConfig {
+  final cb.Reference baseClassName;
+  final List<cb.Reference> genericTypes;
+  final List<cb.Parameter> callParams;
+  final List<cb.Expression> repoCallPositionalArgs;
+  final Map<String, cb.Expression> repoCallNamedArgs;
+  final cb.TypeDef? recordTypeDef;
+
+  UseCaseGenerationConfig({
+    required this.baseClassName,
+    required this.genericTypes,
+    required this.callParams,
+    this.repoCallPositionalArgs = const [],
+    this.repoCallNamedArgs = const {},
+    this.recordTypeDef,
+  });
+
+  UseCaseGenerationConfig.empty(String nullaryName, cb.Reference outputType)
+    : this(baseClassName: cb.refer(nullaryName), genericTypes: [outputType], callParams: []);
+}
+
+class _AstParamInfo {
+  final String? name;
+  final String? type;
+  final bool isNamed;
+  final bool isOptionalPositional;
+
+  _AstParamInfo({
+    required this.name,
+    required this.type,
+    required this.isNamed,
+    required this.isOptionalPositional,
+  });
 }
