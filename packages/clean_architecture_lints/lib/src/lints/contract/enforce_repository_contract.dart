@@ -16,13 +16,14 @@ class EnforceRepositoryContract extends ArchitectureLintRule {
   );
 
   static const _defaultBaseName = 'Repository';
-  static const _defaultCorePackagePath = 'package:clean_architecture_core/clean_architecture_core.dart';
+  static const _defaultCorePackagePath =
+      'package:clean_architecture_core/clean_architecture_core.dart';
 
   final bool _isIgnored;
 
   EnforceRepositoryContract({required super.config, required super.layerResolver})
-      : _isIgnored = config.inheritances.rules.any((r) => r.on == ArchComponent.contract.id),
-        super(code: _code);
+    : _isIgnored = config.inheritances.rules.any((r) => r.on == ArchComponent.contract.id),
+      super(code: _code);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {

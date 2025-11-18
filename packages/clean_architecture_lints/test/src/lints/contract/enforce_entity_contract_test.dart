@@ -50,7 +50,8 @@ void main() {
       writeFile(p.join(projectPath, 'pubspec.yaml'), 'name: test_project');
       writeFile(
         p.join(projectPath, '.dart_tool', 'package_config.json'),
-        '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", "packageUri": "lib/"}]}',
+        '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", '
+        '"packageUri": "lib/"}]}',
       );
       writeFile(
         p.join(projectPath, 'lib', 'core', 'entity', 'entity.dart'),

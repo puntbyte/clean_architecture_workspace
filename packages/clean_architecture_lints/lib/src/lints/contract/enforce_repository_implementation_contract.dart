@@ -17,7 +17,8 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 class EnforceRepositoryImplementationContract extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_repository_implementation_contract',
-    problemMessage: 'Repository implementations must implement a repository interface from the domain layer.',
+    problemMessage:
+        'Repository implementations must implement a repository interface from the domain layer.',
     correctionMessage: 'Add `implements YourRepositoryInterface` to the class definition.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
@@ -44,8 +45,7 @@ class EnforceRepositoryImplementationContract extends ArchitectureLintRule {
       // comes from a file that the LayerResolver identifies as a `contract`.
       final hasContractSupertype = classElement.allSupertypes.any((supertype) {
         // We get the source file of the supertype's element.
-        final source = supertype.element.library?.firstFragment.source;
-        if (source == null) return false;
+        final source = supertype.element.library.firstFragment.source;
 
         // We then ask the LayerResolver what kind of component it is.
         return layerResolver.getComponent(source.fullName) == ArchComponent.contract;

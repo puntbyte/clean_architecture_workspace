@@ -6,7 +6,8 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
-import 'package:clean_architecture_lints/src/lints/contract/enforce_repository_implementation_contract.dart';
+import 'package:clean_architecture_lints/src/lints/contract/'
+    'enforce_repository_implementation_contract.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
@@ -31,12 +32,14 @@ void main() {
       String repositoryDir = 'repositories',
     }) async {
       final config = makeConfig(contractDir: contractDir, repositoryDir: repositoryDir);
-      final lint = EnforceRepositoryImplementationContract(config: config, layerResolver: LayerResolver(config));
+      final lint = EnforceRepositoryImplementationContract(
+        config: config,
+        layerResolver: LayerResolver(config),
+      );
 
-      final resolvedUnit = await contextCollection
-          .contextFor(filePath)
-          .currentSession
-          .getResolvedUnit(filePath) as ResolvedUnitResult;
+      final resolvedUnit =
+          await contextCollection.contextFor(filePath).currentSession.getResolvedUnit(filePath)
+              as ResolvedUnitResult;
 
       return lint.testRun(resolvedUnit);
     }
@@ -49,12 +52,23 @@ void main() {
 
       // Create virtual file system
       writeFile(p.join(projectPath, 'pubspec.yaml'), 'name: test_project');
-      writeFile(p.join(projectPath, '.dart_tool', 'package_config.json'),
-          '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", "packageUri": "lib/"}]}');
+      writeFile(
+        p.join(projectPath, '.dart_tool', 'package_config.json'),
+        '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", '
+        '"packageUri": "lib/"}]}',
+      );
 
       // Create the contract that implementations are expected to implement.
       writeFile(
-        p.join(projectPath, 'lib', 'features', 'user', 'domain', 'contracts', 'user_repository.dart'),
+        p.join(
+          projectPath,
+          'lib',
+          'features',
+          'user',
+          'domain',
+          'contracts',
+          'user_repository.dart',
+        ),
         'abstract class UserRepository {}',
       );
 
@@ -69,7 +83,15 @@ void main() {
     });
 
     test('should report violation when implementation does not implement a contract', () async {
-      final path = p.join(projectPath, 'lib', 'features', 'user', 'data', 'repositories', 'user_repository_impl.dart');
+      final path = p.join(
+        projectPath,
+        'lib',
+        'features',
+        'user',
+        'data',
+        'repositories',
+        'user_repository_impl.dart',
+      );
       writeFile(path, 'class UserRepositoryImpl {}');
 
       final lints = await runLint(filePath: path);
@@ -78,21 +100,40 @@ void main() {
       expect(lints.first.diagnosticCode.name, 'enforce_repository_implementation_contract');
     });
 
-    test('should not report violation when implementation correctly implements a contract', () async {
-      final path = p.join(projectPath, 'lib', 'features', 'user', 'data', 'repositories', 'user_repository_impl.dart');
-      writeFile(path, '''
+    test(
+      'should not report violation when implementation correctly implements a contract',
+      () async {
+        final path = p.join(
+          projectPath,
+          'lib',
+          'features',
+          'user',
+          'data',
+          'repositories',
+          'user_repository_impl.dart',
+        );
+        writeFile(path, '''
         import 'package:test_project/features/user/domain/contracts/user_repository.dart';
         class UserRepositoryImpl implements UserRepository {}
       ''');
 
-      final lints = await runLint(filePath: path);
-      expect(lints, isEmpty);
-    });
+        final lints = await runLint(filePath: path);
+        expect(lints, isEmpty);
+      },
+    );
 
     test('should not report violation when a superclass implements the contract', () async {
       // Define an abstract base class that implements the contract
       writeFile(
-        p.join(projectPath, 'lib', 'features', 'user', 'data', 'repositories', 'base_repo_impl.dart'),
+        p.join(
+          projectPath,
+          'lib',
+          'features',
+          'user',
+          'data',
+          'repositories',
+          'base_repo_impl.dart',
+        ),
         '''
         import 'package:test_project/features/user/domain/contracts/user_repository.dart';
         abstract class BaseRepoImpl implements UserRepository {}
@@ -100,7 +141,15 @@ void main() {
       );
 
       // Define a concrete class that extends the base class
-      final path = p.join(projectPath, 'lib', 'features', 'user', 'data', 'repositories', 'user_repository_impl.dart');
+      final path = p.join(
+        projectPath,
+        'lib',
+        'features',
+        'user',
+        'data',
+        'repositories',
+        'user_repository_impl.dart',
+      );
       writeFile(path, '''
         import 'base_repo_impl.dart';
         class UserRepositoryImpl extends BaseRepoImpl {}
@@ -111,7 +160,15 @@ void main() {
     });
 
     test('should not report violation for an abstract class in the repository layer', () async {
-      final path = p.join(projectPath, 'lib', 'features', 'user', 'data', 'repositories', 'abstract_repo_impl.dart');
+      final path = p.join(
+        projectPath,
+        'lib',
+        'features',
+        'user',
+        'data',
+        'repositories',
+        'abstract_repo_impl.dart',
+      );
       writeFile(path, 'abstract class AbstractRepoImpl {}');
 
       final lints = await runLint(filePath: path);
@@ -119,11 +176,23 @@ void main() {
     });
 
     test('should not run when file is not a repository implementation', () async {
-      final path = p.join(projectPath, 'lib', 'features', 'user', 'data', 'models', 'user_model.dart');
+      final path = p.join(
+        projectPath,
+        'lib',
+        'features',
+        'user',
+        'data',
+        'models',
+        'user_model.dart',
+      );
       writeFile(path, 'class UserModel {}');
 
       final lints = await runLint(filePath: path);
-      expect(lints, isEmpty, reason: 'The lint should ignore files not in a repository implementation directory.');
+      expect(
+        lints,
+        isEmpty,
+        reason: 'The lint should ignore files not in a repository implementation directory.',
+      );
     });
   });
 }

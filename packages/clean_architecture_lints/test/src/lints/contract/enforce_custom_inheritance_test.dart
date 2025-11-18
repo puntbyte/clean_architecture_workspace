@@ -34,10 +34,12 @@ void main() {
       final config = makeConfig(inheritances: inheritances);
       final lint = EnforceCustomInheritance(config: config, layerResolver: LayerResolver(config));
 
-      final resolvedUnit = await contextCollection
-          .contextFor(p.normalize(filePath))
-          .currentSession
-          .getResolvedUnit(p.normalize(filePath)) as ResolvedUnitResult;
+      final resolvedUnit =
+          await contextCollection
+                  .contextFor(p.normalize(filePath))
+                  .currentSession
+                  .getResolvedUnit(p.normalize(filePath))
+              as ResolvedUnitResult;
 
       return lint.testRun(resolvedUnit);
     }
@@ -50,12 +52,24 @@ void main() {
       Directory(testProjectPath).createSync(recursive: true);
 
       writeFile(p.join(testProjectPath, 'pubspec.yaml'), 'name: test_project');
-      writeFile(p.join(testProjectPath, '.dart_tool/package_config.json'),
-          '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", "packageUri": "lib/"}]}');
+      writeFile(
+        p.join(testProjectPath, '.dart_tool/package_config.json'),
+        '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", '
+        '"packageUri": "lib/"}]}',
+      );
 
-      writeFile(p.join(testProjectPath, 'lib/core/base_widget.dart'), 'abstract class BaseWidget {}');
-      writeFile(p.join(testProjectPath, 'lib/core/special_widget.dart'), 'abstract class SpecialWidget extends BaseWidget {}');
-      writeFile(p.join(testProjectPath, 'lib/core/forbidden_mixin.dart'), 'mixin ForbiddenMixin {}');
+      writeFile(
+        p.join(testProjectPath, 'lib/core/base_widget.dart'),
+        'abstract class BaseWidget {}',
+      );
+      writeFile(
+        p.join(testProjectPath, 'lib/core/special_widget.dart'),
+        'abstract class SpecialWidget extends BaseWidget {}',
+      );
+      writeFile(
+        p.join(testProjectPath, 'lib/core/forbidden_mixin.dart'),
+        'mixin ForbiddenMixin {}',
+      );
 
       contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
     });
@@ -67,11 +81,14 @@ void main() {
     group('Required Rule', () {
       final requiredRule = {
         'on': 'widget',
-        'required': {'name': 'BaseWidget', 'import': 'package:test_project/core/base_widget.dart'}
+        'required': {'name': 'BaseWidget', 'import': 'package:test_project/core/base_widget.dart'},
       };
 
       test('should report violation when a widget does not have the required supertype', () async {
-        final path = p.join(testProjectPath, 'lib/features/home/presentation/widgets/home_button.dart');
+        final path = p.join(
+          testProjectPath,
+          'lib/features/home/presentation/widgets/home_button.dart',
+        );
         writeFile(path, 'class HomeButton {}');
 
         final lints = await runLint(filePath: path, inheritances: [requiredRule]);
@@ -81,7 +98,10 @@ void main() {
       });
 
       test('should not report violation when a widget has the required supertype', () async {
-        final path = p.join(testProjectPath, 'lib/features/home/presentation/widgets/home_button.dart');
+        final path = p.join(
+          testProjectPath,
+          'lib/features/home/presentation/widgets/home_button.dart',
+        );
         writeFile(path, '''
           import 'package:test_project/core/base_widget.dart';
           class HomeButton extends BaseWidget {}
@@ -95,11 +115,17 @@ void main() {
     group('Forbidden Rule', () {
       final forbiddenRule = {
         'on': 'widget',
-        'forbidden': {'name': 'ForbiddenMixin', 'import': 'package:test_project/core/forbidden_mixin.dart'}
+        'forbidden': {
+          'name': 'ForbiddenMixin',
+          'import': 'package:test_project/core/forbidden_mixin.dart',
+        },
       };
 
       test('should report violation when a widget has a forbidden supertype', () async {
-        final path = p.join(testProjectPath, 'lib/features/home/presentation/widgets/home_button.dart');
+        final path = p.join(
+          testProjectPath,
+          'lib/features/home/presentation/widgets/home_button.dart',
+        );
         writeFile(path, '''
           import 'package:test_project/core/forbidden_mixin.dart';
           class HomeButton with ForbiddenMixin {}
@@ -113,38 +139,63 @@ void main() {
     });
 
     group('Allowed Rule Interaction', () {
-      test('should not report violation when a required rule is unmet but an allowed rule is met', () async {
-        final combinedRule = {
-          'on': 'widget',
-          'required': {'name': 'BaseWidget', 'import': 'package:test_project/core/base_widget.dart'},
-          'allowed': {'name': 'SpecialWidget', 'import': 'package:test_project/core/special_widget.dart'}
-        };
-        final path = p.join(testProjectPath, 'lib/features/home/presentation/widgets/home_button.dart');
-        writeFile(path, '''
+      test(
+        'should not report violation when a required rule is unmet but an allowed rule is met',
+        () async {
+          final combinedRule = {
+            'on': 'widget',
+            'required': {
+              'name': 'BaseWidget',
+              'import': 'package:test_project/core/base_widget.dart',
+            },
+            'allowed': {
+              'name': 'SpecialWidget',
+              'import': 'package:test_project/core/special_widget.dart',
+            },
+          };
+          final path = p.join(
+            testProjectPath,
+            'lib/features/home/presentation/widgets/home_button.dart',
+          );
+          writeFile(path, '''
           import 'package:test_project/core/special_widget.dart';
           class HomeButton extends SpecialWidget {}
         ''');
 
-        final lints = await runLint(filePath: path, inheritances: [combinedRule]);
-        expect(lints, isEmpty, reason: 'Allowed supertype should override the required check.');
-      });
+          final lints = await runLint(filePath: path, inheritances: [combinedRule]);
+          expect(lints, isEmpty, reason: 'Allowed supertype should override the required check.');
+        },
+      );
 
-      test('should not report violation when a forbidden rule is met but an allowed rule is also met', () async {
-        // This tests a rule like "don't extend Base, but it's okay if you extend Special which extends Base"
-        final combinedRule = {
-          'on': 'widget',
-          'forbidden': {'name': 'BaseWidget', 'import': 'package:test_project/core/base_widget.dart'},
-          'allowed': {'name': 'SpecialWidget', 'import': 'package:test_project/core/special_widget.dart'}
-        };
-        final path = p.join(testProjectPath, 'lib/features/home/presentation/widgets/home_button.dart');
-        writeFile(path, '''
+      test(
+        'should not report violation when a forbidden rule is met but an allowed rule is also met',
+        () async {
+          // This tests a rule like "don't extend Base, but it's okay if you extend Special which
+          // extends Base"
+          final combinedRule = {
+            'on': 'widget',
+            'forbidden': {
+              'name': 'BaseWidget',
+              'import': 'package:test_project/core/base_widget.dart',
+            },
+            'allowed': {
+              'name': 'SpecialWidget',
+              'import': 'package:test_project/core/special_widget.dart',
+            },
+          };
+          final path = p.join(
+            testProjectPath,
+            'lib/features/home/presentation/widgets/home_button.dart',
+          );
+          writeFile(path, '''
           import 'package:test_project/core/special_widget.dart';
           class HomeButton extends SpecialWidget {} // SpecialWidget extends BaseWidget
         ''');
 
-        final lints = await runLint(filePath: path, inheritances: [combinedRule]);
-        expect(lints, isEmpty, reason: 'Allowed supertype should override the forbidden check.');
-      });
+          final lints = await runLint(filePath: path, inheritances: [combinedRule]);
+          expect(lints, isEmpty, reason: 'Allowed supertype should override the forbidden check.');
+        },
+      );
     });
   });
 }

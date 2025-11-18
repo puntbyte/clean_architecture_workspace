@@ -30,8 +30,8 @@ class EnforceCustomInheritance extends ArchitectureLintRule {
   final Map<String, InheritanceRule> _rules;
 
   EnforceCustomInheritance({required super.config, required super.layerResolver})
-      : _rules = {for (final rule in config.inheritances.rules) rule.on: rule},
-        super(code: _requiredCode);
+    : _rules = {for (final rule in config.inheritances.rules) rule.on: rule},
+      super(code: _requiredCode);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
@@ -51,10 +51,10 @@ class EnforceCustomInheritance extends ArchitectureLintRule {
       if (rule == null) return;
 
       // --- 1. CHECK FOR ALLOWED (OVERRIDE) ---
-      // If the class implements an "allowed" supertype, it is considered valid
-      // and no other checks for this rule are needed.
       if (rule.allowed.isNotEmpty) {
-        final hasAllowed = rule.allowed.any((allowed) => _hasSupertype(classElement, allowed, context));
+        final hasAllowed = rule.allowed.any(
+          (allowed) => _hasSupertype(classElement, allowed, context),
+        );
         if (hasAllowed) {
           return; // This class is explicitly allowed, so we're done.
         }
@@ -83,15 +83,14 @@ class EnforceCustomInheritance extends ArchitectureLintRule {
     final expectedUri = _buildExpectedUri(detail.import, context);
     return element.allSupertypes.any((supertype) {
       final superElement = supertype.element;
-      return superElement.name == detail.name &&
-          superElement.library?.firstFragment.source.uri.toString() == expectedUri;
+      final libraryUri = superElement.library.firstFragment.source.uri.toString();
+      return superElement.name == detail.name && libraryUri == expectedUri;
     });
   }
 
   String _buildExpectedUri(String configPath, CustomLintContext context) {
     if (configPath.startsWith('package:')) return configPath;
     final packageName = context.pubspec.name;
-    // Handle paths that might start with 'lib/' but should not.
     final sanitizedPath = configPath.startsWith('lib/') ? configPath.substring(4) : configPath;
     return 'package:$packageName/$sanitizedPath';
   }
