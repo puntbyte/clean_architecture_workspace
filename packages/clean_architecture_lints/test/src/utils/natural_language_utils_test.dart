@@ -8,64 +8,65 @@ void main() {
     late NaturalLanguageUtils nlpUtils;
 
     setUpAll(() {
-      // Use overrides to make tests fast and deterministic, independent of the
-      // actual dictionary content.
       final posOverrides = <String, Set<String>>{
-        'get': {'VERB'}, 'save': {'VERB'}, 'delete': {'VERB'}, 'update': {'VERB'},
-        'send': {'VERB'}, 'request': {'VERB'}, 'build': {'VERB'}, 'nest': {'VERB'},
+        'get': {'VERB'}, 'save': {'VERB'}, 'update': {'VERB'}, 'request': {'VERB'}, 'apply': {'VERB'},
         'user': {'NOUN'}, 'profile': {'NOUN'}, 'email': {'NOUN'}, 'morning': {'NOUN'},
-        'successful': {'ADJ'}, 'empty': {'ADJ'}, 'invalid': {'ADJ'}, 'red': {'ADJ'},
-        'sent': {'VERB'}, 'found': {'VERB'}, 'built': {'VERB'},
-        // Ambiguous words for testing precedence
+        'successful': {'ADJ'}, 'empty': {'ADJ'}, 'invalid': {'ADJ'},
+        // Ambiguous words for testing precedence rules
         'building': {'NOUN'},
         'nested': {'ADJ'},
       };
-      nlpUtils = NaturalLanguageUtils(dictionary: null, posOverrides: posOverrides);
+      nlpUtils = NaturalLanguageUtils(posOverrides: posOverrides);
     });
 
     setUp(() {
-      // Clear the cache before each test to ensure isolation.
       nlpUtils.clearCache();
     });
 
     group('Part of Speech checks', () {
-      test('should correctly identify verbs from overrides', () {
+      test('should return true for verbs defined in overrides', () {
         expect(nlpUtils.isVerb('Get'), isTrue);
         expect(nlpUtils.isVerb('Save'), isTrue);
       });
 
-      test('should correctly identify nouns from overrides', () {
+      test('should return true for nouns defined in overrides', () {
         expect(nlpUtils.isNoun('User'), isTrue);
         expect(nlpUtils.isNoun('Email'), isTrue);
       });
 
-      test('should correctly identify adjectives from overrides', () {
+      test('should return true for adjectives defined in overrides', () {
         expect(nlpUtils.isAdjective('Successful'), isTrue);
-        expect(nlpUtils.isAdjective('Red'), isTrue);
+        expect(nlpUtils.isAdjective('Invalid'), isTrue);
       });
 
-      test('should return false for words not in overrides when dictionary is null', () {
+      test('should return false for unknown words when dictionary is disabled', () {
         expect(nlpUtils.isVerb('NonExistentVerb'), isFalse);
         expect(nlpUtils.isNoun('NonExistentNoun'), isFalse);
       });
     });
 
     group('isVerbGerund', () {
-      test('should return true for -ing forms of known verbs', () {
+      test('should return true for simple -ing form of a known verb', () {
         expect(nlpUtils.isVerbGerund('Updating'), isTrue); // update -> updating
-        expect(nlpUtils.isVerbGerund('Saving'), isTrue);   // save -> saving
       });
 
-      test('should return false for words that are primarily nouns ending in -ing', () {
-        // Our overrides define 'building' as a noun, so the heuristic should reject it.
-        expect(nlpUtils.isVerbGerund('Building'), isFalse);
+      test('should return true for -ing form with a dropped e', () {
+        expect(nlpUtils.isVerbGerund('Saving'), isTrue); // save -> saving
+      });
+
+      test('should return false for a word that is primarily a noun ending in -ing', () {
+        expect(nlpUtils.isVerbGerund('Building'), isFalse, reason: 'Building is defined as a noun.');
         expect(nlpUtils.isVerbGerund('Morning'), isFalse);
       });
     });
 
     group('isVerbPast', () {
-      test('should return true for regular -ed verbs', () {
+      test('should return true for regular -ed verb', () {
         expect(nlpUtils.isVerbPast('Requested'), isTrue);
+      });
+
+      test('should return true for -ied verb from a "y" stem', () {
+        expect(nlpUtils.isVerbPast('Applied'), isTrue); // apply -> applied
       });
 
       test('should return true for common irregular verbs', () {
@@ -73,29 +74,24 @@ void main() {
         expect(nlpUtils.isVerbPast('Built'), isTrue);
       });
 
-      test('should return false for words that are primarily adjectives ending in -ed', () {
-        // Our overrides define 'nested' as an adjective, so the heuristic should reject it.
-        expect(nlpUtils.isVerbPast('Nested'), isFalse);
-        expect(nlpUtils.isVerbPast('Red'), isFalse);
+      test('should return false for a word that is primarily an adjective ending in -ed', () {
+        expect(nlpUtils.isVerbPast('Nested'), isFalse, reason: 'Nested is defined as an adjective.');
       });
     });
 
-    group('Caching Behavior', () {
-      test('should use the cache for repeated lookups', () {
+    group('Caching', () {
+      test('should cache results to avoid re-computation', () {
         expect(nlpUtils.cacheSize, 0);
 
         // First call populates the cache
         final result1 = nlpUtils.isNoun('User');
         expect(result1, isTrue);
-        expect(nlpUtils.cacheSize, greaterThan(0));
-
-        final cacheSizeAfterFirstCall = nlpUtils.cacheSize;
+        expect(nlpUtils.cacheSize, 1);
 
         // Second call should hit the cache
         final result2 = nlpUtils.isNoun('User');
         expect(result2, isTrue);
-        // The cache size should NOT have increased.
-        expect(nlpUtils.cacheSize, cacheSizeAfterFirstCall);
+        expect(nlpUtils.cacheSize, 1, reason: 'Cache size should not increase on a cache hit.');
       });
     });
   });

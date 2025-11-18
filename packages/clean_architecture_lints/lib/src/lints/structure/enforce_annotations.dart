@@ -40,7 +40,7 @@ class EnforceAnnotations extends ArchitectureLintRule {
 
       // Check for required annotations.
       for (final requiredAnnotation in rule.required) {
-        final annotationName = _normalizeAnnotationText(requiredAnnotation.text);
+        final annotationName = _normalizeAnnotationText(requiredAnnotation.name);
         if (!declaredAnnotations.contains(annotationName)) {
           reporter.atToken(
             node.name,
@@ -56,7 +56,7 @@ class EnforceAnnotations extends ArchitectureLintRule {
 
       // Check for forbidden annotations.
       for (final forbiddenAnnotation in rule.forbidden) {
-        final annotationName = _normalizeAnnotationText(forbiddenAnnotation.text);
+        final annotationName = _normalizeAnnotationText(forbiddenAnnotation.name);
         if (declaredAnnotations.contains(annotationName)) {
           reporter.atToken(
             node.name,
@@ -71,8 +71,8 @@ class EnforceAnnotations extends ArchitectureLintRule {
       }
 
       // Check for suggested annotations.
-      for (final suggestedAnnotation in rule.suggested) {
-        final annotationName = _normalizeAnnotationText(suggestedAnnotation.text);
+      for (final suggestedAnnotation in rule.allowed) {
+        final annotationName = _normalizeAnnotationText(suggestedAnnotation.name);
         if (!declaredAnnotations.contains(annotationName)) {
           reporter.atToken(
             node.name,

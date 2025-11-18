@@ -1,8 +1,8 @@
 // lib/clean_architecture_lints.dart
 
 import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
+import 'package:clean_architecture_lints/src/lints/contract/enforce_custom_inheritance.dart';
 import 'package:clean_architecture_lints/src/lints/contract/enforce_entity_contract.dart';
-import 'package:clean_architecture_lints/src/lints/contract/enforce_inheritance.dart';
 import 'package:clean_architecture_lints/src/lints/contract/enforce_repository_contract.dart';
 import 'package:clean_architecture_lints/src/lints/contract/enforce_repository_implementation_contract.dart';
 import 'package:clean_architecture_lints/src/lints/contract/enforce_use_case_contract.dart';
@@ -59,7 +59,7 @@ class CleanArchitectureLintsPlugin extends PluginBase {
       EnforceUseCaseContract(config: config, layerResolver: layerResolver),
       EnforceRepositoryImplementationContract(config: config, layerResolver: layerResolver),
       // The generic engine for user-defined inheritance rules.
-      EnforceInheritance(config: config, layerResolver: layerResolver),
+      EnforceCustomInheritance(config: config, layerResolver: layerResolver),
     ];
 
     final dependencyRules = [

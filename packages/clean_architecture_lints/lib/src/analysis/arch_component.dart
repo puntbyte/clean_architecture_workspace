@@ -6,27 +6,28 @@
 /// in the `analysis_options.yaml` configuration (e.g., `on: 'use_case'`).
 enum ArchComponent {
   // --- Domain Components ---
-  entity('entity', 'Entity'),
-  contract('contract', 'Repository Interface'),
-  usecase('usecase', 'Use Case'),
-  usecaseParameter('usecase.parameter', 'Use Case Parameter'),
+  entity('entity', label: 'Entity'),
+  contract('contract', label: 'Repository Interface'),
+  usecase('usecase', label: 'Use Case'),
+  usecaseParameter('usecase.parameter', label: 'Use Case Parameter'),
 
   // --- Data Components ---
-  model('model', 'Model'),
-  repository('repository.implementation', 'Repository Implementation'),
-  source('source.interface', 'Data Source Interface'),
-  sourceImplementation('source.implementation', 'Data Source Implementation'),
+  model('model', label: 'Model'),
+  repository('repository.implementation', label: 'Repository Implementation'),
+  source('source.interface', label: 'Data Source Interface'),
+  sourceImplementation('source.implementation', label: 'Data Source Implementation'),
 
   // --- Presentation Components ---
-  page('page', 'Page'),
-  widget('widget', 'Widget'),
-  manager('manager', 'Manager'),
+  page('page', label: 'Page'),
+  widget('widget', label: 'Widget'),
+  manager('manager', label: 'Manager'),
+  event('event.interface', label: 'Event'),
+  eventImplementation('event.implementation', label: 'Event Implementation'),
+  state('state.interface', label: 'State'),
+  stateImplementation('state.implementation', label: 'State Implementation'),
 
-  event('event.interface', 'Event'),
-  eventImplementation('event.implementation', 'Event Implementation'),
-  state('state.interface', 'State'),
-  stateImplementation('state.implementation', 'State Implementation'),
-  unknown('unknown', 'Unknown');
+  // --- Unknown Component ---
+  unknown('unknown', label: 'Unknown');
 
   /// The `snake_case` identifier used in `analysis_options.yaml`.
   final String id;
@@ -34,12 +35,11 @@ enum ArchComponent {
   /// A user-friendly label for error messages.
   final String label;
 
-  const ArchComponent(this.id, this.label);
+  const ArchComponent(this.id, {required this.label});
 
   /// A reverse lookup to find an enum value from its string [id].
-  static ArchComponent fromId(String id) {
-    return values.firstWhere((value) => value.id == id, orElse: () => ArchComponent.unknown);
-  }
+  static ArchComponent fromId(String id) =>
+      values.firstWhere((value) => value.id == id, orElse: () => ArchComponent.unknown);
 
   // --- Layer Composition Getters ---
 

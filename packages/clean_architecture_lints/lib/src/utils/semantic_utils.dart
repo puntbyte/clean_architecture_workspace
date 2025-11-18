@@ -14,18 +14,17 @@ class SemanticUtils {
   /// An architectural override means the element implements or extends a member
   /// from a class that is defined in a domain 'contract' directory.
   static bool isArchitecturalOverride(ExecutableElement element, LayerResolver layerResolver) {
-    final enclosingClass = element.enclosingElement;
-    if (enclosingClass is! InterfaceElement) return false;
-
+    // FIX 2: Check for a null name early. An element with no name cannot be an override.
     final elementName = element.name;
     if (elementName == null) return false;
 
-    // Check all supertypes to see if any of them is a domain contract
-    // that declares a member with the same name.
-    for (final supertype in enclosingClass.allSupertypes) {
-      final source = supertype.element.firstFragment.libraryFragment.source;
+    final enclosingClass = element.enclosingElement;
+    if (enclosingClass is! InterfaceElement) return false;
 
-      if (layerResolver.getComponent(source.fullName) == ArchComponent.contract) {
+    for (final supertype in enclosingClass.allSupertypes) {
+      final path = _getSourcePath(supertype);
+      if (path != null && layerResolver.getComponent(path) == ArchComponent.contract) {
+        // Use the non-nullable elementName for lookups.
         if (supertype.getMethod(elementName) != null || supertype.getGetter(elementName) != null) {
           return true;
         }
@@ -38,19 +37,14 @@ class SemanticUtils {
   static bool isFlutterType(DartType? type) {
     if (type == null) return false;
 
-    final library = type.element?.library;
-    if (library != null) {
-      final uri = library.uri;
-      final isFlutterPackage =
-          uri.isScheme('package') &&
-              uri.pathSegments.isNotEmpty &&
-              uri.pathSegments.first == 'flutter';
-      final isDartUi =
-          uri.isScheme('dart') && uri.pathSegments.isNotEmpty && uri.pathSegments.first == 'ui';
+    // FIX 1: Use `library?.firstFragment.source.uri` to access the URI.
+    final uri = type.element?.library?.firstFragment.source.uri;
+    if (uri != null) {
+      final isFlutterPackage = uri.isScheme('package') && uri.pathSegments.firstOrNull == 'flutter';
+      final isDartUi = uri.isScheme('dart') && uri.pathSegments.firstOrNull == 'ui';
       if (isFlutterPackage || isDartUi) return true;
     }
 
-    // Recurse on generic type arguments (e.g., List<Color>).
     if (type is InterfaceType) {
       return type.typeArguments.any(isFlutterType);
     }
@@ -66,18 +60,20 @@ class SemanticUtils {
       ) {
     if (type == null) return false;
 
-    // Check the primary type itself.
-    final source = type.element?.firstFragment.libraryFragment?.source;
-    if (source != null) {
-      if (layerResolver.getComponent(source.fullName) == componentToFind) {
-        return true;
-      }
+    final path = _getSourcePath(type);
+    if (path != null && layerResolver.getComponent(path) == componentToFind) {
+      return true;
     }
 
-    // Recurse on generic type arguments (e.g., List<UserModel>).
     if (type is InterfaceType) {
       return type.typeArguments.any((arg) => isComponent(arg, layerResolver, componentToFind));
     }
     return false;
+  }
+
+  /// A robust helper to get the absolute file path from a DartType.
+  static String? _getSourcePath(DartType? type) {
+    // This helper was already correct and uses the modern API.
+    return type?.element?.library?.firstFragment.source.fullName;
   }
 }

@@ -1,5 +1,4 @@
-# This file is the source of truth for the `clean_architecture_lints` package.
-# It enables and configures every available rule to demonstrate a complete setup.
+# feature_first_example/analysis_options.yaml
 
 formatter:
   page_width: 100
@@ -33,7 +32,7 @@ custom_lint:
     - enforce_use_case_contract: true
     - enforce_entity_contract: true
     - enforce_repository_implementation_contract: true
-    - enforce_inheritance: true # Generic engine for custom rules
+    - enforce_custom_inheritance: true # Generic engine for custom rules
 
     # Dependency & Structure Rules
     - enforce_layer_independence: true
@@ -56,18 +55,21 @@ custom_lint:
 
     # --- SHARED CONFIGURATION BLOCK ---
     - clean_architecture:
-      # A new block to define top-level module directories.
+      # [Section 1] This single block now defines the entire high-level project structure.
       module_definitions:
         type: 'feature_first' # or 'layer_first'
         core: 'core'
         features: 'features'
+        # layers can be used for both feature_first and layer_first naming.
+        # all layer components accept a single string or a list of strings.
         layers:
           domain: 'domain'
           data: 'data'
           presentation: 'presentation'
 
-      # Defines the directory names for each architectural component.
+      # [Section 2] Defines the directory names for each architectural component.
       # Can be a single string or a list of strings.
+      # all layer components accept a single string or a list of strings.
       layer_definitions:
         domain:
           entity: 'entities'
@@ -82,71 +84,57 @@ custom_lint:
           widget: 'widgets'
           manager: [ 'managers', 'bloc', 'cubit' ]
 
-      # Defines syntactic (`pattern`/`antipattern`) and semantic (`grammar`) naming rules.
+      # in all configurations `on` can accept a single string or a list of strings.
+
+      # [Section 3] Defines syntactic (`pattern`/`antipattern`) and semantic (`grammar`)
+      # naming rules.
       naming_conventions:
-        entity:
+        - on: entity
           pattern: '{{name}}'
           antipattern: '{{name}}Entity'
-        model:
+        - on: model
           pattern: '{{name}}Model'
           grammar: '{{noun.phrase}}Model'
-        usecase:
+        - on: usecase
           pattern: '{{name}}'
           antipattern: '{{name}}Use(C|c)ase'
           grammar: '{{verb.present}}{{noun.phrase}}'
-        usecase.parameter: '_{{name}}Param'
+        - on: usecase.parameter
+          pattern: '_{{name}}Param'
 
-        source.interface: '{{name}}DataSource'
-        source.implementation: 'Default{{name}}DataSource'
-        repository.interface: '{{name}}Repository'
-        repository.implementation: '{{kind}}{{name}}Repository'
+        - on: source.interface
+          pattern: '{{name}}DataSource'
+        - on: source.implementation
+          pattern: 'Default{{name}}DataSource'
+        - on: repository.interface
+          pattern: '{{name}}Repository'
+        - on: repository.implementation
+          pattern: '{{kind}}{{name}}Repository'
 
-        manager:
+        - on: manager
           pattern: '{{name}}(Bloc|Cubit|Manager)'
           grammar: '{{noun.phrase}}(Bloc|Cubit|Manager)'
-        event.interface:
+        - on: event.interface
           pattern: '{{name}}Event'
           grammar: '{{noun.phrase}}Event'
-        event.implementation:
+        - on: event.implementation
           pattern: '{{name}}'
           grammar: '{{subject}}{{noun.phrase}}?{{verb.past}}'
-        state.interface:
+        - on: state.interface
           pattern: '{{name}}State'
           grammar: '{{noun.singular}}State'
-        state.implementation:
+        - on: state.implementation
           pattern: '{{name}}'
           grammar: '{{subject}}({{adjective}}|{{verb.gerund}}|{{verb.past}})'
-
-      # A unified list of rules to enforce strong types and migrate away from unsafe primitives.
-      type_safeties:
-        # Rule 1: Enforce FutureEither on return types.
-        - on: ['usecase', 'contract']
-          check: 'return'
-          unsafe_type: 'Future'
-          safe_type: 'FutureEither'
-          import: 'package:example/core/utils/types.dart'
-
-        # Rule 2: Enforce IntId for integer `id` parameters in contracts.
-        - on: 'contract'
-          check: 'parameter'
-          identifier: 'id'
-          unsafe_type: 'int'
-          safe_type: 'IntId'
-          import: 'package:example/core/utils/types.dart'
 
       # A list of custom, user-defined inheritance rules, enforced by `enforce_inheritance`.
       # Core rules (Entity, Repository, UseCase) are handled by their own lints but can be overridden here.
       inheritances:
+        # Example of overriding the default Entity contract.
         - on: 'entity'
           required:
             name: 'Entity'
             import: 'package:example/core/entity/entity.dart'
-
-        # Example of a suggested inheritance rule.
-        - on: 'manager'
-          suggested:
-            name: 'Bloc'
-            import: 'package:bloc/bloc.dart'
 
         # Example of overriding the default UseCase contract.
         - on: 'usecase'
@@ -156,35 +144,77 @@ custom_lint:
             - name: 'MyOtherUseCase'
               import: 'package:my_core/my_core.dart'
 
+        # Example of a suggested inheritance rule.
+        - on: 'manager'
+          allowed:
+            name: 'Bloc'
+            import: 'package:bloc/bloc.dart'
+
+        # We can use both `suggested` and `forbidden` in a single rule for widget.
         - on: 'widget'
-          suggested:
+          allowed:
             name: 'HookWidget'
             import: 'package:flutter_hooks/flutter_hooks.dart'
-            message: 'Consider extending HookWidget to use hooks for state management.'
 
-        # Example of a forbidden inheritance rule.
-        - on: 'widget'
           forbidden:
             name: 'StatefulWidget'
             import: 'package:flutter/widgets.dart'
 
+
+      # A unified list of rules to enforce strong types and migrate away from unsafe primitives.
+      type_safeties:
+        # Rule 1: Enforce FutureEither on return types.
+        - on: [ 'usecase', 'contract' ]
+          returns:
+            unsafe_type: 'Future'
+            safe_type: 'FutureEither'
+            import: 'package:example/core/utils/types.dart'
+
+        # Rule 2: Enforce IntId for integer `id` parameters in contracts.
+        - on: 'contract'
+          parameters:
+            - unsafe_type: 'int'
+              identifier: 'id'
+              safe_type: 'IntId'
+              import: 'package:example/core/utils/types.dart'
+
+            - unsafe_type: 'String'
+              identifier: 'id'
+              safe_type: 'StringId'
+              import: 'package:example/core/utils/types.dart'
+
       # A list of rules to enforce the presence/absence of annotations on classes.
       # Enforced by the `enforce_annotations` lint. Also used by code generators.
+      # annotations name do not have to have `@` prefix because annotations always start with @
+      # annotations name do not have to have `()` suffix because they may have parameters or named
+      # constructor.
       annotations:
-        - on: 'usecase'
-          required:
-            - text: 'Injectable'
-              import: 'package:injectable/injectable.dart'
-        - on: 'repository' # Targets the implementation
-          required:
-            - text: 'LazySingleton'
-              import: 'package:injectable/injectable.dart'
         - on: 'entity'
           forbidden:
-            - text: 'Injectable'
+            name: [ 'Injectable', 'LazySingleton' ]
+
+        - on: 'usecase'
+          required:
+            name: 'Injectable'
+            import: 'package:injectable/injectable.dart'
+
+        - on: 'repository'
+          required:
+            - name: 'LazySingleton'
+              import: 'package:injectable/injectable.dart'
+          allowed:
+            name: 'WithCache'
+            import: 'package:cached_annotation/cached_annotation.dart'
+
+        - on: 'model'
+          allowed:
+            - name: 'freezed'
+              import: 'package:freezed_annotation/freezed_annotation.dart'
+            - name: 'MappableClass'
+              import: 'package:dart_mappable/dart_mappable.dart'
 
       # Configuration for service-related lints.
       services:
-        dependency_injection:
+        service_locator:
           # Configures the `disallow_service_locator` lint.
-          service_locator_names: ['getIt', 'locator', 'sl']
+          name: ['getIt', 'locator', 'sl']

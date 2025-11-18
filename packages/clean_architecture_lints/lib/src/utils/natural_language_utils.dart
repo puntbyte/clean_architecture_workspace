@@ -3,15 +3,14 @@
 import 'package:dictionaryx/dictentry.dart';
 import 'package:dictionaryx/dictionary_msa.dart';
 
-/// A utility class that wraps a dictionary to perform natural language
-/// processing on class/method names for semantic linting.
-///
-/// Construct with `dictionary: null` to disable the external dictionary (useful in unit tests).
+/// A utility class for semantic linting using natural language processing.
+/// It wraps a dictionary and uses caching and heuristics for performance.
 class NaturalLanguageUtils {
   final DictionaryMSA? _dictionary;
-  final Map<String, bool> _cache = {};
+  final Map<(POS, String), bool> _cache = {};
   final Map<String, Set<String>> _posOverrides;
 
+  // Common words for fast lookups, avoiding dictionary access.
   static const _commonNouns = {
     'email',
     'profile',
@@ -24,7 +23,6 @@ class NaturalLanguageUtils {
     'request',
     'response',
   };
-
   static const _commonVerbs = {
     'get',
     'set',
@@ -37,180 +35,142 @@ class NaturalLanguageUtils {
     'login',
     'logout',
   };
+  static const _commonIrregularPastVerbs = {
+    'went',
+    'saw',
+    'did',
+    'took',
+    'said',
+    'came',
+    'gave',
+    'ran',
+    'ate',
+    'wrote',
+    'was',
+    'were',
+    'had',
+    'knew',
+    'put',
+    'thought',
+    'became',
+    'showed',
+    'sent',
+    'found',
+    'built',
+    'began',
+    'left',
+  };
 
-  /// Create an instance.
-  /// - If [dictionary] is null, dictionary lookups are disabled (tests should pass null).
-  /// - [posOverrides] maps lowercase words -> set of POS names (e.g. {'get': {'VERB'}})
-  NaturalLanguageUtils({
-    DictionaryMSA? dictionary,
-    Map<String, Set<String>>? posOverrides,
-  }) : _dictionary = dictionary,
-       _posOverrides = posOverrides ?? {};
+  /// Creates an instance.
+  /// - If [dictionary] is null, dictionary lookups are disabled (for tests).
+  /// - [posOverrides] maps lowercase words to a set of POS names (e.g., {'get': {'VERB'}}).
+  NaturalLanguageUtils({DictionaryMSA? dictionary, Map<String, Set<String>>? posOverrides})
+    : _dictionary = dictionary,
+      _posOverrides = posOverrides ?? {};
 
-  /// Clears the internal POS result cache.
   void clearCache() => _cache.clear();
 
-  /// Returns the number of cached entries (useful for tests).
   int get cacheSize => _cache.length;
 
-  /// Generic cached helper to check whether a given [word] has the POS [pos].
-  bool _hasPos(String word, POS pos) {
-    final lowerWord = word.toLowerCase();
-    final cacheKey = '${pos.name}:$lowerWord';
-    if (_cache.containsKey(cacheKey)) return _cache[cacheKey]!;
+  bool isVerb(String word) => _hasPos(word, POS.VERB);
 
-    // 1) Overrides (tests)
-    final override = _posOverrides[lowerWord];
-    if (override != null) {
-      final res = override.contains(pos.name);
-      _cache[cacheKey] = res;
-      return res;
-    }
+  bool isNoun(String word) => _hasPos(word, POS.NOUN);
 
-    // 2) Quick fallback lists
-    if (pos == POS.NOUN && _commonNouns.contains(lowerWord)) {
-      _cache[cacheKey] = true;
-      return true;
-    }
-    if (pos == POS.VERB && _commonVerbs.contains(lowerWord)) {
-      _cache[cacheKey] = true;
-      return true;
-    }
-
-    // 3) Dictionary (only if provided)
-    if (_dictionary == null) {
-      _cache[cacheKey] = false;
-      return false;
-    }
-
-    try {
-      if (!_dictionary.hasEntry(lowerWord)) {
-        _cache[cacheKey] = false;
-        return false;
-      }
-      final entry = _dictionary.getEntry(lowerWord);
-      final result = entry.meanings.any((m) => m.pos == pos);
-      _cache[cacheKey] = result;
-      return result;
-    } catch (_) {
-      _cache[cacheKey] = false;
-      return false;
-    }
-  }
-
-  /// Checks if the given word is a verb.
-  bool isVerb(String word) {
-    final lower = word.toLowerCase();
-    if (_commonVerbs.contains(lower)) {
-      // Cache the quick-hit result so cacheSize increases during tests/usage.
-      _cache['VERB:$lower'] = true;
-      return true;
-    }
-    return _hasPos(word, POS.VERB);
-  }
-
-  /// Checks if the given word is a noun.
-  bool isNoun(String word) {
-    final lower = word.toLowerCase();
-    if (_commonNouns.contains(lower)) {
-      // Cache the quick-hit result so cacheSize increases during tests/usage.
-      _cache['NOUN:$lower'] = true;
-      return true;
-    }
-    return _hasPos(word, POS.NOUN);
-  }
-
-  /// Checks if the given word is an adjective.
   bool isAdjective(String word) => _hasPos(word, POS.ADJ);
 
-  /// Heuristic: is this an -ing form of a verb?
+  /// Checks if a [word] has a specific part-of-speech [pos], using a cache.
+  bool _hasPos(String word, POS pos) {
+    final lowerWord = word.toLowerCase();
+    final cacheKey = (pos, lowerWord);
+    if (_cache.containsKey(cacheKey)) return _cache[cacheKey]!;
+
+    // Tier 1: User-defined overrides (for testing and customization).
+    final override = _posOverrides[lowerWord];
+    if (override != null) {
+      return _cache[cacheKey] = override.contains(pos.name);
+    }
+
+    // Tier 2: Hardcoded common word lists for performance.
+    if (pos == POS.NOUN && _commonNouns.contains(lowerWord)) return _cache[cacheKey] = true;
+    if (pos == POS.VERB && _commonVerbs.contains(lowerWord)) return _cache[cacheKey] = true;
+
+    // Tier 3: Dictionary lookup (if provided).
+    if (_dictionary != null) {
+      try {
+        final entry = _dictionary.getEntry(lowerWord);
+        final result = entry.meanings.any((m) => m.pos == pos);
+        return _cache[cacheKey] = result;
+      } catch (_) {
+        // Word not found or other dictionary error.
+      }
+    }
+
+    // Default to false if no match was found.
+    return _cache[cacheKey] = false;
+  }
+
+  /// Heuristic to determine if a word is a verb gerund (ending in "-ing").
   bool isVerbGerund(String word) {
     final lowerWord = word.toLowerCase();
-    if (!lowerWord.endsWith('ing')) return false;
+    if (!lowerWord.endsWith('ing') || lowerWord.length < 4) return false;
 
-    // --- THE DEFINITIVE FIX ---
-    // 1. Check for the noun case first. If a word is a known noun (like "Building"),
-    //    it should NOT be considered a verb gerund for our naming rules.
+    // Rule 1: Prioritize nouns. If a word is a known noun but not a verb (e.g., "Building"),
+    // it should not be considered a verb gerund for our naming rules.
     if (isNoun(word) && !isVerb(word)) {
       return false;
     }
-    // --- END OF FIX ---
 
-    // 2. If it's not a noun, or if it's ambiguously both (like "setting"),
-    //    then proceed with the verb checks.
-
-    // If the gerund itself is a known verb, accept it.
+    // Rule 2: If the word itself is a known verb, it's valid.
     if (isVerb(word)) return true;
 
+    // Rule 3: Check the verb stem.
     final stem = lowerWord.substring(0, lowerWord.length - 3);
-    if (stem.isEmpty) return false;
 
-    // Double-letter case: getting -> get (stem "gett")
+    // Case: doubling consonant (e.g., "getting" -> "gett" -> "get")
     if (stem.length > 1 && stem.endsWith(stem[stem.length - 1])) {
       final base = stem.substring(0, stem.length - 1);
       if (isVerb(base) || isVerb('${base}e')) return true;
     }
 
-    // dropped 'e': updating -> update
+    // Case: dropped 'e' (e.g., "updating" -> "updat" -> "update")
     return isVerb(stem) || isVerb('${stem}e');
   }
 
-  /// Heuristic: is this a past-tense verb?
-  ///
-  /// Supports common irregulars, -ed regular forms, ies->y conversion, and basic doubling heuristics.
+  /// Heuristic to determine if a word is a past-tense verb.
   bool isVerbPast(String word) {
-    final lowerWord = word.toLowerCase();
-
-    // Prioritize adjectives. If a word is a known adjective (like "Nested", "Red"),
+    // Rule 1: Prioritize adjectives. If a word is a known adjective but not a verb (e.g., "nested", "red"),
     // it should not be considered a past-tense verb.
     if (isAdjective(word) && !isVerb(word)) {
       return false;
     }
 
-    // Common irregular past forms we accept directly
-    const commonIrregular = {
-      'went',
-      'saw',
-      'did',
-      'took',
-      'said',
-      'came',
-      'gave',
-      'ran',
-      'ate',
-      'wrote',
-      'was',
-      'were',
-      'had',
-      'knew',
-      'put',
-      'thought',
-      'became',
-      'showed',
-      'sent',
-      'found',
-      'built',
-      'began',
-      'left',
-    };
+    final lowerWord = word.toLowerCase();
 
-    if (commonIrregular.contains(lowerWord)) return true;
+    // Rule 2: Check for common irregular past-tense verbs.
+    if (_commonIrregularPastVerbs.contains(lowerWord)) return true;
 
-    if (lowerWord.endsWith('ied') && lowerWord.length > 3) { /* ... as before ... */ }
-
-    if (lowerWord.endsWith('ed')) {
-      final base = lowerWord.substring(0, lowerWord.length - 2);
-      if (base.isEmpty) return false;
-
-      if (base.length > 1 && base.endsWith(base[base.length - 1])) {
-        final possible = base.substring(0, base.length - 1);
-        if (isVerb(possible)) return true;
-      }
-
-      if (isVerb(base) || isVerb('${base}e')) return true;
+    // Rule 3: Check for -ied ending (e.g., "applied" -> "apply").
+    if (lowerWord.endsWith('ied') && lowerWord.length > 3) {
+      final stem = lowerWord.substring(0, lowerWord.length - 3);
+      if (isVerb('${stem}y')) return true;
     }
 
-    // Fallback for other irregulars
+    // Rule 4: Check for -ed ending.
+    if (lowerWord.endsWith('ed')) {
+      final stem = lowerWord.substring(0, lowerWord.length - 2);
+      if (stem.isEmpty) return false;
+
+      // Case: doubling consonant (e.g., "stopped" -> "stopp" -> "stop")
+      if (stem.length > 1 && stem.endsWith(stem[stem.length - 1])) {
+        final base = stem.substring(0, stem.length - 1);
+        if (isVerb(base)) return true;
+      }
+
+      // Case: dropped 'e' or regular (e.g., "updated" -> "updat" -> "update" or "requested" -> "request")
+      if (isVerb(stem) || isVerb('${stem}e')) return true;
+    }
+
+    // Rule 5: Fallback for other irregulars that might be in the dictionary.
     return isVerb(word);
   }
 }

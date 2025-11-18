@@ -6,7 +6,7 @@ import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/models/rules/type_safety_rule.dart';
+import 'package:clean_architecture_lints/src/models/type_safeties_config.dart';
 import 'package:clean_architecture_lints/src/utils/ast_utils.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
@@ -26,7 +26,7 @@ class EnforceTypeSafety extends ArchitectureLintRule {
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    if (config.typeSafety.rules.isEmpty) return;
+    if (config.typeSafeties.rules.isEmpty) return;
 
     context.registry.addMethodDeclaration((node) {
       final component = layerResolver.getComponent(
@@ -40,14 +40,14 @@ class EnforceTypeSafety extends ArchitectureLintRule {
       final componentId = component.id;
 
       // Filter to get only the rules that apply to the current component.
-      final applicableRules = config.typeSafety.rules.where(
+      final applicableRules = config.typeSafeties.rules.where(
         (rule) => rule.on.contains(componentId),
       );
       if (applicableRules.isEmpty) return;
 
       // Separate rules by what they check.
-      final returnRules = applicableRules.where((r) => r.check == TypeSafetyTarget.returnType);
-      final paramRules = applicableRules.where((r) => r.check == TypeSafetyTarget.parameter);
+      final returnRules = applicableRules.where((r) => r.target == TypeSafetyTarget.return$);
+      final paramRules = applicableRules.where((r) => r.target == TypeSafetyTarget.parameter);
 
       for (final rule in returnRules) {
         _validateReturnType(node, rule, reporter);

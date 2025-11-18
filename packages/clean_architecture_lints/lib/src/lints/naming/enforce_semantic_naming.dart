@@ -34,7 +34,7 @@ class EnforceSemanticNaming extends ArchitectureLintRule {
       if (component == ArchComponent.unknown) return;
 
       // Get the specific naming rule for this component.
-      final rule = config.naming.getRuleFor(component);
+      final rule = config.namingConventions.getRuleFor(component);
 
       // Only proceed if a grammar rule is defined for this component.
       final grammar = rule?.grammar;

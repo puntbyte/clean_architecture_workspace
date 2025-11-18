@@ -4,7 +4,7 @@ import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/models/naming_config.dart';
+import 'package:clean_architecture_lints/src/models/naming_conventions_config.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/iterable_extension.dart';
 import 'package:clean_architecture_lints/src/utils/naming_utils.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
@@ -25,7 +25,7 @@ class EnforceNamingConventions extends ArchitectureLintRule {
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
     // Pre-build a list of all known patterns for the mislocation check.
-    final allPatterns = _getAllPatterns(config.naming);
+    final allPatterns = _getAllPatterns(config.namingConventions);
 
     context.registry.addClassDeclaration((node) {
       final className = node.name.lexeme;
@@ -36,7 +36,7 @@ class EnforceNamingConventions extends ArchitectureLintRule {
       if (actualComponent == ArchComponent.unknown) return;
 
       // Get the specific naming rule for the component we're analyzing.
-      final rule = config.naming.getRuleFor(actualComponent);
+      final rule = config.namingConventions.getRuleFor(actualComponent);
       if (rule == null) return;
 
       // --- Pre-Check for Mislocation ---
@@ -79,7 +79,7 @@ class EnforceNamingConventions extends ArchitectureLintRule {
   }
 
   /// Creates a list of all known patterns for the mislocation check.
-  List<_ComponentPattern> _getAllPatterns(NamingConfig naming) {
+  List<_ComponentPattern> _getAllPatterns(NamingConventionsConfig naming) {
     return naming.rules.entries
         .map((entry) => _ComponentPattern(pattern: entry.value.pattern, component: entry.key))
         .toList();

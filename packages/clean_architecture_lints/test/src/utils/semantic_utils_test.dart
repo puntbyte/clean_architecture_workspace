@@ -15,21 +15,6 @@ import 'package:test/test.dart';
 
 import '../../helpers/test_data.dart';
 
-// Helper to resolve a ClassElement from the virtual project.
-Future<ClassElement> resolveClassElement(
-  AnalysisContextCollection contextCollection,
-  String path,
-  String className,
-) async {
-  final context = contextCollection.contextFor(path);
-  final unitResult = await context.currentSession.getResolvedUnit(path) as ResolvedUnitResult;
-  return unitResult.unit.declarations
-      .whereType<ClassDeclaration>()
-      .firstWhere((c) => c.name.lexeme == className)
-      .declaredFragment!
-      .element;
-}
-
 void main() {
   group('SemanticUtils', () {
     late PhysicalResourceProvider resourceProvider;
@@ -37,11 +22,20 @@ void main() {
     late Directory tempDir;
     late String projectPath;
 
-    // A helper to write a file to the virtual file system.
     void writeFile(String path, String content) {
       final file = resourceProvider.getFile(path);
       file.parent.create();
       file.writeAsStringSync(content);
+    }
+
+    Future<ClassElement> resolveClassElement(String path, String className) async {
+      final context = contextCollection.contextFor(path);
+      final unitResult = await context.currentSession.getResolvedUnit(path) as ResolvedUnitResult;
+      return unitResult.unit.declarations
+          .whereType<ClassDeclaration>()
+          .firstWhere((c) => c.name.lexeme == className)
+          .declaredFragment!
+          .element;
     }
 
     setUpAll(() {
@@ -51,7 +45,7 @@ void main() {
       final packagesPath = p.join(tempDir.path, 'packages');
       final projectLib = p.join(projectPath, 'lib');
 
-      // Create package_config.json
+      // Create a virtual file system structure for the analyzer
       writeFile(
         p.join(projectPath, '.dart_tool', 'package_config.json'),
         '''
@@ -65,27 +59,23 @@ void main() {
         ''',
       );
 
-      // Create virtual source files with custom paths to match non-default test configs.
+      // Create virtual source files
       writeFile(
-        p.join(projectLib, 'app_features', 'auth', 'domain', 'api', 'auth_api.dart'),
-        'abstract interface class AuthApi { void getUser(); String get userId; }',
+        p.join(projectLib, 'features', 'auth', 'domain', 'contracts', 'auth_repo.dart'),
+        'abstract interface class AuthRepo { void getUser(); String get userId; }',
       );
       writeFile(
-        p.join(projectLib, 'app_features', 'auth', 'domain', 'dtos', 'user_dto.dart'),
-        'class UserDto {}',
+        p.join(projectLib, 'features', 'auth', 'domain', 'entities', 'user_entity.dart'),
+        'class UserEntity {}',
       );
       writeFile(
-        p.join(
-          projectLib,
-          'app_features',
-          'auth',
-          'data',
-          'transfer_objects',
-          'user_transfer_object.dart',
-        ),
-        'class UserTransferObject {}',
+        p.join(projectLib, 'features', 'auth', 'data', 'models', 'user_model.dart'),
+        'class UserModel {}',
       );
-
+      writeFile(
+        p.join(projectLib, 'data', 'base_repo.dart'),
+        'abstract class BaseRepo { void commonMethod(); }',
+      );
       writeFile(p.join(packagesPath, 'flutter', 'lib', 'material.dart'), 'class Color {}');
 
       contextCollection = AnalysisContextCollection(
@@ -99,85 +89,102 @@ void main() {
     });
 
     group('isArchitecturalOverride', () {
-      // THE FIX: Use non-default names to make the test more robust and lint-free.
-      final config = makeConfig(featuresModule: 'app_features', contractDir: 'api');
-      final layerResolver = LayerResolver(config);
+      late LayerResolver layerResolver;
+      late ClassElement repoImplClass;
 
-      test('should return true when a method overrides a member from a contract', () async {
-        final path = p.join(projectPath, 'lib', 'impl.dart');
+      setUpAll(() async {
+        layerResolver = LayerResolver(makeConfig());
+        final path = p.join(projectPath, 'lib', 'repo_impl.dart');
         writeFile(path, '''
-          import 'package:test_project/app_features/auth/domain/api/auth_api.dart';
-          class RepoImpl implements AuthApi { @override void getUser() {} @override String get userId => ""; }
+          import 'package:test_project/features/auth/domain/contracts/auth_repo.dart';
+          import 'package:test_project/data/base_repo.dart';
+          class RepoImpl extends BaseRepo implements AuthRepo { 
+            @override void getUser() {} 
+            @override String get userId => ""; 
+            @override void commonMethod() {}
+          }
         ''');
-        final implClass = await resolveClassElement(contextCollection, path, 'RepoImpl');
-        final method = implClass.methods.firstWhere((m) => m.name == 'getUser');
+        repoImplClass = await resolveClassElement(path, 'RepoImpl');
+      });
 
+      test('should return true when method overrides a member from a domain contract', () {
+        final method = repoImplClass.methods.firstWhere((m) => m.name == 'getUser');
         expect(SemanticUtils.isArchitecturalOverride(method, layerResolver), isTrue);
       });
 
-      test('should return true when a getter overrides a member from a contract', () async {
-        final path = p.join(projectPath, 'lib', 'impl.dart');
-        final implClass = await resolveClassElement(contextCollection, path, 'RepoImpl');
-        final getter = implClass.getGetter('userId');
-
+      test('should return true when getter overrides a member from a domain contract', () {
+        final getter = repoImplClass.getGetter('userId');
         expect(getter, isNotNull);
         expect(SemanticUtils.isArchitecturalOverride(getter!, layerResolver), isTrue);
       });
 
-      test('should return false for a method that is not an override', () async {
-        final path = p.join(projectPath, 'lib', 'impl2.dart');
-        writeFile(path, 'class RepoImpl { void myHelper() {} }');
-        final implClass = await resolveClassElement(contextCollection, path, 'RepoImpl');
-        final method = implClass.methods.first;
-
+      test('should return false when method overrides a member from a non-contract superclass', () {
+        final method = repoImplClass.methods.firstWhere((m) => m.name == 'commonMethod');
         expect(SemanticUtils.isArchitecturalOverride(method, layerResolver), isFalse);
       });
     });
 
     group('isComponent', () {
-      // THE FIX: Use non-default names.
-      final config = makeConfig(
-        featuresModule: 'app_features',
-        entityDir: 'dtos',
-        modelDir: 'transfer_objects',
-      );
-      final layerResolver = LayerResolver(config);
+      late LayerResolver layerResolver;
+      setUpAll(() => layerResolver = LayerResolver(makeConfig()));
 
       test('should return true when a direct type is the specified component', () async {
         final path = p.join(projectPath, 'lib', 'a.dart');
         writeFile(path, '''
-          import 'package:test_project/app_features/auth/domain/dtos/user_dto.dart';
-          class A { UserDto? user; }
+          import 'package:test_project/features/auth/domain/entities/user_entity.dart';
+          class A { UserEntity? user; }
         ''');
-        final classA = await resolveClassElement(contextCollection, path, 'A');
+        final classA = await resolveClassElement(path, 'A');
         final fieldType = classA.fields.first.type;
-
         expect(SemanticUtils.isComponent(fieldType, layerResolver, ArchComponent.entity), isTrue);
       });
 
-      test('should return true when a type inside a generic is the specified component', () async {
+      test('should return true when a generic type argument is the specified component', () async {
         final path = p.join(projectPath, 'lib', 'b.dart');
         writeFile(path, '''
-          import 'package:test_project/app_features/auth/data/transfer_objects/user_transfer_object.dart';
-          class B { List<UserTransferObject>? models; }
+          import 'package:test_project/features/auth/data/models/user_model.dart';
+          class B { List<UserModel>? models; }
         ''');
-        final classB = await resolveClassElement(contextCollection, path, 'B');
+        final classB = await resolveClassElement(path, 'B');
         final fieldType = classB.fields.first.type;
-
         expect(SemanticUtils.isComponent(fieldType, layerResolver, ArchComponent.model), isTrue);
       });
+
+      test(
+        'should return true when a nested generic type argument is the specified component',
+        () async {
+          final path = p.join(projectPath, 'lib', 'c.dart');
+          writeFile(path, '''
+          import 'package:test_project/features/auth/data/models/user_model.dart';
+          class C { Future<List<UserModel>>? models; }
+        ''');
+          final classC = await resolveClassElement(path, 'C');
+          final fieldType = classC.fields.first.type;
+          expect(SemanticUtils.isComponent(fieldType, layerResolver, ArchComponent.model), isTrue);
+        },
+      );
     });
 
     group('isFlutterType', () {
-      test('should return true for a type from a Flutter package', () async {
-        final path = p.join(projectPath, 'lib', 'c.dart');
+      test('should return true when a direct type is from a flutter package', () async {
+        final path = p.join(projectPath, 'lib', 'd.dart');
         writeFile(path, '''
           import 'package:flutter/material.dart';
-          class C { Color? color; }
+          class D { Color? color; }
         ''');
-        final classC = await resolveClassElement(contextCollection, path, 'C');
-        final fieldType = classC.fields.first.type;
+        final classD = await resolveClassElement(path, 'D');
+        final fieldType = classD.fields.first.type;
+        expect(SemanticUtils.isFlutterType(fieldType), isTrue);
+      });
 
+      test('should return true when a generic type argument is from a flutter package', () async {
+        final path = p.join(projectPath, 'lib', 'e.dart');
+        writeFile(path, '''
+          import 'package:flutter/material.dart';
+          class E { List<Color>? colors; }
+        ''');
+        final classE = await resolveClassElement(path, 'E');
+        final fieldType = classE.fields.first.type;
         expect(SemanticUtils.isFlutterType(fieldType), isTrue);
       });
     });

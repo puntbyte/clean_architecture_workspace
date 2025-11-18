@@ -110,8 +110,8 @@ class CreateUseCaseFix extends Fix {
     final requiredAnnotations = config.annotations.requiredFor(ArchComponent.usecase.id);
 
     final annotations = requiredAnnotations
-        .where((a) => a.text.isNotEmpty)
-        .map((a) => cb.CodeExpression(cb.Code(a.text)))
+        .where((a) => a.name.isNotEmpty)
+        .map((a) => cb.CodeExpression(cb.Code(a.name)))
         .toList();
 
     final useCaseName = NamingUtils.getExpectedUseCaseClassName(methodName, config);
@@ -139,7 +139,7 @@ class CreateUseCaseFix extends Fix {
     required cb.Reference outputType,
   }) {
     // Find the configured base class names from the custom inheritance rules, with defaults.
-    final useCaseRule = config.inheritance.rules.firstWhereOrNull((r) => r.on == ArchComponent.usecase.id);
+    final useCaseRule = config.inheritances.rules.firstWhereOrNull((r) => r.on == ArchComponent.usecase.id);
     final unaryName = useCaseRule?.required.firstWhereOrNull((d) => d.name.contains('Unary'))?.name ?? 'UnaryUsecase';
     final nullaryName = useCaseRule?.required.firstWhereOrNull((d) => d.name.contains('Nullary'))?.name ?? 'NullaryUsecase';
 
@@ -165,7 +165,7 @@ class CreateUseCaseFix extends Fix {
     }
 
     final useCaseNamePascal = methodName.toPascalCase();
-    final recordName = config.naming.getRuleFor(ArchComponent.usecaseParameter)!.pattern
+    final recordName = config.namingConventions.getRuleFor(ArchComponent.usecaseParameter)!.pattern
         .replaceAll('{{name}}', useCaseNamePascal);
     final recordRef = cb.refer(recordName);
 
@@ -226,7 +226,7 @@ class CreateUseCaseFix extends Fix {
     }
 
     // Add imports for base use case classes.
-    final useCaseRule = config.inheritance.rules.firstWhereOrNull((r) => r.on == ArchComponent.usecase.id);
+    final useCaseRule = config.inheritances.rules.firstWhereOrNull((r) => r.on == ArchComponent.usecase.id);
     if (useCaseRule != null) {
       for (final detail in useCaseRule.required) {
         importLibraryChecked(Uri.parse(buildUri(detail.import)));
@@ -237,7 +237,7 @@ class CreateUseCaseFix extends Fix {
     }
 
     // Add imports for type safety wrappers.
-    for (final rule in config.typeSafety.rules) {
+    for (final rule in config.typeSafeties.rules) {
       if (rule.import != null) importLibraryChecked(Uri.parse(buildUri(rule.import!)));
     }
 

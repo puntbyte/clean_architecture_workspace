@@ -6,7 +6,6 @@ import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/models/rules/type_safety_rule.dart';
 import 'package:clean_architecture_lints/src/utils/semantic_utils.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
@@ -28,8 +27,8 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
   /// A cached set of wrapper type names for efficiency, built from the configuration.
   late final Set<String> _wrapperTypeNames = {
     // Get all configured "safe" return types from the central config.
-    ...config.typeSafety.rules
-        .where((r) => r.check == TypeSafetyTarget.returnType)
+    ...config.typeSafeties.rules
+        .where((r) => r.target == TypeSafetyTarget.return$)
         .map((r) => r.safeType),
     // Also include common implementation wrappers like `Right` from fpdart.
     'Right',

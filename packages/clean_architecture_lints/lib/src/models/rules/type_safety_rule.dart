@@ -1,67 +1,59 @@
 // lib/src/models/rules/type_safety_rule.dart
 
-import 'package:clean_architecture_lints/src/utils/extensions/json_map_extension.dart';
+part of 'package:clean_architecture_lints/src/models/type_safeties_config.dart';
 
-/// An enum to represent what part of a method signature a rule targets.
-enum TypeSafetyTarget { returnType, parameter, unknown }
-
-/// Represents a single, unified type safety rule.
+/// Represents a complete type safety rule for architectural components.
 class TypeSafetyRule {
-  /// The architectural components to apply the rule to.
   final List<String> on;
-
-  /// The part of the signature to check ('return' or 'parameter').
-  final TypeSafetyTarget check;
-
-  /// The unsafe type to look for (e.g., 'Future', 'int').
-  final String unsafeType;
-
-  /// The safe type to suggest as a replacement (e.g., 'FutureEither', 'IntId').
-  final String safeType;
-
-  /// The import path for the safe type.
-  final String? import;
-
-  /// An optional identifier to target specific parameters (e.g., 'id').
-  final String? identifier;
+  final List<TypeSafetyDetail> returns;
+  final List<TypeSafetyDetail> parameters;
 
   const TypeSafetyRule({
     required this.on,
-    required this.check,
-    required this.unsafeType,
-    required this.safeType,
-    this.import,
-    this.identifier,
+    this.returns = const [],
+    this.parameters = const [],
   });
 
-  /// A failable factory. Returns null if essential keys are missing.
+  /// Validates that the rule has at least one return or parameter check.
+  bool get isValid => returns.isNotEmpty || parameters.isNotEmpty;
+
+  /// Creates an instance from a map, returning null if essential data is missing.
   static TypeSafetyRule? tryFromMap(Map<String, dynamic> map) {
-    final on = map.getList('on');
-    final unsafeType = map.getString('unsafe_type');
-    final safeType = map.getString('safe_type');
-    final checkStr = map.getString('check');
+    final on = map.asStringList(ConfigKey.rule.on);
+    if (on.isEmpty) return null;
 
-    TypeSafetyTarget check;
-    switch (checkStr) {
-      case 'return':
-        check = TypeSafetyTarget.returnType;
-      case 'parameter':
-        check = TypeSafetyTarget.parameter;
-      default:
-        check = TypeSafetyTarget.unknown;
-    }
+    final returns = _parseReturns(map);
+    final parameters = _parseParameters(map);
 
-    if (on.isEmpty || unsafeType.isEmpty || safeType.isEmpty || check == TypeSafetyTarget.unknown) {
-      return null;
-    }
+    if (returns.isEmpty && parameters.isEmpty) return null;
 
     return TypeSafetyRule(
       on: on,
-      check: check,
-      unsafeType: unsafeType,
-      safeType: safeType,
-      import: map.getOptionalString('import'),
-      identifier: map.getOptionalString('identifier'),
+      returns: returns,
+      parameters: parameters,
     );
+  }
+
+  /// Parses return type checks from the map.
+  static List<TypeSafetyDetail> _parseReturns(Map<String, dynamic> map) {
+    final returnsData = map['returns'];
+    if (returnsData is Map<String, dynamic>) {
+      final detail = TypeSafetyDetail.tryFromMap(returnsData);
+      return detail != null ? [detail] : [];
+    }
+    return [];
+  }
+
+  /// Parses parameter type checks from the map.
+  static List<TypeSafetyDetail> _parseParameters(Map<String, dynamic> map) {
+    final paramsData = map['parameters'];
+    if (paramsData is List) {
+      return paramsData
+          .whereType<Map<String, dynamic>>()
+          .map(TypeSafetyDetail.tryFromMap)
+          .whereType<TypeSafetyDetail>()
+          .toList();
+    }
+    return [];
   }
 }

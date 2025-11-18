@@ -4,7 +4,6 @@ import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/models/rules/type_safety_rule.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 /// A lint that forbids DataSource methods from returning wrapper types like `Either` or `Result`.
@@ -39,8 +38,8 @@ class EnforceExceptionOnDataSource extends ArchitectureLintRule {
     // --- NEW LOGIC: Read from the central TypeSafetyConfig ---
     // Get a set of all "safe types" that are used for return values. These are
     // the types (like FutureEither) that are forbidden in a DataSource.
-    final forbiddenReturnTypes = config.typeSafety.rules
-        .where((rule) => rule.check == TypeSafetyTarget.returnType)
+    final forbiddenReturnTypes = config.typeSafeties.rules
+        .where((rule) => rule.target == TypeSafetyTarget.return$)
         .map((rule) => rule.safeType)
         .toSet();
 

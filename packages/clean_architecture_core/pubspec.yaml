@@ -1,6 +1,6 @@
 name: clean_architecture_core
 description: >-
-  A lightweight companion package for clean_architecture_kit, providing core interfaces like 
+  A lightweight companion package for clean_architecture_lints, providing core interfaces like 
   Repository and UseCase for building Clean Architecture apps.
 version: 1.0.0
 repository: https://github.com/puntbyte/clean_architecture_workspace/tree/master/packages/clean_architecture_core

@@ -1,41 +1,47 @@
 // lib/src/models/architecture_config.dart
 
 import 'package:clean_architecture_lints/src/models/annotations_config.dart';
-import 'package:clean_architecture_lints/src/models/inheritance_config.dart';
+import 'package:clean_architecture_lints/src/models/inheritances_config.dart';
 import 'package:clean_architecture_lints/src/models/layer_config.dart';
-import 'package:clean_architecture_lints/src/models/naming_config.dart';
+import 'package:clean_architecture_lints/src/models/module_config.dart';
+import 'package:clean_architecture_lints/src/models/naming_conventions_config.dart';
 import 'package:clean_architecture_lints/src/models/services_config.dart';
-import 'package:clean_architecture_lints/src/models/type_safety_config.dart';
+import 'package:clean_architecture_lints/src/models/type_safeties_config.dart';
+import 'package:clean_architecture_lints/src/utils/config_keys.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/json_map_extension.dart';
 
-/// The main configuration class that parses the entire `architecture_kit` block from the
-/// `analysis_options.yaml` file.
+/// The main configuration class that parses the entire configuration from
+/// `analysis_options.yaml`.
 class ArchitectureConfig {
-  final LayerConfig layers;
-  final NamingConfig naming;
-  final TypeSafetyConfig typeSafety;
-  final InheritanceConfig inheritance;
+  final ModuleConfig module;
+  final LayerConfig layer;
+  final InheritancesConfig inheritances;
+  final NamingConventionsConfig namingConventions;
+  final TypeSafetiesConfig typeSafeties;
   final AnnotationsConfig annotations;
   final ServicesConfig services;
 
   const ArchitectureConfig({
-    required this.layers,
-    required this.naming,
-    required this.typeSafety,
-    required this.inheritance,
+    required this.module,
+    required this.layer,
+    required this.inheritances,
+    required this.namingConventions,
+    required this.typeSafeties,
     required this.annotations,
     required this.services,
   });
 
+  /// Creates an instance from a configuration map.
+  /// Missing sections will result in default configurations.
   factory ArchitectureConfig.fromMap(Map<String, dynamic> map) {
     return ArchitectureConfig(
-      layers: LayerConfig.fromMap(map),
-      naming: NamingConfig.fromMap(map.getMap('naming_conventions')),
-      // FIX: Pass the raw map instead of trying to extract a sub-map
-      typeSafety: TypeSafetyConfig.fromMap(map),
-      inheritance: InheritanceConfig.fromMap(map),
+      module: ModuleConfig.fromMap(map.asMap(ConfigKey.root.modules)),
+      layer: LayerConfig.fromMap(map.asMap(ConfigKey.root.layers)),
+      inheritances: InheritancesConfig.fromMap(map),
+      namingConventions: NamingConventionsConfig.fromMap(map),
+      typeSafeties: TypeSafetiesConfig.fromMap(map),
       annotations: AnnotationsConfig.fromMap(map),
-      services: ServicesConfig.fromMap(map.getMap('services')),
+      services: ServicesConfig.fromMap(map.asMap(ConfigKey.root.services)),
     );
   }
 }

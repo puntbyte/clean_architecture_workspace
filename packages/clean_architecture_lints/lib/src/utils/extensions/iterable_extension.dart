@@ -7,10 +7,9 @@ extension IterableExtension<T> on Iterable<T> {
   /// If no element satisfies [test], returns `null`.
   T? firstWhereOrNull(bool Function(T element) test) {
     for (final element in this) {
-      if (test(element)) {
-        return element;
-      }
+      if (test(element)) return element;
     }
+
     return null;
   }
 }

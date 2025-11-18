@@ -1,64 +1,57 @@
-// lib/src/lints/contracts/enforce_repository_contract.dart
+// lib/src/lints/contract/enforce_repository_contract.dart
 
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/utils/extensions/iterable_extension.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
+/// Enforces that repository interfaces (abstract classes) extend the base Repository class.
 class EnforceRepositoryContract extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_repository_contract',
-    problemMessage: 'Repository interfaces must implement the base repository class `{0}`.',
-    correctionMessage: 'Add `implements {0}` to the class definition.',
+    problemMessage: 'Repository interfaces must extend the base repository class `{0}`.',
+    correctionMessage: 'Add `extends {0}` to the class definition.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
-  // Hardcoded default for the core architectural contract.
   static const _defaultBaseName = 'Repository';
-  static const _defaultBasePath = 'package:clean_architecture_core/repository/repository.dart';
+  static const _defaultCorePackagePath = 'package:clean_architecture_core/clean_architecture_core.dart';
 
-  const EnforceRepositoryContract({required super.config, required super.layerResolver})
-    : super(code: _code);
+  final bool _isIgnored;
+
+  EnforceRepositoryContract({required super.config, required super.layerResolver})
+      : _isIgnored = config.inheritances.rules.any((r) => r.on == ArchComponent.contract.id),
+        super(code: _code);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    final component = layerResolver.getComponent(resolver.source.fullName);
-    if (component != ArchComponent.contract) return;
+    // If a user has a custom rule for 'contract', this specific lint is ignored.
+    if (_isIgnored) return;
 
-    // --- LOGIC: Use user config as an OVERRIDE, otherwise use default ---
-    final userRule = config.inheritance.rules.firstWhereOrNull((r) => r.on == 'contract');
-
-    // If the user has defined a custom rule for 'contract', the generic `enforce_inheritance`
-    // lint will handle it. This lint should stay silent to avoid duplicate warnings.
-    if (userRule != null) return;
-
-    final expectedPackageUri = _buildExpectedUri(_defaultBasePath, context);
+    // This lint only applies to files identified as repository contracts.
+    if (layerResolver.getComponent(resolver.source.fullName) != ArchComponent.contract) return;
 
     context.registry.addClassDeclaration((node) {
-      // This core rule only applies to interfaces (abstract classes).
+      // Only check abstract classes, which are used as repository interfaces/contracts.
       if (node.abstractKeyword == null) return;
+
       final classElement = node.declaredFragment?.element;
       if (classElement == null) return;
 
+      final expectedLocalUri = 'package:${context.pubspec.name}/core/repository/repository.dart';
+
       final hasCorrectSupertype = classElement.allSupertypes.any((supertype) {
         final superElement = supertype.element;
+        final libraryUri = superElement.library.firstFragment.source.uri.toString();
+
         return superElement.name == _defaultBaseName &&
-            superElement.library.uri.toString() == expectedPackageUri;
+            (libraryUri == _defaultCorePackagePath || libraryUri == expectedLocalUri);
       });
 
       if (!hasCorrectSupertype) {
         reporter.atToken(node.name, _code, arguments: [_defaultBaseName]);
       }
     });
-  }
-
-  // This helper can be extracted to a shared utility file if desired.
-  String _buildExpectedUri(String configPath, CustomLintContext context) {
-    if (configPath.startsWith('package:')) return configPath;
-    final packageName = context.pubspec.name;
-    final sanitizedPath = configPath.startsWith('/') ? configPath.substring(1) : configPath;
-    return 'package:$packageName/$sanitizedPath';
   }
 }

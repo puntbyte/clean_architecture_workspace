@@ -5,14 +5,13 @@ import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/models/rules/inheritance_rule.dart';
-import 'package:clean_architecture_lints/src/utils/extensions/iterable_extension.dart';
+import 'package:clean_architecture_lints/src/models/inheritances_config.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/string_extension.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 /// A generic lint that enforces all custom inheritance rules defined in the
 /// `inheritances` block of the configuration.
-class EnforceInheritance extends ArchitectureLintRule {
+class EnforceCustomInheritance extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_inheritance',
     problemMessage: 'Inheritance contract violation.',
@@ -70,7 +69,7 @@ class EnforceInheritance extends ArchitectureLintRule {
             LintCode(
               name: 'custom_inheritance_forbidden',
               problemMessage:
-                  'This ${component.label} must not be a subtype of `${forbidden.name}`.',
+              'This ${component.label} must not be a subtype of `${forbidden.name}`.',
               errorSeverity: DiagnosticSeverity.WARNING,
             ),
           );
@@ -85,8 +84,8 @@ class EnforceInheritance extends ArchitectureLintRule {
             LintCode(
               name: 'custom_inheritance_suggested',
               problemMessage:
-                  'Consider making this ${component.label} a subtype of `${suggested.name}` for '
-                      'better functionality.',
+              'Consider making this ${component.label} a subtype of `${suggested.name}` for '
+                  'better functionality.',
             ),
           );
         }

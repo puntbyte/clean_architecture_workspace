@@ -1,7 +1,8 @@
 // example/lib/features/auth/domain/usecases/usecases.violations.dart
 import 'package:example/core/usecase/usecase.dart';
 
-// VIOLATION: enforce_use_case_inheritance (does not implement a base use case)
+// VIOLATION: enforce_use_case_contract
+// The class `LogoutUserUsecase` does not implement the base use case class `UnaryUsecase`.
 class LogoutUserUsecase { // <-- LINT WARNING HERE
   const LogoutUserUsecase();
 }

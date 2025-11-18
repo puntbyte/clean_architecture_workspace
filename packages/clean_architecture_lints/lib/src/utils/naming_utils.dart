@@ -8,56 +8,42 @@ import 'package:clean_architecture_lints/src/utils/extensions/string_extension.d
 class NamingUtils {
   const NamingUtils._();
 
+  /// A cache for compiled regular expressions to avoid repeated compilation.
+  static final Map<String, RegExp> _expressionCache = {};
+
   /// Converts a repository method name into an expected UseCase class name.
   static String getExpectedUseCaseClassName(String methodName, ArchitectureConfig config) {
     final pascal = methodName.toPascalCase();
-    final template = config.naming.getRuleFor(ArchComponent.usecase)!.pattern;
-    return template.replaceAll('{{name}}', pascal);
+    final rule = config.namingConventions.getRuleFor(ArchComponent.usecase);
+    // A rule should always exist, but we check for safety.
+    if (rule == null) return pascal;
+    return rule.pattern.replaceAll('{{name}}', pascal);
   }
 
-  /// Validates a class name against a configured template string.
-  static bool validateName({
-    required String name,
-    required String template,
-  }) {
-    // This is the definitive, robust implementation that passes all tests.
-    if (template == '{{name}}') {
-      final isPascal = RegExp(r'^[A-Z][a-zA-Z0-9]+$').hasMatch(name);
-      final hasForbiddenSuffix = RegExp(
-        r'(Entity|Model|UseCase|Usecase|Repository|DataSource)$',
-      ).hasMatch(name);
-      return isPascal && !hasForbiddenSuffix;
-    }
+  /// Validates a name against a configured template string using a cached regex.
+  static bool validateName({required String name, required String template}) {
+    // Retrieve the compiled regex from cache or build and cache it.
+    final regex = _expressionCache.putIfAbsent(template, () => _buildRegexForTemplate(template));
+    return regex.hasMatch(name);
+  }
 
-    const namePlaceholder = '{{name}}';
-    const kindPlaceholder = '{{kind}}'; // Updated from 'prefix' or 'type'
-    const bothPlaceholder = '{{kind}}{{name}}';
-
+  /// Builds a regular expression from a template string with placeholders.
+  static RegExp _buildRegexForTemplate(String template) {
+    // Define the regex representation for our placeholders.
+    // `kind` is non-greedy (`*?`) to correctly handle `{{kind}}{{name}}` patterns,
+    // where it should match the shortest possible prefix (e.g., "Default").
     const pascalToken = '([A-Z][a-zA-Z0-9]*)';
-    const pascalTokenNonGreedy = '([A-Z][a-zA-Z0-9]*?)';
+    const nonGreedyPascalToken = '([A-Z][a-zA-Z0-9]*?)';
 
-    final buffer = StringBuffer();
-    for (var i = 0; i < template.length;) {
-      if (template.startsWith(bothPlaceholder, i)) {
-        buffer.write('$pascalTokenNonGreedy$pascalToken');
-        i += bothPlaceholder.length;
-        continue;
-      }
-      if (template.startsWith(namePlaceholder, i)) {
-        buffer.write(pascalToken);
-        i += namePlaceholder.length;
-        continue;
-      }
-      if (template.startsWith(kindPlaceholder, i)) {
-        buffer.write(pascalToken);
-        i += kindPlaceholder.length;
-        continue;
-      }
-      buffer.write(RegExp.escape(template[i]));
-      i++;
-    }
+    // 1. Escape all special regex characters in the original template.
+    var pattern = RegExp.escape(template);
 
-    final pattern = '^$buffer\$';
-    return RegExp(pattern).hasMatch(name);
+    // 2. Un-escape our placeholders and replace them with their regex tokens.
+    pattern = pattern
+        .replaceAll(RegExp.escape('{{kind}}'), nonGreedyPascalToken)
+        .replaceAll(RegExp.escape('{{name}}'), pascalToken);
+
+    // 3. Anchor the pattern to ensure it matches the entire string.
+    return RegExp('^$pattern\$');
   }
 }

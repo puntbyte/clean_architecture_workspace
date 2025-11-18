@@ -4,7 +4,7 @@ import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/models/naming_config.dart';
+import 'package:clean_architecture_lints/src/models/naming_conventions_config.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/iterable_extension.dart';
 import 'package:clean_architecture_lints/src/utils/naming_utils.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
@@ -31,7 +31,7 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    final allPatterns = _getAllPatterns(config.naming);
+    final allPatterns = _getAllPatterns(config.namingConventions);
 
     context.registry.addClassDeclaration((node) {
       final className = node.name.lexeme;
@@ -50,7 +50,7 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
       // We also check that the class name does NOT match the pattern for its actual location.
       // This prevents flagging `UserEntity` in an `entities` folder, as its name also
       // technically matches the `{{name}}` pattern for `usecase`.
-      final ruleForActual = config.naming.getRuleFor(actualComponent);
+      final ruleForActual = config.namingConventions.getRuleFor(actualComponent);
       final matchesActualPattern =
           ruleForActual != null &&
           NamingUtils.validateName(name: className, template: ruleForActual.pattern);
@@ -70,7 +70,7 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
   }
 
   /// Creates a list of all known patterns for the mislocation check.
-  List<_ComponentPattern> _getAllPatterns(NamingConfig naming) {
+  List<_ComponentPattern> _getAllPatterns(NamingConventionsConfig naming) {
     return naming.rules.entries
         .map((entry) => _ComponentPattern(pattern: entry.value.pattern, component: entry.key))
         .toList();

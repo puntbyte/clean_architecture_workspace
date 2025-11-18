@@ -1,23 +1,24 @@
 // test/helpers/test_data.dart
 
 import 'package:clean_architecture_lints/src/models/architecture_config.dart';
-import 'package:clean_architecture_lints/src/models/rules/type_safety_rule.dart';
 
-/// A single, powerful test data factory for creating a complete and valid
+/// A powerful test data factory for creating a complete and valid
 /// [ArchitectureConfig] object for use in unit tests.
 ///
 /// It provides sensible defaults for all configuration options and allows any
-/// specific property to be overridden by passing it as a parameter.
+/// specific property to be overridden by passing it as a named parameter.
+/// This ensures that tests can be written concisely and are robust against
+/// missing configuration errors.
 ArchitectureConfig makeConfig({
-  // module_definitions
-  String projectStructure = 'feature_first',
-  String coreModule = 'core',
-  String featuresModule = 'features',
-  String domainLayerPath = 'domain',
-  String dataLayerPath = 'data',
-  String presentationLayerPath = 'presentation',
+  // --- Module Overrides ---
+  String type = 'feature_first',
+  String coreDir = 'core',
+  String featuresDir = 'features',
+  String domainLayerName = 'domain',
+  String dataLayerName = 'data',
+  String presentationLayerName = 'presentation',
 
-  // layer_definitions
+  // --- Layer Directory Overrides (accepts String or List<String>) ---
   dynamic entityDir = 'entities',
   dynamic contractDir = 'contracts',
   dynamic usecaseDir = 'usecases',
@@ -28,41 +29,49 @@ ArchitectureConfig makeConfig({
   dynamic widgetDir = 'widgets',
   dynamic managerDir = const ['managers', 'bloc', 'cubit'],
 
-  // naming_conventions (use `dynamic` to accept both String and Map)
-  dynamic entityNaming = '{{name}}',
-  dynamic modelNaming = '{{name}}Model',
-  dynamic useCaseNaming = '{{name}}',
-  dynamic eventNaming = '{{name}}Event',
-  dynamic stateNaming = '{{name}}State',
-  dynamic managerNaming = '{{name}}Manager',
-  dynamic blocNaming = '{{name}}Bloc',
-  dynamic cubitNaming = '{{name}}Cubit',
-  dynamic repositoryNaming = '{{name}}Repository',
-  dynamic sourceNaming = '{{name}}Source',
-  dynamic pageNaming = '{{name}}Page',
-  dynamic widgetNaming = '{{name}}Widget',
-  // ... add other naming configs as needed
+  // --- Rule List Overrides ---
+  List<Map<String, dynamic>>? namingRules,
+  List<Map<String, dynamic>>? inheritances,
+  List<Map<String, dynamic>>? annotations,
+  List<Map<String, dynamic>>? typeSafeties,
 
-  // type_safeties (pass rule objects for type safety)
-  List<TypeSafetyRule> typeSafetyRules = const [],
-
-  // inheritances & annotations (pass raw maps as they are simpler for tests)
-  List<Map<String, dynamic>> inheritanceRules = const [],
-  List<Map<String, dynamic>> annotationRules = const [],
-
-  // services
-  List<String> serviceLocatorNames = const ['getIt', 'locator', 'sl'],
+  // --- Service Overrides ---
+  Map<String, dynamic>? services,
 }) {
+  /// A comprehensive set of default naming rules, one for each ArchComponent.
+  /// This prevents lints from failing due to missing rules and makes the
+  /// default configuration more realistic and robust.
+  final defaultNamingRules = [
+    // Domain
+    {'on': 'entity', 'pattern': '{{name}}'},
+    {'on': 'contract', 'pattern': '{{name}}Repository'},
+    {'on': 'usecase', 'pattern': '{{name}}'},
+    {'on': 'usecase.parameter', 'pattern': '_{{name}}Param'},
+    // Data
+    {'on': 'model', 'pattern': '{{name}}Model'},
+    {'on': 'repository.implementation', 'pattern': 'Default{{name}}Repository'},
+    {'on': 'source.interface', 'pattern': '{{name}}DataSource'},
+    {'on': 'source.implementation', 'pattern': 'Default{{name}}DataSource'},
+    // Presentation
+    {'on': 'page', 'pattern': '{{name}}Page'},
+    {'on': 'widget', 'pattern': '{{name}}Widget'},
+    {'on': 'manager', 'pattern': '{{name}}(Bloc|Cubit|Manager)'},
+    {'on': 'event.interface', 'pattern': '{{name}}Event'},
+    {'on': 'state.interface', 'pattern': '{{name}}State'},
+    // Generic patterns for implementations are common, which is why refinement is needed.
+    {'on': 'event.implementation', 'pattern': '{{name}}'},
+    {'on': 'state.implementation', 'pattern': '{{name}}'},
+  ];
+
   return ArchitectureConfig.fromMap({
-    // New, unified module_definitions block
     'module_definitions': {
-      'type': projectStructure,
-      'core': coreModule,
-      'features': featuresModule,
+      'type': type,
+      'core': coreDir,
+      'features': featuresDir,
       'layers': {
-        'domain': domainLayerPath,
-        'data': dataLayerPath,
-        'presentation': presentationLayerPath,
+        'domain': domainLayerName,
+        'data': dataLayerName,
+        'presentation': presentationLayerName,
       }
     },
     'layer_definitions': {
@@ -70,28 +79,14 @@ ArchitectureConfig makeConfig({
       'data': {'model': modelDir, 'repository': repositoryDir, 'source': sourceDir},
       'presentation': {'page': pageDir, 'widget': widgetDir, 'manager': managerDir},
     },
-
-    'naming_conventions': {
-      'entity': entityNaming,
-      'model': modelNaming,
-      'usecase': useCaseNaming,
-      'event.interface': eventNaming,
-      'state.interface': stateNaming,
-    },
-
-    'type_safeties': typeSafetyRules.map((r) => {
-      'on': r.on,
-      'check': r.check.name, // Use the enum's name
-      'unsafe_type': r.unsafeType,
-      'safe_type': r.safeType,
-      if (r.identifier != null) 'identifier': r.identifier,
-    }).toList(),
-
-    'inheritances': inheritanceRules,
-    'annotations': annotationRules,
-
-    'services': {
-      'dependency_injection': {'service_locator_names': serviceLocatorNames}
+    'naming_conventions': namingRules ?? defaultNamingRules,
+    'inheritances': inheritances ?? [],
+    'annotations': annotations ?? [],
+    'type_safeties': typeSafeties ?? [],
+    'services': services ?? {
+      'service_locator': {
+        'name': ['getIt', 'locator', 'sl'],
+      }
     },
   });
 }

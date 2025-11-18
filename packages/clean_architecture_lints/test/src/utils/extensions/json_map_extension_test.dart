@@ -5,143 +5,239 @@ import 'package:test/test.dart';
 
 void main() {
   group('JsonMapExtension', () {
-    // --- getMap ---
-    group('getMap', () {
-      test('should return a map when the value is a valid Map<String, dynamic>', () {
-        final source = {'config': {'key': 'value'}};
-        expect(source.getMap('config'), {'key': 'value'});
+    group('asBool', () {
+      test('should return true when value is true', () {
+        final json = {'enabled': true};
+        expect(json.asBool('enabled'), isTrue);
       });
 
-      test('should return a map when the value is a generic Map', () {
-        final source = <String, dynamic>{'config': <dynamic, dynamic>{'key': 'value'}};
-        expect(source.getMap('config'), {'key': 'value'});
+      test('should return false when value is false', () {
+        final json = {'enabled': false};
+        expect(json.asBool('enabled'), isFalse);
       });
 
-      test('should return an empty map when the key does not exist', () {
-        final source = {'other': 'value'};
-        expect(source.getMap('config'), isEmpty);
+      test('should return default false when key is missing', () {
+        final json = {'other': 'value'};
+        expect(json.asBool('enabled'), isFalse);
       });
 
-      test('should return an empty map when the value is not a map', () {
-        final source = {'config': 'not_a_map'};
-        expect(source.getMap('config'), isEmpty);
+      test('should return custom orElse when key is missing', () {
+        final json = {'other': 'value'};
+        expect(json.asBool('enabled', orElse: true), isTrue);
       });
 
-      test('should return an empty map when the value is null', () {
-        final source = <String, dynamic>{'config': null};
-        expect(source.getMap('config'), isEmpty);
-      });
-    });
-
-    // --- getList ---
-    group('getList', () {
-      test('should return a list of strings when the value is a valid list', () {
-        final source = {'items': ['a', 'b']};
-        expect(source.getList('items'), ['a', 'b']);
+      test('should return orElse for non-boolean values', () {
+        final json = {'enabled': 'not_a_bool'};
+        expect(json.asBool('enabled', orElse: true), isTrue);
       });
 
-      test('should return a list containing the string when the value is a single string', () {
-        final source = {'items': 'a'};
-        expect(source.getList('items'), ['a']);
-      });
-
-      test('should return the default empty list when the key does not exist', () {
-        final source = {'other': 'value'};
-        expect(source.getList('items'), isEmpty);
-      });
-
-      test('should return the provided orElse list when the key does not exist', () {
-        final source = {'other': 'value'};
-        expect(source.getList('items', orElse: ['default']), ['default']);
-      });
-
-      test('should return the orElse list when the value is not a list or string', () {
-        final source = {'items': 123};
-        expect(source.getList('items', orElse: ['default']), ['default']);
-      });
-
-      test('should return the orElse list for a list with non-string items', () {
-        final source = {'items': ['a', 123, 'b']};
-        expect(source.getList('items', orElse: ['default']), ['default']);
+      test('should return orElse for null values', () {
+        final json = <String, dynamic>{'enabled': null};
+        expect(json.asBool('enabled', orElse: true), isTrue);
       });
     });
 
-    // --- getString ---
-    group('getString', () {
-      test('should return the string value when it exists', () {
-        final source = {'name': 'my_app'};
-        expect(source.getString('name'), 'my_app');
+    group('asString', () {
+      test('should return string value when it exists', () {
+        final json = {'name': 'my_app'};
+        expect(json.asString('name'), 'my_app');
       });
 
-      test('should return the orElse value when the key does not exist', () {
-        final source = {'other': 'value'};
-        expect(source.getString('name', orElse: 'default'), 'default');
+      test('should return empty string when key is missing', () {
+        final json = {'other': 'value'};
+        expect(json.asString('name'), '');
       });
 
-      test('should return the orElse value when the value is not a string', () {
-        final source = {'name': 123};
-        expect(source.getString('name', orElse: 'default'), 'default');
+      test('should return custom orElse when key is missing', () {
+        final json = {'other': 'value'};
+        expect(json.asString('name', orElse: 'default'), 'default');
       });
 
-      test('should return the default empty string if orElse is not provided', () {
-        final source = {'name': 123};
-        expect(source.getString('name'), '');
-      });
-    });
-
-    // --- getOptionalString ---
-    group('getOptionalString', () {
-      test('should return the string value when it exists', () {
-        final source = {'path': '/lib/core'};
-        expect(source.getOptionalString('path'), '/lib/core');
+      test('should return orElse for non-string values', () {
+        final json = {'name': 123};
+        expect(json.asString('name', orElse: 'default'), 'default');
       });
 
-      test('should return null when the key does not exist', () {
-        final source = {'other': 'value'};
-        expect(source.getOptionalString('path'), isNull);
-      });
-
-      test('should return null when the value is not a string', () {
-        final source = {'path': 123};
-        expect(source.getOptionalString('path'), isNull);
-      });
-
-      test('should return null when the value is explicitly null', () {
-        final source = <String, dynamic>{'path': null};
-        expect(source.getOptionalString('path'), isNull);
+      test('should return orElse for null values', () {
+        final json = <String, dynamic>{'name': null};
+        expect(json.asString('name', orElse: 'default'), 'default');
       });
     });
 
-    // --- getBool ---
-    group('getBool', () {
-      test('should return true when the value is true', () {
-        final source = {'enabled': true};
-        expect(source.getBool('enabled'), isTrue);
+    group('asStringOrNull', () {
+      test('should return string value when it exists', () {
+        final json = {'path': '/lib/core'};
+        expect(json.asStringOrNull('path'), '/lib/core');
       });
 
-      test('should return false when the value is false', () {
-        final source = {'enabled': false};
-        expect(source.getBool('enabled'), isFalse);
+      test('should return null when key is missing', () {
+        final json = {'other': 'value'};
+        expect(json.asStringOrNull('path'), isNull);
       });
 
-      test('should return the default false when the key does not exist', () {
-        final source = {'other': 'value'};
-        expect(source.getBool('enabled'), isFalse);
+      test('should return null for non-string values', () {
+        final json = {'path': 123};
+        expect(json.asStringOrNull('path'), isNull);
       });
 
-      test('should return the provided orElse value when the key does not exist', () {
-        final source = {'other': 'value'};
-        expect(source.getBool('enabled', orElse: true), isTrue);
+      test('should return null for explicit null values', () {
+        final json = <String, dynamic>{'path': null};
+        expect(json.asStringOrNull('path'), isNull);
+      });
+    });
+
+    group('asStringList', () {
+      test('should return list of strings when value is a valid list', () {
+        final json = {
+          'items': ['a', 'b'],
+        };
+        expect(json.asStringList('items'), ['a', 'b']);
       });
 
-      test('should return the orElse value when the value is not a boolean', () {
-        final source = {'enabled': 'not_a_bool'};
-        expect(source.getBool('enabled', orElse: true), isTrue);
+      test('should return list containing the string for a single string value', () {
+        final json = {'items': 'a'};
+        expect(json.asStringList('items'), ['a']);
       });
 
-      test('should return the default false when the value is null', () {
-        final source = <String, dynamic>{'enabled': null};
-        expect(source.getBool('enabled'), isFalse);
+      test('should return empty list when key is missing', () {
+        final json = {'other': 'value'};
+        expect(json.asStringList('items'), isEmpty);
+      });
+
+      test('should return custom orElse when key is missing', () {
+        final json = {'other': 'value'};
+        expect(json.asStringList('items', orElse: ['default']), ['default']);
+      });
+
+      test('should return orElse for non-list and non-string values', () {
+        final json = {'items': 123};
+        expect(json.asStringList('items', orElse: ['default']), ['default']);
+      });
+
+      test('should return orElse for lists with non-string items', () {
+        final json = {
+          'items': ['a', 123, 'b'],
+        };
+        expect(json.asStringList('items', orElse: ['default']), ['default']);
+      });
+
+      test('should return empty list for explicit null value', () {
+        final json = <String, dynamic>{'items': null};
+        expect(json.asStringList('items'), isEmpty);
+      });
+    });
+
+    group('asMap', () {
+      test('should return JsonMap when value is a valid JsonMap', () {
+        final json = {
+          'config': {'key': 'value'},
+        };
+        expect(json.asMap('config'), {'key': 'value'});
+      });
+
+      test('should convert Map<dynamic, dynamic> to JsonMap', () {
+        final json = <String, dynamic>{
+          'config': <dynamic, dynamic>{'key': 'value'},
+        };
+        expect(json.asMap('config'), {'key': 'value'});
+      });
+
+      test('should return empty map when key is missing', () {
+        final json = {'other': 'value'};
+        expect(json.asMap('config'), isEmpty);
+      });
+
+      test('should return custom orElse when key is missing', () {
+        final json = {'other': 'value'};
+        expect(json.asMap('config', orElse: {'default': 'value'}), {'default': 'value'});
+      });
+
+      test('should return orElse for non-map values', () {
+        final json = {'config': 'not_a_map'};
+        expect(json.asMap('config', orElse: {'default': 'value'}), {'default': 'value'});
+      });
+
+      test('should return orElse for null values', () {
+        final json = <String, dynamic>{'config': null};
+        expect(json.asMap('config', orElse: {'default': 'value'}), {'default': 'value'});
+      });
+
+      test('should handle nested map retrieval', () {
+        final json = {
+          'outer': {
+            'inner': {'value': 42},
+          },
+        };
+        final outer = json.asMap('outer');
+        expect(outer.asMap('inner'), {'value': 42});
+      });
+    });
+
+    group('asMapList', () {
+      test('should return list of JsonMap for a valid list of maps', () {
+        final json = {
+          'rules': [
+            {'name': 'rule1'},
+            {'name': 'rule2'},
+          ],
+        };
+        final result = json.asMapList('rules');
+        expect(result, hasLength(2));
+        expect(result.first['name'], 'rule1');
+        expect(result.last['name'], 'rule2');
+      });
+
+      test('should return empty list when key is missing', () {
+        final json = {'other': 'value'};
+        expect(json.asMapList('rules'), isEmpty);
+      });
+
+      test('should return custom orElse when key is missing', () {
+        final json = {'other': 'value'};
+        final defaultList = [
+          {'default': 'rule'},
+        ];
+        expect(json.asMapList('rules', orElse: defaultList), defaultList);
+      });
+
+      test('should return empty list for null value', () {
+        final json = <String, dynamic>{'rules': null};
+        expect(json.asMapList('rules'), isEmpty);
+      });
+
+      test('should filter out non-map items from list', () {
+        final json = {
+          'rules': [
+            {'name': 'rule1'},
+            'not_a_map',
+            123,
+            {'name': 'rule2'},
+          ],
+        };
+        final result = json.asMapList('rules');
+        expect(result, hasLength(2));
+        expect(result.first['name'], 'rule1');
+        expect(result.last['name'], 'rule2');
+      });
+
+      test('should return orElse for non-list values', () {
+        final json = {'rules': 'not_a_list'};
+        expect(
+          json.asMapList(
+            'rules',
+            orElse: [
+              {'default': 'value'},
+            ],
+          ),
+          [
+            {'default': 'value'},
+          ],
+        );
+      });
+
+      test('should handle empty list', () {
+        final json = {'rules': List<dynamic>.empty()};
+        expect(json.asMapList('rules'), isEmpty);
       });
     });
   });

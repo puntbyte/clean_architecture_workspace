@@ -1,39 +1,36 @@
 // lib/src/models/annotations_config.dart
 
-import 'package:clean_architecture_lints/src/models/rules/annotation_rule.dart';
+import 'package:clean_architecture_lints/src/utils/config_keys.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/iterable_extension.dart';
+import 'package:clean_architecture_lints/src/utils/extensions/json_map_extension.dart';
+
+part 'details/annotation_detail.dart';
+part 'rules/annotation_rule.dart';
 
 /// The parent configuration class for all annotation rules.
 class AnnotationsConfig {
-  /// A list of all annotation rules defined in `analysis_options.yaml`.
   final List<AnnotationRule> rules;
 
   const AnnotationsConfig({required this.rules});
 
-  /// A helper to find the specific rule for a given architectural component ID.
+  /// Finds the specific rule for a given architectural component ID.
   AnnotationRule? ruleFor(String componentId) {
-    return rules.firstWhereOrNull((rule) => rule.on == componentId);
+    return rules.firstWhereOrNull((rule) => rule.on.contains(componentId));
   }
 
-  /// A convenient helper for code generators to find all annotations
-  /// that are required for a specific component.
-  //
-  // THE DEFINITIVE FIX IS HERE: This method was missing.
+  /// Returns all required annotations for a specific component.
   List<AnnotationDetail> requiredFor(String componentId) {
-    // Safely find the rule and return its `required` list, or an empty list if not found.
     return ruleFor(componentId)?.required ?? [];
   }
 
-  /// The factory constructor that parses the `annotations` block from the YAML.
+  /// Factory that parses the `annotations` block from YAML.
   factory AnnotationsConfig.fromMap(Map<String, dynamic> map) {
-    // The key in the YAML is `annotations`, which is a list of rule maps.
-    final ruleList = (map['annotations'] as List<dynamic>?) ?? [];
+    final ruleList = map.asMapList(ConfigKey.root.annotations);
 
     return AnnotationsConfig(
       rules: ruleList
-          .whereType<Map<String, dynamic>>()
           .map(AnnotationRule.tryFromMap)
-          .whereType<AnnotationRule>() // Filter out any nulls from malformed rules
+          .whereType<AnnotationRule>()
           .toList(),
     );
   }

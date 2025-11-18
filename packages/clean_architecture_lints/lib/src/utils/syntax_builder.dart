@@ -2,13 +2,9 @@
 
 import 'package:code_builder/code_builder.dart' as cb;
 
-/// A declarative wrapper around the `code_builder` API to simplify and standardize
-/// the generation of Dart code ASTs (Abstract Syntax Trees).
-///
-/// This utility provides a cleaner, more readable API for creating common
-/// code structures like classes, methods, and fields.
+/// A declarative wrapper around the `code_builder` API to simplify and
+/// standardize the generation of Dart code.
 class SyntaxBuilder {
-  // Private constructor to prevent instantiation.
   const SyntaxBuilder._();
 
   /// Builds a [cb.Library] spec.
@@ -16,21 +12,21 @@ class SyntaxBuilder {
     return cb.Library((b) => b.body.addAll(body));
   }
 
-  /// Builds a [cb.TypeDef] spec, commonly used for records.
+  /// Builds a [cb.TypeDef] spec, typically used for defining record type aliases.
+  ///
+  /// Example: `typedef MyParams = ({int id});`
   static cb.TypeDef typeDef({required String name, required cb.Expression definition}) {
-    return cb.TypeDef(
-      (b) => b
-        ..name = name
-        ..definition = definition,
-    );
+    return cb.TypeDef((b) => b..name = name..definition = definition);
   }
 
   /// Builds a [cb.RecordType] spec.
+  ///
+  /// Example: `({String name, int id})`
   static cb.RecordType recordType({Map<String, cb.Reference> namedFields = const {}}) {
     return cb.RecordType((b) => b.namedFieldTypes.addAll(namedFields));
   }
 
-  /// Builds a [cb.Parameter] spec.
+  /// Builds a [cb.Parameter] spec for a method or constructor.
   static cb.Parameter parameter({
     required String name,
     cb.Reference? type,
@@ -39,7 +35,7 @@ class SyntaxBuilder {
     bool isRequired = false,
   }) {
     return cb.Parameter(
-      (b) => b
+          (b) => b
         ..name = name
         ..type = type
         ..toThis = toThis
@@ -48,12 +44,12 @@ class SyntaxBuilder {
     );
   }
 
-  /// Builds a method or function [cb.InvokeExpression] spec.
+  /// Builds a method or function invocation expression [cb.InvokeExpression].
   static cb.Expression call(
-    cb.Expression callee, {
-    List<cb.Expression> positional = const [],
-    Map<String, cb.Expression> named = const {},
-  }) {
+      cb.Expression callee, {
+        List<cb.Expression> positional = const [],
+        Map<String, cb.Expression> named = const {},
+      }) {
     return callee.call(positional, named);
   }
 
@@ -86,7 +82,7 @@ class SyntaxBuilder {
     bool constant = false,
   }) {
     return cb.Constructor(
-      (b) => b
+          (b) => b
         ..requiredParameters.addAll(requiredParameters)
         ..optionalParameters.addAll(optionalParameters)
         ..initializers.addAll(initializers)
@@ -95,8 +91,8 @@ class SyntaxBuilder {
     );
   }
 
-  /// Builds a [cb.Method] spec.
-  /// THIS IS THE DEFINITIVE FIX.
+  /// Builds a [cb.Method] spec. Defaults to a `void` return type and an
+  /// empty block body `{}` if not specified.
   static cb.Method method({
     required String name,
     cb.Reference? returns,
@@ -106,21 +102,18 @@ class SyntaxBuilder {
     List<cb.Expression> annotations = const [],
   }) {
     return cb.Method(
-      (b) => b
+          (b) => b
         ..name = name
-        // If no return type is given, default to `void` to generate valid code.
         ..returns = returns ?? cb.refer('void')
         ..requiredParameters.addAll(requiredParameters)
         ..annotations.addAll(annotations)
         ..lambda = isLambda
-        ..body = body ?? cb.Block(),
+      // Provide an empty block as a safe default for non-lambda methods.
+        ..body = body ?? (isLambda ? null : cb.Block.of([])),
     );
   }
 
   /// High-level builder for a complete UseCase class.
-  ///
-  /// This encapsulates the entire structure of a generated UseCase, including its
-  /// fields, constructor, and `call` method, making the `CreateUseCaseFix` much cleaner.
   static List<cb.Spec> useCase({
     required String useCaseName,
     required String repoClassName,
@@ -135,13 +128,14 @@ class SyntaxBuilder {
   }) {
     return [
       cb.Class(
-        (b) => b
+            (b) => b
           ..name = useCaseName
           ..modifier = cb.ClassModifier.final$
           ..implements.add(
             cb.TypeReference(
-              (b) => b
+                  (b) => b
                 ..symbol = baseClassName.symbol
+                ..url = baseClassName.url
                 ..types.addAll(genericTypes),
             ),
           )

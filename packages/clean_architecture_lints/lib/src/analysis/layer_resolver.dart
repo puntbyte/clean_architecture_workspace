@@ -2,16 +2,19 @@
 
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/models/architecture_config.dart';
+import 'package:clean_architecture_lints/src/models/module_config.dart';
 import 'package:clean_architecture_lints/src/utils/naming_utils.dart';
 import 'package:path/path.dart' as p;
 
-/// A utility class to resolve the architectural component of a given file path and class name.
+/// A utility class to resolve the architectural component of a given file path.
+/// It uses a pre-computed lookup map for high performance.
 class LayerResolver {
   final ArchitectureConfig _config;
+  final Map<String, ArchComponent> _componentDirectoryMap;
 
-  LayerResolver(this._config);
+  LayerResolver(this._config) : _componentDirectoryMap = _createComponentDirectoryMap(_config);
 
-  /// Resolves the specific architectural component for a given file path and an optional class name.
+  /// Resolves the architectural component for a given file path and optional class name.
   ArchComponent getComponent(String path, {String? className}) {
     final componentFromPath = _getComponentFromPath(path);
 
@@ -23,129 +26,117 @@ class LayerResolver {
         return _refineSourceComponent(className);
       }
     }
+
     return componentFromPath;
   }
 
-  /// Determines the component type based solely on the file's directory.
+  /// Determines the component type by checking path segments against the pre-computed map.
   ArchComponent _getComponentFromPath(String path) {
     final segments = _getRelativePathSegments(path);
-    if (segments == null) return ArchComponent.unknown;
-
-    final layerCfg = _config.layers;
-    bool pathContainsAny(List<String> configuredDirs) => configuredDirs.any(segments.contains);
-
-    if (layerCfg.projectStructure == 'layer_first') {
-      if (segments.isNotEmpty &&
-          [
-            layerCfg.domainPath,
-            layerCfg.dataPath,
-            layerCfg.presentationPath,
-          ].contains(segments.first)) {
-        // Continue to sub-layer checks
-      } else {
-        return ArchComponent.unknown;
-      }
-    } else {
-      // feature_first
-      if (segments.length <= 2 || segments.first != layerCfg.featuresModule) {
-        return ArchComponent.unknown;
-      }
+    if (segments == null || !_isPathInArchitecturalLayer(segments)) {
+      return ArchComponent.unknown;
     }
 
-    // Domain Layer
-    if (pathContainsAny(layerCfg.domain.entity)) return ArchComponent.entity;
-    if (pathContainsAny(layerCfg.domain.contract)) return ArchComponent.contract;
-    if (pathContainsAny(layerCfg.domain.usecase)) return ArchComponent.usecase;
-
-    // Data Layer
-    if (pathContainsAny(layerCfg.data.model)) return ArchComponent.model;
-    if (pathContainsAny(layerCfg.data.repository)) return ArchComponent.repository;
-    if (pathContainsAny(layerCfg.data.source)) return ArchComponent.source;
-
-    // Presentation Layer
-    if (pathContainsAny(layerCfg.presentation.page)) return ArchComponent.page;
-    if (pathContainsAny(layerCfg.presentation.widget)) return ArchComponent.widget;
-    if (pathContainsAny(layerCfg.presentation.manager)) return ArchComponent.manager;
+    // Iterate backwards as the component dir is usually at the end of the path
+    for (final segment in segments.reversed) {
+      final component = _componentDirectoryMap[segment];
+      if (component != null) {
+        return component;
+      }
+    }
 
     return ArchComponent.unknown;
   }
 
-  /// Refines a 'manager' component into 'event', 'state', or 'manager'
-  /// by checking for specific, unambiguous name patterns.
+  /// Refines a component by checking its class name against a series of naming rules
+  /// in a specific, hardcoded order to prevent ambiguity.
   ArchComponent _refineManagerComponent(String className) {
-    final naming = _config.naming;
+    // Check for the MOST specific patterns (interfaces with suffixes) first.
+    if (_matches(className, ArchComponent.event)) return ArchComponent.event;
+    if (_matches(className, ArchComponent.state)) return ArchComponent.state;
 
-    // --- THE DEFINITIVE, PRIORITIZED LOGIC ---
-    // Check for the most specific, suffix-based patterns FIRST.
+    // Then, check for the manager/bloc/cubit pattern.
+    if (_matches(className, ArchComponent.manager)) return ArchComponent.manager;
 
-    // 1. Check if it's an Event or State interface (e.g., AuthEvent, AuthState).
-    if (NamingUtils.validateName(
-      name: className,
-      template: naming.getRuleFor(ArchComponent.event)!.pattern,
-    )) {
-      return ArchComponent.event;
-    }
-    if (NamingUtils.validateName(
-      name: className,
-      template: naming.getRuleFor(ArchComponent.state)!.pattern,
-    )) {
-      return ArchComponent.state;
-    }
-
-    // 2. Check if it's a Manager class (e.g., AuthBloc, AuthCubit).
-    if (NamingUtils.validateName(
-      name: className,
-      template: naming.getRuleFor(ArchComponent.manager)!.pattern,
-    )) {
-      return ArchComponent.manager;
-    }
-
-    // 3. If it has no specific suffix, it's an implementation.
-    // We CANNOT reliably distinguish event vs. state implementations here syntactically,
-    // as they both use the generic '{{name}}' pattern. That is the job of the
-    // semantic linter. For the purpose of file location and basic naming,
-    // we can default to a reasonable guess. Let's assume state implementations
-    // are more common or provide a general category if needed.
-    // However, the best approach is to NOT try to guess. If it doesn't match a specific
-    // pattern above, it's treated as a generic member of the 'manager' sub-layer.
-    // For the purpose of the naming lints, we need a guess. The ambiguity lies in the config.
-    // Given the tests, we need to distinguish them. The only way is order.
-    // The previous error was that the generic `{{name}}` rule for implementations
-    // was matching before the more specific `{{name}}Bloc` rule. The order fixes this.
-
-    if (NamingUtils.validateName(
-      name: className,
-      template: naming.getRuleFor(ArchComponent.stateImplementation)!.pattern,
-    )) {
+    // Finally, check for the generic implementation patterns. The order between
+    // these two only matters if their patterns are also ambiguous.
+    if (_matches(className, ArchComponent.stateImplementation))
       return ArchComponent.stateImplementation;
-    }
-    if (NamingUtils.validateName(
-      name: className,
-      template: naming.getRuleFor(ArchComponent.eventImplementation)!.pattern,
-    )) {
+    if (_matches(className, ArchComponent.eventImplementation))
       return ArchComponent.eventImplementation;
-    }
 
-    // Default to the sub-layer's component type if no specific name matches.
+    // If no specific name matches, it's a generic manager.
     return ArchComponent.manager;
   }
 
   ArchComponent _refineSourceComponent(String className) {
-    final naming = _config.naming;
-    if (NamingUtils.validateName(
-      name: className,
-      template: naming.getRuleFor(ArchComponent.sourceImplementation)!.pattern,
-    )) {
+    if (_matches(className, ArchComponent.sourceImplementation)) {
       return ArchComponent.sourceImplementation;
     }
+    // Default to the interface if the implementation pattern doesn't match.
     return ArchComponent.source;
   }
 
+  /// Helper to check if a class name matches the pattern for a given component.
+  bool _matches(String className, ArchComponent component) {
+    final rule = _config.namingConventions.getRuleFor(component);
+    return rule != null && NamingUtils.validateName(name: className, template: rule.pattern);
+  }
+
+  // --- Path Helper Functions ---
+
+  bool _isPathInArchitecturalLayer(List<String> segments) {
+    final modules = _config.module;
+    if (modules.type == ModuleType.layerFirst) {
+      return segments.isNotEmpty &&
+          [modules.domain, modules.data, modules.presentation].contains(segments.first);
+    } else {
+      // feature_first
+      return segments.length > 2 && segments.first == modules.features;
+    }
+  }
+
   List<String>? _getRelativePathSegments(String absolutePath) {
-    final normalized = p.normalize(absolutePath).replaceAll(r'\', '/');
-    final segments = normalized.split('/');
+    final normalized = p.normalize(absolutePath);
+    final segments = p.split(normalized);
     final libIndex = segments.lastIndexOf('lib');
     if (libIndex == -1) return null;
     return segments.sublist(libIndex + 1);
+  }
+
+  static Map<String, ArchComponent> _createComponentDirectoryMap(ArchitectureConfig config) {
+    final map = <String, ArchComponent>{};
+    final layers = config.layer;
+    // Domain Layer
+    for (final dir in layers.domain.entity) {
+      map[dir] = ArchComponent.entity;
+    }
+    for (final dir in layers.domain.contract) {
+      map[dir] = ArchComponent.contract;
+    }
+    for (final dir in layers.domain.usecase) {
+      map[dir] = ArchComponent.usecase;
+    }
+    // Data Layer
+    for (final dir in layers.data.model) {
+      map[dir] = ArchComponent.model;
+    }
+    for (final dir in layers.data.repository) {
+      map[dir] = ArchComponent.repository;
+    }
+    for (final dir in layers.data.source) {
+      map[dir] = ArchComponent.source;
+    }
+    // Presentation Layer
+    for (final dir in layers.presentation.page) {
+      map[dir] = ArchComponent.page;
+    }
+    for (final dir in layers.presentation.widget) {
+      map[dir] = ArchComponent.widget;
+    }
+    for (final dir in layers.presentation.manager) {
+      map[dir] = ArchComponent.manager;
+    }
+    return map;
   }
 }

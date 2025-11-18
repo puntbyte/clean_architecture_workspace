@@ -10,67 +10,81 @@ void main() {
     final emitter = cb.DartEmitter(useNullSafetySyntax: true);
     final formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
 
-    // A robust helper to format a spec and compare it to an expected string.
     void expectSpec(cb.Spec spec, String expected) {
       final actualSource = spec.accept(emitter).toString();
-      // Format both the actual and expected source to ignore minor whitespace differences.
       expect(formatter.format(actualSource), equals(formatter.format(expected)));
     }
 
-    test('should build a simple parameter inside a method context', () {
+    test('should build a parameter with a type', () {
       final paramSpec = SyntaxBuilder.parameter(name: 'id', type: cb.refer('int'));
-      // Test the parameter by putting it inside a method.
       final methodSpec = SyntaxBuilder.method(name: 'm', requiredParameters: [paramSpec]);
       expectSpec(methodSpec, 'void m(int id) {}');
     });
 
-    test('should build a constructor with a `toThis` parameter', () {
-      final spec = SyntaxBuilder.constructor(
+    test('should build a constructor with a "toThis" parameter', () {
+      final constructorSpec = SyntaxBuilder.constructor(
         constant: true,
         requiredParameters: [SyntaxBuilder.parameter(name: '_repo', toThis: true)],
       );
-      final classSpec = cb.Class((b) => b..name = 'MyClass'..constructors.add(spec));
+      final classSpec = cb.Class((b) => b..name = 'MyClass'..constructors.add(constructorSpec));
       expectSpec(classSpec, 'class MyClass { const MyClass(this._repo); }');
     });
 
-    test('should build a final field', () {
-      final spec = SyntaxBuilder.field(
+    test('should build a final field with a type', () {
+      final fieldSpec = SyntaxBuilder.field(
         name: '_repository',
         modifier: cb.FieldModifier.final$,
         type: cb.refer('AuthRepository'),
       );
-      expectSpec(spec, 'final AuthRepository _repository;');
+      expectSpec(fieldSpec, 'final AuthRepository _repository;');
     });
 
-    test('should build a lambda method with a valid expression body', () {
-      final spec = SyntaxBuilder.method(
+    test('should build a method with a default empty block body', () {
+      final methodSpec = SyntaxBuilder.method(name: 'doNothing');
+      expectSpec(methodSpec, 'void doNothing() {}');
+    });
+
+    test('should build a lambda method when placed inside a class context', () {
+      // Create the method spec as before.
+      final methodSpec = SyntaxBuilder.method(
         name: 'call',
-        returns: cb.refer('void'),
+        returns: cb.refer('bool'),
         isLambda: true,
         annotations: [cb.refer('override')],
-        // A lambda body must be a single expression that can be returned.
-        // A print statement is not an expression, but a function call is.
-        // We'll test with a simple literal value.
-        body: cb.literal(true).statement,
+        body: cb.literal(true).code,
       );
-      // The output will be a valid statement that can be parsed.
-      expectSpec(spec, '@override void call() => true;');
+
+      // FIX: Wrap the method in a class to create a valid, parsable unit.
+      final classSpec = cb.Class((b) => b
+        ..name = 'MyClass'
+        ..methods.add(methodSpec));
+
+      // The expected string now includes the class wrapper.
+      const expected = '''
+        class MyClass {
+          @override
+          bool call() => true;
+        }
+      ''';
+
+      expectSpec(classSpec, expected);
     });
 
     test('should build a record type definition', () {
-      final spec = SyntaxBuilder.typeDef(
+      final typeDefSpec = SyntaxBuilder.typeDef(
         name: '_MyParams',
         definition: SyntaxBuilder.recordType(namedFields: {
           'id': cb.refer('int'),
           'name': cb.refer('String'),
         }),
       );
-      expectSpec(spec, 'typedef _MyParams = ({int id, String name});');
+      expectSpec(typeDefSpec, 'typedef _MyParams = ({int id, String name});');
     });
 
     group('useCase builder', () {
-      test('should build a complete NullaryUseCase class', () {
-        final spec = SyntaxBuilder.useCase(
+      // ... (useCase builder tests remain unchanged and are correct)
+      test('should build a complete UseCase class with no parameters', () {
+        final useCaseSpec = SyntaxBuilder.useCase(
           useCaseName: 'GetCurrentUser',
           repoClassName: 'AuthRepository',
           methodName: 'getCurrentUser',
@@ -80,7 +94,6 @@ void main() {
           callParams: [],
           repoCallPositionalArgs: [],
           repoCallNamedArgs: {},
-          // Use the canonical way to build an annotation expression.
           annotations: [cb.refer('Injectable').call([])],
         ).first;
 
@@ -95,11 +108,11 @@ void main() {
             FutureEither<User?> call() => _repository.getCurrentUser();
           }
         ''';
-        expectSpec(spec, expected);
+        expectSpec(useCaseSpec, expected);
       });
 
-      test('should build a complete UnaryUseCase class with a record parameter', () {
-        final spec = SyntaxBuilder.useCase(
+      test('should build a complete UseCase class with a record parameter', () {
+        final useCaseSpec = SyntaxBuilder.useCase(
           useCaseName: 'SaveUser',
           repoClassName: 'AuthRepository',
           methodName: 'saveUser',
@@ -126,7 +139,7 @@ void main() {
                 _repository.saveUser(name: params.name, email: params.email);
           }
         ''';
-        expectSpec(spec, expected);
+        expectSpec(useCaseSpec, expected);
       });
     });
   });
