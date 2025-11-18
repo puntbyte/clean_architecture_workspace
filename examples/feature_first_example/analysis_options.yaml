@@ -96,10 +96,10 @@ custom_lint:
         # Example of overriding the default UseCase contract.
         - on: 'usecase'
           required:
-            - name: 'MyBaseUseCase'
-              import: 'package:my_core/my_core.dart'
-            - name: 'MyOtherUseCase'
-              import: 'package:my_core/my_core.dart'
+            - name: 'NullUseCase'
+              import: 'package:example/core/usecase/usecase.dart'
+            - name: 'UnaryUsecase'
+              import: 'package:example/core/usecase/usecase.dart'
 
         # Example of a suggested inheritance rule.
         - on: 'manager'
@@ -125,9 +125,6 @@ custom_lint:
         - on: entity
           pattern: '{{name}}'
           antipattern: '{{name}}Entity'
-        - on: model
-          pattern: '{{name}}Model'
-          grammar: '{{noun.phrase}}Model'
         - on: usecase
           pattern: '{{name}}'
           antipattern: '{{name}}Use(C|c)ase'
@@ -135,6 +132,9 @@ custom_lint:
         - on: usecase.parameter
           pattern: '_{{name}}Param'
 
+        - on: model
+          pattern: '{{name}}Model'
+          grammar: '{{noun.phrase}}Model'
         - on: source.interface
           pattern: '{{name}}DataSource'
         - on: source.implementation
@@ -160,6 +160,10 @@ custom_lint:
           pattern: '{{name}}'
           grammar: '{{subject}}({{adjective}}|{{verb.gerund}}|{{verb.past}})'
 
+        - on: page
+          pattern: '{{name}}Page'
+          grammar: '{{noun.phrase}}Page'
+
       # A unified list of rules to enforce strong types and migrate away from unsafe primitives.
       type_safeties:
         # Rule 1: Enforce FutureEither on return types.
@@ -181,6 +185,35 @@ custom_lint:
               identifier: 'id'
               safe_type: 'StringId'
               import: 'package:example/core/utils/types.dart'
+
+      locations:
+        # Domain layer
+        - on: 'domain'
+          allowed:
+            component: ['domain', 'manager']
+          forbidden:
+            component: 'model'
+            package: 'package:flutter/material.dart'
+        - on: 'usecase'
+          allowed: 'manager'
+        - on: 'repository.interface'
+          allowed: ['repository.implementation', 'usecase']
+
+        # Data layer
+        - on: 'model'
+          allowed: 'data'
+        - on: 'source.interface'
+          allowed: 'source.implementation'
+        - on: 'source.implementation'
+          allowed: 'repository.implementation'
+        - on: 'repository.implementation'
+          allowed: 'usecase'
+
+        # Presentation Layer
+        - on: ['manager', 'event', 'state', 'page']
+          allowed: 'page'
+        - on: 'widget'
+          allowed: ['page', 'core']
 
       # A list of rules to enforce the presence/absence of annotations on classes.
       # Enforced by the `enforce_annotations` lint. Also used by code generators.

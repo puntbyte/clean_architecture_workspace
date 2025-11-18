@@ -6,24 +6,29 @@
 /// in the `analysis_options.yaml` configuration (e.g., `on: 'use_case'`).
 enum ArchComponent {
   // --- Domain Components ---
+  domain('domain', label: 'Domain'),
   entity('entity', label: 'Entity'),
   contract('contract', label: 'Repository Interface'),
   usecase('usecase', label: 'Use Case'),
   usecaseParameter('usecase.parameter', label: 'Use Case Parameter'),
 
   // --- Data Components ---
+  data('data', label: 'Data'),
   model('model', label: 'Model'),
   repository('repository.implementation', label: 'Repository Implementation'),
   source('source.interface', label: 'Data Source Interface'),
   sourceImplementation('source.implementation', label: 'Data Source Implementation'),
 
   // --- Presentation Components ---
+  presentation('presentation', label: 'Presentation'),
   page('page', label: 'Page'),
   widget('widget', label: 'Widget'),
   manager('manager', label: 'Manager'),
-  event('event.interface', label: 'Event'),
+  event('event', label: 'Event'),
+  eventInterface('event.interface', label: 'Event Interface'),
   eventImplementation('event.implementation', label: 'Event Implementation'),
-  state('state.interface', label: 'State'),
+  state('state', label: 'State'),
+  stateInterface('state.interface', label: 'State Interface'),
   stateImplementation('state.implementation', label: 'State Implementation'),
 
   // --- Unknown Component ---
@@ -40,6 +45,21 @@ enum ArchComponent {
   /// A reverse lookup to find an enum value from its string [id].
   static ArchComponent fromId(String id) =>
       values.firstWhere((value) => value.id == id, orElse: () => ArchComponent.unknown);
+
+  Set<ArchComponent> get children => switch (this) {
+    ArchComponent.domain => {ArchComponent.entity, ArchComponent.contract, ArchComponent.usecase},
+    ArchComponent.data => {ArchComponent.model, ArchComponent.repository, ArchComponent.source},
+    ArchComponent.presentation => {
+      ArchComponent.page,
+      ArchComponent.widget,
+      ArchComponent.manager,
+    },
+    ArchComponent.usecase => {ArchComponent.usecaseParameter},
+    ArchComponent.manager => {ArchComponent.event, ArchComponent.state},
+    ArchComponent.event => {ArchComponent.eventInterface, ArchComponent.eventImplementation},
+    ArchComponent.state => {ArchComponent.stateInterface, ArchComponent.stateImplementation},
+    _ => {},
+  };
 
   // --- Layer Composition Getters ---
 

@@ -1,9 +1,10 @@
-// example/lib/features/auth/domain/contracts/auth_repository.violations.dart
+// example/lib/features/auth/domain/contracts/contracts.violations.dart
 
 import 'package:example/core/repository/repository.dart';
 import 'package:example/core/utils/types.dart';
 // VIOLATION: enforce_layer_independence (importing from the data layer)
 import 'package:example/features/auth/data/models/user_model.dart';
+import 'package:example/features/auth/domain/entities/entities.violations.dart';
 import 'package:example/features/auth/domain/entities/user.dart';
 
 

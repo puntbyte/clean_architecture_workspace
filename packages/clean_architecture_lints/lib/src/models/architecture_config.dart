@@ -3,6 +3,7 @@
 import 'package:clean_architecture_lints/src/models/annotations_config.dart';
 import 'package:clean_architecture_lints/src/models/inheritances_config.dart';
 import 'package:clean_architecture_lints/src/models/layer_config.dart';
+import 'package:clean_architecture_lints/src/models/locations_config.dart';
 import 'package:clean_architecture_lints/src/models/module_config.dart';
 import 'package:clean_architecture_lints/src/models/naming_conventions_config.dart';
 import 'package:clean_architecture_lints/src/models/services_config.dart';
@@ -18,6 +19,7 @@ class ArchitectureConfig {
   final InheritancesConfig inheritances;
   final NamingConventionsConfig namingConventions;
   final TypeSafetiesConfig typeSafeties;
+  final LocationsConfig locations;
   final AnnotationsConfig annotations;
   final ServicesConfig services;
 
@@ -27,6 +29,7 @@ class ArchitectureConfig {
     required this.inheritances,
     required this.namingConventions,
     required this.typeSafeties,
+    required this.locations,
     required this.annotations,
     required this.services,
   });
@@ -40,6 +43,7 @@ class ArchitectureConfig {
       inheritances: InheritancesConfig.fromMap(map),
       namingConventions: NamingConventionsConfig.fromMap(map),
       typeSafeties: TypeSafetiesConfig.fromMap(map),
+      locations: LocationsConfig.fromMap(map),
       annotations: AnnotationsConfig.fromMap(map),
       services: ServicesConfig.fromMap(map.asMap(ConfigKey.root.services)),
     );

@@ -12,12 +12,12 @@ class UncontractedUser { // <-- LINT WARNING HERE
 }
 
 // VIOLATION: enforce_naming_convention
-// The class `InvalidUserEntity` has a suffix `Entity` which is forbidden for entities.
-class InvalidUserEntity implements Entity { // <-- LINT WARNING HERE
+// The class `UserEntity` has a suffix `Entity` which is forbidden for entities.
+class UserEntity implements Entity { // <-- LINT WARNING HERE
   final String id;
   // VIOLATION: disallow_flutter_types_in_domain
   // Flutter type `Color` is not allowed in the domain layer.
   final Color profileColor; // <-- LINT WARNING HERE
 
-  const InvalidUserEntity({required this.id, required this.profileColor});
+  const UserEntity({required this.id, required this.profileColor});
 }

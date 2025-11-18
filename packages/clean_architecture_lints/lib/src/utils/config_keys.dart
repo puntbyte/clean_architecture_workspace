@@ -25,6 +25,7 @@ class _RootKeys {
   String get namings => 'naming_conventions';
   String get typeSafeties => 'type_safeties';
   String get inheritances => 'inheritances';
+  String get locations => 'locations';
   String get annotations => 'annotations';
   String get services => 'services';
 }

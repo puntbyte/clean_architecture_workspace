@@ -5,11 +5,11 @@ import 'package:injectable/injectable.dart';
 import '/core/usecase/usecase.dart';
 
 @Injectable()
-final class GetUserUsecase implements UnaryUsecase<UserEntity, int> {
-  const GetUserUsecase(this.repository);
+final class GetUser implements UnaryUsecase<User, int> {
+  const GetUser(this.repository);
 
   final AuthRepository repository;
 
   @override
-  FutureEither<UserEntity> call(int id) => repository.getUser(id);
+  FutureEither<User> call(int id) => repository.getUser(id);
 }

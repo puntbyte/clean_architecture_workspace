@@ -1,96 +1,126 @@
-// lib/src/lints/location/enforce_layer_independence.dart
+// lib/src/lints/dependency/enforce_layer_independence.dart
 
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
+import 'package:clean_architecture_lints/src/models/locations_config.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-/// Enforces the valid flow of dependencies between architectural layers.
-///
-/// **Reasoning:** A cornerstone of Clean Architecture is the Dependency Rule, which
-/// states that dependencies must flow inwards.
-/// - The Domain layer (contracts, entities) must be pure and independent.
-/// - The Presentation layer can depend on Domain but not on Data.
-/// - The Data layer can depend on Domain but not on Presentation.
+/// A generic lint that enforces the dependency graph defined in the `locations` configuration.
 class EnforceLayerIndependence extends ArchitectureLintRule {
-  static const _code = LintCode(
-    name: 'enforce_layer_independence',
-    problemMessage: 'Invalid layer dependency: The {0} layer cannot import from the {1} layer.',
-    correctionMessage:
-        'Ensure dependencies flow inwards (e.g., Presentation -> Domain, Data -> Domain).',
+  static const _forbiddenComponentCode = LintCode(
+    name: 'enforce_layer_independence_forbidden_component',
+    problemMessage: 'Invalid import: A {0} must not import from a {1}.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
-  /// A declarative map defining the illegal dependency graph.
-  /// Key: The component that is importing.
-  /// Value: A set of components that it is forbidden to import.
-  static const Map<ArchComponent, Set<ArchComponent>> _illegalDependencies = {
-    // Domain components are forbidden from importing almost everything.
-    ArchComponent.entity: {
-      ArchComponent.model,
-      ArchComponent.repository,
-      ArchComponent.source,
-      ArchComponent.manager,
-      ArchComponent.widget,
-      ArchComponent.page,
-    },
-    ArchComponent.contract: {
-      ArchComponent.model,
-      ArchComponent.repository,
-      ArchComponent.source,
-      ArchComponent.manager,
-      ArchComponent.widget,
-      ArchComponent.page,
-    },
-    ArchComponent.usecase: {
-      ArchComponent.model,
-      ArchComponent.repository,
-      ArchComponent.source,
-      ArchComponent.manager,
-      ArchComponent.widget,
-      ArchComponent.page,
-    },
+  static const _forbiddenPackageCode = LintCode(
+    name: 'enforce_layer_independence_forbidden_package',
+    problemMessage: 'Invalid import: A {0} must not import the package `{1}`.',
+    errorSeverity: DiagnosticSeverity.WARNING,
+  );
 
-    // Presentation components are forbidden from importing Data components.
-    ArchComponent.manager: {ArchComponent.model, ArchComponent.repository, ArchComponent.source},
-    ArchComponent.widget: {ArchComponent.model, ArchComponent.repository, ArchComponent.source},
-    ArchComponent.page: {ArchComponent.model, ArchComponent.repository, ArchComponent.source},
-
-    // Data components are forbidden from importing Presentation components.
-    ArchComponent.model: {ArchComponent.manager, ArchComponent.widget, ArchComponent.page},
-    ArchComponent.repository: {ArchComponent.manager, ArchComponent.widget, ArchComponent.page},
-    ArchComponent.source: {ArchComponent.manager, ArchComponent.widget, ArchComponent.page},
-  };
+  static const _unallowedComponentCode = LintCode(
+    name: 'enforce_layer_independence_unallowed_component',
+    problemMessage: 'Invalid import: A {0} is not allowed to import from a {1}.',
+    errorSeverity: DiagnosticSeverity.WARNING,
+  );
 
   const EnforceLayerIndependence({
     required super.config,
     required super.layerResolver,
-  }) : super(code: _code);
+  }) : super(code: _forbiddenComponentCode);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    final currentComponent = layerResolver.getComponent(resolver.source.fullName);
-    if (currentComponent == ArchComponent.unknown) return;
+    if (config.locations.rules.isEmpty) return;
 
-    // Get the set of forbidden imports for the current component's location.
-    final forbiddenImports = _illegalDependencies[currentComponent];
-    if (forbiddenImports == null || forbiddenImports.isEmpty) return;
+    final sourceComponent = layerResolver.getComponent(resolver.source.fullName);
+    if (sourceComponent == ArchComponent.unknown) return;
+
+    final rule =
+        config.locations.ruleFor(sourceComponent.id) ??
+        config.locations.ruleFor(sourceComponent.layer.id);
+    if (rule == null) return;
 
     context.registry.addImportDirective((node) {
-      final importedLibrary = node.libraryImport?.importedLibrary;
-      if (importedLibrary == null) return;
+      final importedUriString = node.uri.stringValue;
+      if (importedUriString == null) return;
 
-      final importPath = importedLibrary.firstFragment.libraryFragment?.source.fullName;
-      if (importPath == null) return;
-      final importedComponent = layerResolver.getComponent(importPath);
+      final isPackageImport = importedUriString.startsWith('package:');
 
+      // --- FORBIDDEN PACKAGE CHECK ---
+      if (isPackageImport) {
+        for (final forbiddenPackage in rule.forbidden.packages) {
+          if (importedUriString.startsWith(forbiddenPackage)) {
+            reporter.atNode(
+              node.uri,
+              _forbiddenPackageCode,
+              arguments: [sourceComponent.label, forbiddenPackage],
+            );
+            return; // One violation is enough per import.
+          }
+        }
+      }
+
+      // --- COMPONENT CHECKS (for internal project imports) ---
+      final importedComponent = _getImportedComponent(importedUriString, context);
       if (importedComponent == ArchComponent.unknown) return;
 
-      // The violation is a simple lookup in our declarative map.
-      if (forbiddenImports.contains(importedComponent)) {
-        reporter.atNode(node, _code, arguments: [currentComponent.label, importedComponent.label]);
+      // FORBIDDEN COMPONENT CHECK
+      if (_isForbidden(importedComponent, rule)) {
+        reporter.atNode(
+          node.uri,
+          _forbiddenComponentCode,
+          arguments: [sourceComponent.label, importedComponent.label],
+        );
+        return;
+      }
+
+      // ALLOWED COMPONENT CHECK (only if an `allowed` block exists)
+      if (rule.allowed.isNotEmpty && !_isAllowed(importedComponent, rule)) {
+        reporter.atNode(
+          node.uri,
+          _unallowedComponentCode,
+          arguments: [sourceComponent.label, importedComponent.label],
+        );
       }
     });
+  }
+
+  ArchComponent _getImportedComponent(String uri, CustomLintContext context) {
+    if (uri.startsWith('package:${context.pubspec.name}')) {
+      // Convert `package:my_proj/features/..` to `lib/features/...` for the resolver.
+      final path = uri.replaceFirst('package:${context.pubspec.name}/', 'lib/');
+      return layerResolver.getComponent(path);
+    }
+    return ArchComponent.unknown;
+  }
+
+  bool _isForbidden(ArchComponent imported, LocationRule rule) {
+    return rule.forbidden.components.contains(imported.id) ||
+        rule.forbidden.components.contains(imported.layer.id);
+  }
+
+  bool _isAllowed(ArchComponent imported, LocationRule rule) {
+    return rule.allowed.components.contains(imported.id) ||
+        rule.allowed.components.contains(imported.layer.id);
+  }
+}
+
+// Helper to get the parent layer (domain, data, presentation) of a component.
+extension ArchComponentLayer on ArchComponent {
+  ArchComponent get layer {
+    if (ArchComponent.domainLayer.contains(this) || this == ArchComponent.domain) {
+      return ArchComponent.domain;
+    }
+    if (ArchComponent.dataLayer.contains(this) || this == ArchComponent.data) {
+      return ArchComponent.data;
+    }
+    if (ArchComponent.presentationLayer.contains(this) || this == ArchComponent.presentation) {
+      return ArchComponent.presentation;
+    }
+    return ArchComponent.unknown;
   }
 }

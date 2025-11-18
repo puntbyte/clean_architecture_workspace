@@ -32,6 +32,7 @@ ArchitectureConfig makeConfig({
   // --- Rule List Overrides ---
   List<Map<String, dynamic>>? namingRules,
   List<Map<String, dynamic>>? inheritances,
+  List<Map<String, dynamic>>? locations,
   List<Map<String, dynamic>>? annotations,
   List<Map<String, dynamic>>? typeSafeties,
 
@@ -74,13 +75,16 @@ ArchitectureConfig makeConfig({
         'presentation': presentationLayerName,
       }
     },
+
     'layer_definitions': {
       'domain': {'entity': entityDir, 'contract': contractDir, 'usecase': usecaseDir},
       'data': {'model': modelDir, 'repository': repositoryDir, 'source': sourceDir},
       'presentation': {'page': pageDir, 'widget': widgetDir, 'manager': managerDir},
     },
+
     'naming_conventions': namingRules ?? defaultNamingRules,
     'inheritances': inheritances ?? [],
+    'locations': locations ?? [],
     'annotations': annotations ?? [],
     'type_safeties': typeSafeties ?? [],
     'services': services ?? {

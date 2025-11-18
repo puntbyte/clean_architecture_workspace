@@ -1,12 +1,12 @@
 // example/lib/features/auth/presentation/widgets/login_button.violations.dart
 import 'package:flutter/material.dart';
-import 'package:example/features/auth/domain/usecases/get_user_usecase.dart';
+import 'package:example/features/auth/domain/usecases/get_user.dart';
 
 /// This widget demonstrates a common architectural violation where a developer
 /// injects a UseCase directly into a widget to take a shortcut.
 class UserProfileViolations extends StatelessWidget {
   /// The widget depends directly on a concrete UseCase implementation.
-  final GetUserUsecase getUserUsecase;
+  final GetUser getUserUsecase;
 
   const UserProfileViolations({
     super.key,
