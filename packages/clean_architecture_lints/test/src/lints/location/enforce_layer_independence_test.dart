@@ -33,10 +33,12 @@ void main() {
       final config = makeConfig(locations: locations);
       final lint = EnforceLayerIndependence(config: config, layerResolver: LayerResolver(config));
 
-      final resolvedUnit = await contextCollection
-          .contextFor(p.normalize(filePath))
-          .currentSession
-          .getResolvedUnit(p.normalize(filePath)) as ResolvedUnitResult;
+      final resolvedUnit =
+          await contextCollection
+                  .contextFor(p.normalize(filePath))
+                  .currentSession
+                  .getResolvedUnit(p.normalize(filePath))
+              as ResolvedUnitResult;
 
       return lint.testRun(resolvedUnit);
     }
@@ -48,11 +50,20 @@ void main() {
       Directory(testProjectPath).createSync(recursive: true);
 
       writeFile(p.join(testProjectPath, 'pubspec.yaml'), 'name: test_project');
-      writeFile(p.join(testProjectPath, '.dart_tool/package_config.json'),
-          '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", "packageUri": "lib/"}]}');
+      writeFile(
+        p.join(testProjectPath, '.dart_tool/package_config.json'),
+        '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", '
+        '"packageUri": "lib/"}]}',
+      );
 
-      writeFile(p.join(testProjectPath, 'lib/features/user/domain/entities/user.dart'), 'class User {}');
-      writeFile(p.join(testProjectPath, 'lib/features/user/data/models/user_model.dart'), 'class UserModel {}');
+      writeFile(
+        p.join(testProjectPath, 'lib/features/user/domain/entities/user.dart'),
+        'class User {}',
+      );
+      writeFile(
+        p.join(testProjectPath, 'lib/features/user/data/models/user_model.dart'),
+        'class UserModel {}',
+      );
 
       contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
     });
@@ -67,7 +78,12 @@ void main() {
 
       final lints = await runLint(
         filePath: path,
-        locations: [{'on': 'usecase', 'forbidden': {'component': 'model'}}],
+        locations: [
+          {
+            'on': 'usecase',
+            'forbidden': {'component': 'model'},
+          },
+        ],
       );
 
       expect(lints, hasLength(1));
@@ -80,7 +96,12 @@ void main() {
 
       final lints = await runLint(
         filePath: path,
-        locations: [{'on': 'domain', 'forbidden': {'component': 'data'}}],
+        locations: [
+          {
+            'on': 'domain',
+            'forbidden': {'component': 'data'},
+          },
+        ],
       );
 
       expect(lints, hasLength(1));
@@ -92,25 +113,38 @@ void main() {
 
       final lints = await runLint(
         filePath: path,
-        locations: [{'on': 'domain', 'forbidden': {'package': 'package:flutter/material.dart'}}],
+        locations: [
+          {
+            'on': 'domain',
+            'forbidden': {'package': 'package:flutter/material.dart'},
+          },
+        ],
       );
 
       expect(lints, hasLength(1));
       expect(lints.first.diagnosticCode.name, 'enforce_layer_independence_forbidden_package');
     });
 
-    test('should report violation for an unallowed component when an allowed list exists', () async {
-      final path = p.join(testProjectPath, 'lib/features/user/domain/usecases/get_user.dart');
-      writeFile(path, "import 'package:test_project/features/user/data/models/user_model.dart';");
+    test(
+      'should report violation for an unallowed component when an allowed list exists',
+      () async {
+        final path = p.join(testProjectPath, 'lib/features/user/domain/usecases/get_user.dart');
+        writeFile(path, "import 'package:test_project/features/user/data/models/user_model.dart';");
 
-      final lints = await runLint(
-        filePath: path,
-        locations: [{'on': 'usecase', 'allowed': {'component': 'entity'}}],
-      );
+        final lints = await runLint(
+          filePath: path,
+          locations: [
+            {
+              'on': 'usecase',
+              'allowed': {'component': 'entity'},
+            },
+          ],
+        );
 
-      expect(lints, hasLength(1));
-      expect(lints.first.diagnosticCode.name, 'enforce_layer_independence_unallowed_component');
-    });
+        expect(lints, hasLength(1));
+        expect(lints.first.diagnosticCode.name, 'enforce_layer_independence_unallowed_component');
+      },
+    );
 
     test('should not report violation for an allowed component import', () async {
       final path = p.join(testProjectPath, 'lib/features/user/domain/usecases/get_user.dart');
@@ -118,7 +152,12 @@ void main() {
 
       final lints = await runLint(
         filePath: path,
-        locations: [{'on': 'usecase', 'allowed': {'component': 'entity'}}],
+        locations: [
+          {
+            'on': 'usecase',
+            'allowed': {'component': 'entity'},
+          },
+        ],
       );
 
       expect(lints, isEmpty);
