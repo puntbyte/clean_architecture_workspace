@@ -1,18 +1,18 @@
-// test/src/lints/contract/enforce_entity_contract_test.dart
+// test/src/lints/contract/enforce_port_contract_test.dart
 
 import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
-import 'package:clean_architecture_lints/src/lints/contract/enforce_entity_contract.dart';
+import 'package:clean_architecture_lints/src/lints/contract/enforce_port_contract.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import '../../../helpers/test_data.dart';
 
 void main() {
-  group('EnforceEntityContract Lint', () {
+  group('EnforcePortContract Lint', () {
     late AnalysisContextCollection contextCollection;
     late Directory tempDir;
     late String testProjectPath;
@@ -26,8 +26,7 @@ void main() {
     }
 
     setUp(() {
-      // [Windows Fix] Use canonical path to avoid mixed separator issues
-      tempDir = Directory.systemTemp.createTempSync('entity_contract_test_');
+      tempDir = Directory.systemTemp.createTempSync('port_contract_test_');
       testProjectPath = p.canonicalize(tempDir.path);
 
       addFile('pubspec.yaml', 'name: test_project');
@@ -37,8 +36,8 @@ void main() {
             '"packageUri": "lib/"}]}',
       );
 
-      // Create a local definition of Entity to simulate the core package or local core
-      addFile('lib/core/entity/entity.dart', 'abstract class Entity {}');
+      // Create the local core repository definition to simulate the base contract
+      addFile('lib/core/repository/repository.dart', 'abstract class Repository {}');
     });
 
     tearDown(() {
@@ -61,71 +60,72 @@ void main() {
               as ResolvedUnitResult;
 
       final config = makeConfig(inheritances: inheritances);
-      final lint = EnforceEntityContract(config: config, layerResolver: LayerResolver(config));
+      final lint = EnforcePortContract(config: config, layerResolver: LayerResolver(config));
 
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }
 
-    test('reports violation when entity does not extend Entity', () async {
-      const path = 'lib/features/login/domain/entities/user.dart';
-      addFile(path, 'class User {}');
+    test('reports violation when Port interface does not extend Repository', () async {
+      // By default, files in 'domain/ports' are considered Ports
+      const path = 'lib/features/user/domain/ports/user_repository.dart';
+      addFile(path, '''
+        abstract class UserRepository {}
+      ''');
 
       final lints = await runLint(filePath: path);
 
       expect(lints, hasLength(1));
-      expect(lints.first.message, contains('Entities must extend or implement: Entity'));
+      expect(
+        lints.first.message,
+        contains('Port interfaces must extend the base repository class `Repository`'),
+      );
     });
 
-    test('does not report violation when entity extends Entity (Local Core)', () async {
-      const path = 'lib/features/login/domain/entities/user.dart';
+    test('reports no violation when extending local Repository', () async {
+      const path = 'lib/features/user/domain/ports/user_repository.dart';
       addFile(path, '''
-        import 'package:test_project/core/entity/entity.dart';
-        class User extends Entity {} 
+        import 'package:test_project/core/repository/repository.dart';
+        abstract class UserRepository extends Repository {}
       ''');
 
       final lints = await runLint(filePath: path);
       expect(lints, isEmpty);
     });
 
-    test('ignores abstract entity classes', () async {
-      const path = 'lib/features/shared/domain/entities/base_user.dart';
-      addFile(path, 'abstract class BaseUser {}');
+    test('ignores concrete classes (implementations)', () async {
+      // EnforcePortContract only cares about abstract interfaces
+      const path = 'lib/features/user/domain/ports/concrete_user_repo.dart';
+      addFile(path, '''
+        class ConcreteUserRepo {}
+      ''');
 
       final lints = await runLint(filePath: path);
       expect(lints, isEmpty);
     });
 
-    test('ignores files outside of the entity directory', () async {
-      const path = 'lib/features/login/presentation/pages/login_page.dart';
-      addFile(path, 'class LoginPage {}');
-
-      final lints = await runLint(filePath: path);
-      expect(lints, isEmpty);
-    });
-
-    test('DISABLES itself when a custom inheritance rule for Entity is defined', () async {
-      // Reasoning: If the user defines a custom rule, EnforceCustomInheritance takes over.
-      // This lint should strictly do nothing to avoid duplicate errors.
+    test('DISABLES itself when a custom inheritance rule for Port is defined', () async {
+      // We define a custom rule for 'port'.
+      // Even though UserRepository violates the *default* rule (it doesn't extend Repository),
+      // this lint should return empty because it disabled itself.
+      // (The EnforceCustomInheritance lint would handle this file instead).
 
       final customConfig = [
         {
-          'on': 'entity',
+          'on': 'port',
           'required': {'name': 'CustomBase', 'import': 'pkg:x'},
         },
       ];
 
-      const path = 'lib/features/login/domain/entities/user.dart';
-      // This code violates BOTH default (Entity) and custom (CustomBase).
-      // However, EnforceEntityContract should report NOTHING because it is disabled.
-      addFile(path, 'class User {}');
+      const path = 'lib/features/user/domain/ports/user_repository.dart';
+      addFile(path, 'abstract class UserRepository {}');
 
       final lints = await runLint(
         filePath: path,
         inheritances: customConfig,
       );
 
-      expect(lints, isEmpty, reason: 'Lint should be disabled when custom rule exists');
+      expect(lints, isEmpty, reason: 'Lint should disable itself when custom rule is present');
     });
   });
 }

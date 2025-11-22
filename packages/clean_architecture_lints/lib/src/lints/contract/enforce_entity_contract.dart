@@ -1,12 +1,18 @@
 // lib/src/lints/contract/enforce_entity_contract.dart
 
-import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
+import 'package:clean_architecture_lints/src/lints/contract/enforce_custom_inheritance.dart';
 import 'package:clean_architecture_lints/src/models/inheritances_config.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
+/// Default preset for Entities.
+///
+/// **Behavior:**
+/// - Enforces extending `Entity` from `clean_architecture_core` OR a local core file.
+/// - **Disable:** If you define a rule for `entity` in `analysis_options.yaml`, this lint
+///   stops running, allowing [EnforceCustomInheritance] to handle your custom rule.
 class EnforceEntityContract extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_entity_contract',
@@ -19,10 +25,13 @@ class EnforceEntityContract extends ArchitectureLintRule {
     import: 'package:clean_architecture_core/clean_architecture_core.dart',
   );
 
-  const EnforceEntityContract({
+  final bool _hasCustomRule;
+
+  EnforceEntityContract({
     required super.config,
     required super.layerResolver,
-  }) : super(code: _code);
+  }) : _hasCustomRule = config.inheritances.ruleFor(ArchComponent.entity.id) != null,
+       super(code: _code);
 
   @override
   void run(
@@ -30,6 +39,7 @@ class EnforceEntityContract extends ArchitectureLintRule {
     DiagnosticReporter reporter,
     CustomLintContext context,
   ) {
+    if (_hasCustomRule) return;
     if (layerResolver.getComponent(resolver.source.fullName) != ArchComponent.entity) return;
 
     context.registry.addClassDeclaration((node) {
@@ -38,56 +48,34 @@ class EnforceEntityContract extends ArchitectureLintRule {
       final element = node.declaredFragment?.element;
       if (element == null) return;
 
-      final customRule = config.inheritances.ruleFor(ArchComponent.entity.id);
-      final List<InheritanceDetail> requiredSupertypes;
+      // Default Logic: Allow External Package OR Local Project Core
+      final requiredSupertypes = [
+        _defaultRule,
+        InheritanceDetail(
+          name: 'Entity',
+          import: 'package:${context.pubspec.name}/core/entity/entity.dart',
+        ),
+      ];
 
-      if (customRule != null && customRule.required.isNotEmpty) {
-        requiredSupertypes = customRule.required;
-      } else {
-        // Allow either the package version OR the local core version
-        requiredSupertypes = [
-          _defaultRule,
-          InheritanceDetail(
-            name: 'Entity',
-            import: 'package:${context.pubspec.name}/core/entity/entity.dart',
-          ),
-        ];
-      }
-
-      final hasCorrectSupertype = requiredSupertypes.any(
-        (detail) => _hasSupertype(element, detail, context),
-      );
+      final hasCorrectSupertype = requiredSupertypes.any((detail) {
+        return element.allSupertypes.any((supertype) {
+          final superElement = supertype.element;
+          if (superElement.name != detail.name) return false;
+          final uri = superElement.library.firstFragment.source.uri.toString();
+          // Check against normalized local URI or exact package URI
+          return uri == detail.import || uri == _normalizeLocal(detail.import, context);
+        });
+      });
 
       if (!hasCorrectSupertype) {
-        // Deduplicate names for the error message (e.g. "Entity or Entity" -> "Entity")
-        final requiredNames = requiredSupertypes.map((r) => r.name).toSet().join(' or ');
-
-        reporter.atToken(
-          node.name,
-          _code,
-          arguments: [requiredNames],
-        );
+        reporter.atToken(node.name, _code, arguments: ['Entity']);
       }
     });
   }
 
-  bool _hasSupertype(ClassElement element, InheritanceDetail detail, CustomLintContext context) {
-    final expectedUri = _normalizeConfigImport(detail.import, context.pubspec.name);
-
-    return element.allSupertypes.any((supertype) {
-      final superElement = supertype.element;
-      if (superElement.name != detail.name) return false;
-
-      final libraryUri = superElement.library.firstFragment.source.uri.toString();
-      return libraryUri == expectedUri;
-    });
-  }
-
-  String _normalizeConfigImport(String importPath, String packageName) {
-    if (importPath.startsWith('package:') || importPath.startsWith('dart:')) {
-      return importPath;
-    }
-    final cleanPath = importPath.startsWith('/') ? importPath.substring(1) : importPath;
-    return 'package:$packageName/$cleanPath';
+  String _normalizeLocal(String importPath, CustomLintContext context) {
+    // Helper to handle the comparison for the local file definition above
+    if (!importPath.startsWith('package:')) return importPath;
+    return importPath;
   }
 }

@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
-import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
 import 'package:clean_architecture_lints/src/lints/contract/enforce_repository_contract.dart';
 import 'package:path/path.dart' as p;
@@ -14,139 +13,129 @@ import '../../../helpers/test_data.dart';
 
 void main() {
   group('EnforceRepositoryContract Lint', () {
-    late PhysicalResourceProvider resourceProvider;
     late AnalysisContextCollection contextCollection;
     late Directory tempDir;
-    late String projectPath;
+    late String testProjectPath;
 
-    void writeFile(String path, String content) {
-      final file = resourceProvider.getFile(path);
-      Directory(p.dirname(path)).createSync(recursive: true);
+    // Helper to write files safely using canonical paths
+    void addFile(String relativePath, String content) {
+      final fullPath = p.join(testProjectPath, p.normalize(relativePath));
+      final file = File(fullPath);
+      file.parent.createSync(recursive: true);
       file.writeAsStringSync(content);
     }
 
-    Future<List<Diagnostic>> runLint({
-      required String filePath,
-      String? contractDir = 'contracts', // Default directory for contracts
-      List<Map<String, dynamic>>? inheritances,
-    }) async {
-      final config = makeConfig(portDir: contractDir, inheritances: inheritances);
-      final lint = EnforceRepositoryContract(config: config, layerResolver: LayerResolver(config));
-
-      final resolvedUnit =
-          await contextCollection.contextFor(filePath).currentSession.getResolvedUnit(filePath)
-              as ResolvedUnitResult;
-
-      return lint.testRun(resolvedUnit);
-    }
-
     setUp(() {
-      resourceProvider = PhysicalResourceProvider.INSTANCE;
-      tempDir = Directory.systemTemp.createTempSync('repository_contract_test_');
-      projectPath = p.join(tempDir.path, 'test_project');
-      Directory(projectPath).createSync(recursive: true);
+      // [Windows Fix] Use canonical path
+      tempDir = Directory.systemTemp.createTempSync('repo_impl_test_');
+      testProjectPath = p.canonicalize(tempDir.path);
 
-      writeFile(p.join(projectPath, 'pubspec.yaml'), 'name: test_project');
-      writeFile(
-        p.join(projectPath, '.dart_tool', 'package_config.json'),
+      addFile('pubspec.yaml', 'name: test_project');
+      addFile(
+        '.dart_tool/package_config.json',
         '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", '
             '"packageUri": "lib/"}]}',
       );
-      writeFile(
-        p.join(projectPath, 'lib', 'core', 'repository', 'repository.dart'),
-        'abstract class Repository {}',
-      );
 
-      contextCollection = AnalysisContextCollection(
-        includedPaths: [projectPath],
-        resourceProvider: resourceProvider,
+      // Create the Port (Interface) in the Domain layer
+      // By default, 'ports' is the configured directory for domain contracts
+      addFile(
+        'lib/features/user/domain/ports/user_repository.dart',
+        'abstract class UserRepository {}',
       );
     });
 
     tearDown(() {
-      tempDir.deleteSync(recursive: true);
+      try {
+        tempDir.deleteSync(recursive: true);
+      } on FileSystemException catch (_) {
+        // Ignore Windows file lock errors
+      }
     });
 
-    test('should report violation when repository contract does not extend Repository', () async {
-      final path = p.join(
-        projectPath,
-        'lib',
-        'features',
-        'user',
-        'domain',
-        'contracts',
-        'user_repository.dart',
+    Future<List<Diagnostic>> runLint({
+      required String filePath,
+      // We use default config names (ports/repositories), but allow override for edge cases
+      String portDir = 'ports',
+      String repositoryDir = 'repositories',
+    }) async {
+      final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
+
+      contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
+
+      final resolvedUnit =
+          await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath)
+              as ResolvedUnitResult;
+
+      final config = makeConfig(portDir: portDir, repositoryDir: repositoryDir);
+      final lint = EnforceRepositoryContract(
+        config: config,
+        layerResolver: LayerResolver(config),
       );
-      writeFile(path, 'abstract class UserRepository {}');
+
+      final lints = await lint.testRun(resolvedUnit);
+      return lints.cast<Diagnostic>();
+    }
+
+    test('reports violation when implementation does not implement a Port', () async {
+      const path = 'lib/features/user/data/repositories/user_repository_impl.dart';
+      addFile(path, 'class UserRepositoryImpl {}');
 
       final lints = await runLint(filePath: path);
 
       expect(lints, hasLength(1));
-      expect(lints.first.diagnosticCode.name, 'enforce_repository_contract');
       expect(
-        lints.first.problemMessage.messageText(includeUrl: false),
-        'Repository interfaces must extend the base repository class `Repository`.',
+        lints.first.message,
+        contains('Repository implementations must implement a Port interface'),
       );
     });
 
-    test(
-      'should not report violation when repository contract correctly extends Repository',
-      () async {
-        final path = p.join(
-          projectPath,
-          'lib',
-          'features',
-          'order',
-          'domain',
-          'contracts',
-          'order_repository.dart',
-        );
-        writeFile(path, '''
-        import 'package:test_project/core/repository/repository.dart';
-        abstract class OrderRepository extends Repository {}
+    test('reports no violation when implementation correctly implements a Port', () async {
+      const path = 'lib/features/user/data/repositories/user_repository_impl.dart';
+      addFile(path, '''
+        import 'package:test_project/features/user/domain/ports/user_repository.dart';
+        class UserRepositoryImpl implements UserRepository {}
       ''');
 
-        final lints = await runLint(filePath: path);
-        expect(lints, isEmpty);
-      },
-    );
-
-    test('should not report violation for a concrete class in the contract layer', () async {
-      final path = p.join(
-        projectPath,
-        'lib',
-        'features',
-        'shared',
-        'domain',
-        'contracts',
-        'concrete_repo.dart',
-      );
-      writeFile(path, 'class ConcreteRepo {}'); // Not abstract
-
       final lints = await runLint(filePath: path);
-      expect(lints, isEmpty, reason: 'Lint should only apply to abstract classes (interfaces).');
+      expect(lints, isEmpty);
     });
 
-    test('should be ignored when a custom inheritance rule for contracts is defined', () async {
-      final path = p.join(
-        projectPath,
-        'lib',
-        'features',
-        'custom',
-        'domain',
-        'contracts',
-        'custom_repo.dart',
-      );
-      writeFile(path, 'abstract class CustomRepo {}');
-
-      final lints = await runLint(
-        filePath: path,
-        inheritances: [
-          {'on': 'contract'},
-        ],
+    test('reports no violation when a superclass implements the Port (transitive)', () async {
+      // Base class implements Port
+      addFile(
+        'lib/features/user/data/repositories/base_repo_impl.dart',
+        '''
+        import 'package:test_project/features/user/domain/ports/user_repository.dart';
+        abstract class BaseRepoImpl implements UserRepository {}
+        ''',
       );
 
-      expect(lints, isEmpty, reason: 'Should defer to the generic enforce_inheritance lint.');
+      // Implementation extends Base, inheriting the interface check
+      const path = 'lib/features/user/data/repositories/user_repository_impl.dart';
+      addFile(path, '''
+        import 'base_repo_impl.dart';
+        class UserRepositoryImpl extends BaseRepoImpl {}
+      ''');
+
+      final lints = await runLint(filePath: path);
+      expect(lints, isEmpty);
+    });
+
+    test('ignores abstract classes in the repository layer', () async {
+      const path = 'lib/features/user/data/repositories/abstract_repo_impl.dart';
+      addFile(path, 'abstract class AbstractRepoImpl {}');
+
+      final lints = await runLint(filePath: path);
+      expect(lints, isEmpty);
+    });
+
+    test('ignores files not in a repository implementation directory', () async {
+      const path = 'lib/features/user/data/models/user_model.dart';
+      addFile(path, 'class UserModel {}');
+
+      final lints = await runLint(filePath: path);
+      expect(lints, isEmpty);
     });
   });
 }

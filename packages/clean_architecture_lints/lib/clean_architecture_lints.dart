@@ -3,9 +3,9 @@
 import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
 import 'package:clean_architecture_lints/src/lints/contract/enforce_custom_inheritance.dart';
 import 'package:clean_architecture_lints/src/lints/contract/enforce_entity_contract.dart';
+import 'package:clean_architecture_lints/src/lints/contract/enforce_port_contract.dart';
 import 'package:clean_architecture_lints/src/lints/contract/enforce_repository_contract.dart';
-import 'package:clean_architecture_lints/src/lints/contract/enforce_repository_implementation_contract.dart';
-import 'package:clean_architecture_lints/src/lints/contract/enforce_use_case_contract.dart';
+import 'package:clean_architecture_lints/src/lints/contract/enforce_usecase_contract.dart';
 import 'package:clean_architecture_lints/src/lints/dependency/disallow_dependency_instantiation.dart';
 import 'package:clean_architecture_lints/src/lints/dependency/disallow_repository_in_presentation.dart';
 import 'package:clean_architecture_lints/src/lints/dependency/disallow_service_locator.dart';
@@ -56,9 +56,9 @@ class CleanArchitectureLintsPlugin extends PluginBase {
     final contractRules = [
       EnforceCustomInheritance(config: config, layerResolver: layerResolver),
       EnforceEntityContract(config: config, layerResolver: layerResolver),
+      EnforcePortContract(config: config, layerResolver: layerResolver),
       EnforceRepositoryContract(config: config, layerResolver: layerResolver),
-      EnforceRepositoryImplementationContract(config: config, layerResolver: layerResolver),
-      EnforceUseCaseContract(config: config, layerResolver: layerResolver),
+      EnforceUsecaseContract(config: config, layerResolver: layerResolver),
     ];
 
     final dependencyRules = [
