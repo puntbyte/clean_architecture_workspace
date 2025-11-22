@@ -1,4 +1,4 @@
-// lib/srcs/lints/structure/enforce_annotations.dart
+// lib/src/lints/structure/enforce_annotations.dart
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
@@ -26,11 +26,11 @@ class EnforceAnnotations extends ArchitectureLintRule {
   final Map<String, AnnotationRule> _rules;
 
   EnforceAnnotations({required super.config, required super.layerResolver})
-    : _rules = {
-        for (final rule in config.annotations.rules)
-          for (final componentId in rule.on) componentId: rule,
-      },
-      super(code: _requiredCode);
+      : _rules = {
+    for (final rule in config.annotations.rules)
+      for (final componentId in rule.on) componentId: rule,
+  },
+        super(code: _requiredCode);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
@@ -41,6 +41,7 @@ class EnforceAnnotations extends ArchitectureLintRule {
         resolver.source.fullName,
         className: node.name.lexeme,
       );
+
       if (component == ArchComponent.unknown) return;
 
       final rule = _rules[component.id];
@@ -48,7 +49,7 @@ class EnforceAnnotations extends ArchitectureLintRule {
 
       final declaredAnnotations = _getDeclaredAnnotations(node);
 
-      // Check for required annotations.
+      // 1. Check Required
       for (final requiredDetail in rule.required) {
         if (!declaredAnnotations.contains(requiredDetail.name)) {
           reporter.atToken(
@@ -59,7 +60,7 @@ class EnforceAnnotations extends ArchitectureLintRule {
         }
       }
 
-      // Check for forbidden annotations.
+      // 2. Check Forbidden
       for (final forbiddenDetail in rule.forbidden) {
         if (declaredAnnotations.contains(forbiddenDetail.name)) {
           reporter.atToken(
@@ -72,8 +73,12 @@ class EnforceAnnotations extends ArchitectureLintRule {
     });
   }
 
-  /// Gets a set of annotation names from a class declaration's metadata.
+  /// Gets a set of simple annotation names from a class declaration's metadata.
+  /// Handles `@Injectable` and `@Injectable()` -> returns "Injectable".
   Set<String> _getDeclaredAnnotations(ClassDeclaration node) {
-    return node.metadata.map((annotation) => annotation.name.toSource()).toSet();
+    return node.metadata.map((annotation) {
+      // The name node handles prefixes correctly (e.g. @prefix.Name)
+      return annotation.name.name;
+    }).toSet();
   }
 }

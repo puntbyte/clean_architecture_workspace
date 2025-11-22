@@ -1,25 +1,20 @@
 // lib/src/lints/dependency/disallow_repository_in_presentation.dart
 
-import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/ast/syntactic_entity.dart';
-import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/utils/ast/ast_utils.dart';
-import 'package:clean_architecture_lints/src/utils/ast/semantic_utils.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-/// A lint that forbids any reference to a Repository within the presentation layer.
+/// A lint that forbids any reference to a Repository (Port) within the presentation layer.
+///
+/// **Category:** Purity / Dependency
 ///
 /// **Reasoning:** The presentation layer (Widgets, Blocs, etc.) should not be
-/// coupled to the data layer. Its only dependency should be on the domain layer,
-
-/// specifically through `UseCases`. A UseCase provides a narrow, specific contract
-/// for a single piece of business logic, whereas a Repository is a broad contract
-/// for a data source. Depending on a repository tempts the presentation layer to
-/// perform business logic that belongs in a UseCase.
+/// coupled to the Repository contract. Its dependency should be on specific
+/// `UseCases`. A UseCase provides a narrow, functional contract, whereas a
+/// Repository is a broad data contract. Depending on a repository tempts the
+/// presentation layer to perform business logic that belongs in a UseCase.
 class DisallowRepositoryInPresentation extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'disallow_repository_in_presentation',
@@ -35,76 +30,27 @@ class DisallowRepositoryInPresentation extends ArchitectureLintRule {
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    // This rule applies to any file within the presentation layer.
-    final component = layerResolver.getComponent(resolver.source.fullName);
-    if (!ArchComponent.presentation.allChildren.contains(component)) return;
+    // 1. Scope: This rule applies ONLY to files within the presentation layer.
+    final currentComponent = layerResolver.getComponent(resolver.source.fullName);
+    if (currentComponent.layer != ArchComponent.presentation) return;
 
-    /// A generic helper that checks the type and reports an error on the correct node.
-    void validate({
-      required SyntacticEntity reportNode,
-      required DartType? type,
-    }) {
-      // The core logic: check if the type is a repository contract.
-      if (SemanticUtils.isComponent(type, layerResolver, ArchComponent.port)) {
-        reporter.atEntity(reportNode, _code);
-      }
-    }
+    // 2. Check: Listen for ANY named type usage (fields, params, generics, variables).
+    context.registry.addNamedType((node) {
+      final type = node.type;
+      if (type == null) return;
 
-    // --- Apply the check comprehensively ---
+      final element = type.element;
+      if (element == null) return;
 
-    // 1. Visit fields.
-    context.registry.addFieldDeclaration((node) {
-      for (final variable in node.fields.variables) {
-        validate(
-          reportNode: node.fields.type ?? variable.name,
-          type: variable.declaredFragment?.element.type,
-        );
-      }
-    });
+      // [Analyzer 8.0.0 Fix] Use firstFragment.source
+      final source = element.library?.firstFragment.source;
+      if (source == null) return;
 
-    // 2. Visit constructor parameters.
-    context.registry.addConstructorDeclaration((node) {
-      for (final parameter in node.parameters.parameters) {
-        validate(
-          reportNode: parameter,
-          type: parameter.declaredFragment?.element.type,
-        );
-      }
-    });
+      // 3. Validate: Is the referenced type a Repository Interface (Port)?
+      final targetComponent = layerResolver.getComponent(source.fullName);
 
-    // 3. Visit method signatures.
-    context.registry.addMethodDeclaration((node) {
-      // Check return type
-      final returnTypeNode = node.returnType;
-      if (returnTypeNode != null) {
-        validate(reportNode: returnTypeNode, type: returnTypeNode.type);
-      }
-      // Check parameters
-      for (final parameter in node.parameters?.parameters ?? <FormalParameter>[]) {
-        final typeNode = AstUtils.getParameterTypeNode(parameter);
-        if (typeNode != null) {
-          validate(reportNode: typeNode, type: typeNode.type);
-        }
-      }
-    });
-
-    // 4. Visit local variables.
-    context.registry.addVariableDeclarationStatement((node) {
-      for (final variable in node.variables.variables) {
-        validate(
-          reportNode: node.variables.type ?? variable.name,
-          type: variable.declaredFragment?.element.type,
-        );
-      }
-    });
-
-    // 5. Visit top-level variables.
-    context.registry.addTopLevelVariableDeclaration((node) {
-      for (final variable in node.variables.variables) {
-        validate(
-          reportNode: node.variables.type ?? variable.name,
-          type: variable.declaredFragment?.element.type,
-        );
+      if (targetComponent == ArchComponent.port) {
+        reporter.atNode(node, _code);
       }
     });
   }

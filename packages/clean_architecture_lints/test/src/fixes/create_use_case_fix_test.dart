@@ -28,11 +28,11 @@ void main() {
       );
 
       expect(config.baseClassName.symbol, equals('NullaryUsecase'));
-      expect(config.genericTypes.length, equals(1));
+      expect(config.genericTypes.length, equals(1)); // [Output]
       expect(config.callParams, isEmpty);
     });
 
-    test('unary (single positional param) returns unary base class and positional arg', () {
+    test('unary (single positional param) returns unary base class', () {
       final parsed = parseString(content: 'class A { void getById(int id) {} }');
       final method = parsed.unit.declarations
           .whereType<ClassDeclaration>()
@@ -50,15 +50,15 @@ void main() {
       );
 
       expect(config.baseClassName.symbol, equals('UnaryUsecase'));
-      expect(config.genericTypes.length, equals(2));
+      expect(config.genericTypes.length, equals(2)); // [Output, Input]
       expect(config.callParams.length, equals(1));
       expect(config.repoCallPositionalArgs.length, equals(1));
       expect(config.repoCallNamedArgs, isEmpty);
       expect(config.callParams.first.name, equals('id'));
     });
 
-    test('multi parameters produce a record type & params wrapper', () {
-      final parsed = parseString(content: 'class A { void search(int id, String name) {} }');
+    test('single named parameter returns unary base class with named arg call', () {
+      final parsed = parseString(content: 'class A { void search({required String query}) {} }');
       final method = parsed.unit.declarations
           .whereType<ClassDeclaration>()
           .first
@@ -77,9 +77,35 @@ void main() {
       expect(config.baseClassName.symbol, equals('UnaryUsecase'));
       expect(config.genericTypes.length, equals(2));
       expect(config.callParams.length, equals(1));
-      expect(config.recordTypeDef, isNotNull);
-      // call param should be named 'params' and of type = the record name
+      // The repo call should use named args
+      expect(config.repoCallPositionalArgs, isEmpty);
+      expect(config.repoCallNamedArgs.keys, contains('query'));
+    });
+
+    test('multi parameters produce a record wrapper', () {
+      final parsed = parseString(content: 'class A { void filter(int id, {String? name}) {} }');
+      final method = parsed.unit.declarations
+          .whereType<ClassDeclaration>()
+          .first
+          .members
+          .whereType<MethodDeclaration>()
+          .first;
+
+      final config = CreateUseCaseFix.buildParameterConfigFromParams(
+        params: method.parameters?.parameters ?? [],
+        methodName: 'filter',
+        outputType: dummyOutput,
+        unaryName: 'UnaryUsecase',
+        nullaryName: 'NullaryUsecase',
+      );
+
+      expect(config.baseClassName.symbol, equals('UnaryUsecase'));
+      expect(config.recordTypeDef, isNotNull, reason: 'Should generate a typedef for params');
       expect(config.callParams.first.name, equals('params'));
+
+      // Check that repo call maps positional and named args correctly from the record fields
+      expect(config.repoCallPositionalArgs.length, equals(1)); // id
+      expect(config.repoCallNamedArgs.keys, contains('name')); // name
     });
   });
 }

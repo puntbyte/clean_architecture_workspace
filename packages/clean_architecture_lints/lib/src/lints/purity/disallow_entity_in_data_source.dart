@@ -37,18 +37,19 @@ class DisallowEntityInDataSource extends ArchitectureLintRule {
       return;
     }
 
-    // Visit every TypeAnnotation in the file.
-    // This visitor automatically recurses into generics (e.g. it visits 'Future' then 'User').
-    context.registry.addTypeAnnotation((node) {
+    // OPTIMIZATION: Use `addNamedType` instead of `addTypeAnnotation`.
+    // `addNamedType` is triggered for every named type usage (e.g., `User`, `List`, `Future`).
+    // It automatically handles nested generics (e.g., inside `Future<User>`, it triggers for `Future` AND `User`).
+    context.registry.addNamedType((node) {
       final type = node.type;
       if (type == null) return;
 
-      // FIX: Do not use recursive SemanticUtils.isComponent.
-      // Instead, check ONLY the direct element of this specific node.
-      // This prevents double-reporting (once for Future<User> and once for User).
-
       // Get the source file where this type is defined.
-      final source = type.element?.library?.firstFragment.source;
+      final element = type.element;
+      if (element == null) return;
+
+      // [Analyzer 8.0.0 Fix] Use firstFragment.source
+      final source = element.library?.firstFragment.source;
       if (source == null) return;
 
       // Check if that source file belongs to the Entity layer.

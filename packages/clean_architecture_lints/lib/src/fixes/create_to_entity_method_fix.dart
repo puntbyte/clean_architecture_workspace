@@ -4,6 +4,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/source/source_range.dart';
+import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
 import 'package:clean_architecture_lints/src/models/architecture_config.dart';
@@ -21,17 +22,14 @@ class CreateToEntityMethodFix extends DartFix {
 
   @override
   void run(
-    CustomLintResolver resolver,
-    ChangeReporter reporter,
-    CustomLintContext context,
-    Diagnostic diagnostic,
-    List<Diagnostic> others,
-  ) {
+      CustomLintResolver resolver,
+      ChangeReporter reporter,
+      CustomLintContext context,
+      Diagnostic diagnostic,
+      List<Diagnostic> others,
+      ) {
     context.addPostRunCallback(() async {
       final resolvedUnit = await resolver.getResolvedUnitResult();
-
-      // FIX: Use the public API `nodeCovering` instead of the internal `NodeLocator2`.
-      // This locates the AST node at the specific error offset safely.
       final node = resolvedUnit.unit.nodeCovering(offset: diagnostic.offset);
 
       final modelNode = node?.thisOrAncestorOfType<ClassDeclaration>();
@@ -42,6 +40,7 @@ class CreateToEntityMethodFix extends DartFix {
 
       final layerResolver = LayerResolver(config);
 
+      // Find the Entity supertype
       final entitySupertype = classElement.allSupertypes.firstWhereOrNull((st) {
         final source = st.element.library.firstFragment.source;
         return layerResolver.getComponent(source.fullName) == ArchComponent.entity;
@@ -50,20 +49,23 @@ class CreateToEntityMethodFix extends DartFix {
       final entityElement = entitySupertype?.element;
       if (entityElement is! InterfaceElement) return;
 
-      final entityName = entityElement.name;
+      final entityName = entityElement.name; // Analyzer 8.0.0: name is simple String (or null)
+      // ignore: unnecessary_null_comparison
       if (entityName == null) return;
 
       final modelName = modelNode.name.lexeme;
 
-      final existingMethod = modelNode.members.whereType<MethodDeclaration>().firstWhereOrNull(
-        (m) => m.name.lexeme == 'toEntity',
-      );
+      final existingMethod = modelNode.members
+          .whereType<MethodDeclaration>()
+          .firstWhereOrNull((m) => m.name.lexeme == 'toEntity');
 
       final message = existingMethod != null
           ? 'Correct `toEntity()` method in `$modelName`'
           : 'Create `toEntity()` method in `$modelName`';
 
-      reporter.createChangeBuilder(message: message, priority: 90).addDartFileEdit((builder) {
+      reporter
+          .createChangeBuilder(message: message, priority: 90)
+          .addDartFileEdit((builder) {
         final method = buildToEntityMethod(
           modelNode: modelNode,
           entityElement: entityElement,
@@ -80,7 +82,7 @@ class CreateToEntityMethodFix extends DartFix {
         if (existingMethod != null) {
           builder.addReplacement(
             SourceRange(existingMethod.offset, existingMethod.length),
-            (editBuilder) => editBuilder.write(formattedBlock),
+                (editBuilder) => editBuilder.write(formattedBlock),
           );
         } else {
           final insertionOffset = modelNode.rightBracket.offset;
@@ -99,23 +101,24 @@ class CreateToEntityMethodFix extends DartFix {
   }
 
   /// Builds the `toEntity` method using code_builder.
+  /// Public static to allow unit testing without full resolver context.
   static cb.Method buildToEntityMethod({
     required ClassDeclaration modelNode,
     required InterfaceElement entityElement,
     required String entityName,
   }) {
-    final modelFieldNames =
+    // Gather all available fields/getters in the Model
+    final modelFieldNames = modelNode.members
+        .whereType<FieldDeclaration>()
+        .expand((f) => f.fields.variables)
+        .map((v) => v.name.lexeme)
+        .toSet()
+      ..addAll(
         modelNode.members
-            .whereType<FieldDeclaration>()
-            .expand((f) => f.fields.variables)
-            .map((v) => v.name.lexeme)
-            .toSet()
-          ..addAll(
-            modelNode.members
-                .whereType<MethodDeclaration>()
-                .where((m) => m.isGetter)
-                .map((m) => m.name.lexeme),
-          );
+            .whereType<MethodDeclaration>()
+            .where((m) => m.isGetter)
+            .map((m) => m.name.lexeme),
+      );
 
     final positionalArgs = <cb.Expression>[];
     final namedArgs = <String, cb.Expression>{};
@@ -125,8 +128,12 @@ class CreateToEntityMethodFix extends DartFix {
     if (constructor != null) {
       for (final param in constructor.formalParameters) {
         final paramName = param.name;
+
+        // Handle missing/unknown parameters gracefully
+        // ignore: unnecessary_null_comparison
         if (paramName == null) continue;
 
+        // If model has a matching field, use it. Otherwise, throw error placeholder.
         final mapping = modelFieldNames.contains(paramName)
             ? cb.refer(paramName)
             : cb.refer("throw UnimplementedError('TODO: Map field \"$paramName\"')");

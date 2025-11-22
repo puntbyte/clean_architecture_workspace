@@ -7,18 +7,22 @@ import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-/// A lint that forbids classes from creating their own dependencies during instantiation.
+/// A lint that forbids classes from creating their own "Service-like" dependencies.
 ///
-/// **Reasoning:** In a pure Dependency Injection (DI) architecture, a class must
-/// receive its dependencies from an external source (via its constructor), not create
-/// them itself. This ensures loose coupling, making classes easy to test with mocks
-/// and easy to reuse with different dependency implementations. Flagging direct
-/// instantiations in field or constructor initializers enforces this principle.
+/// **Category:** Dependency
+///
+/// **Reasoning:** In Clean Architecture, "Service" components (Repositories, DataSources,
+/// UseCases, Managers) should be injected via the constructor (DI). Creating them directly
+/// creates tight coupling.
+///
+/// **Allowed:** Instantiating "Data" objects (Entities, Models, States, Events, Failures)
+/// is allowed and expected.
 class DisallowDependencyInstantiation extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'disallow_dependency_instantiation',
     problemMessage:
-        'Do not instantiate dependencies directly. They should be injected via the constructor.',
+    'Do not instantiate architectural dependencies directly. Inject them via the constructor.',
+    correctionMessage: 'Add this class to the constructor parameters instead of creating it here.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
@@ -28,43 +32,66 @@ class DisallowDependencyInstantiation extends ArchitectureLintRule {
   }) : super(code: _code);
 
   @override
-  void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    // This rule applies to concrete implementation classes in the data and presentation layers.
-    final component = layerResolver.getComponent(resolver.source.fullName);
-    if (component == ArchComponent.unknown || ArchComponent.domain.allChildren.contains(component)) {
-      return;
-    }
+  void run(
+      CustomLintResolver resolver,
+      DiagnosticReporter reporter,
+      CustomLintContext context,
+      ) {
+    // Only run on "Service-like" components that should be using DI.
+    // (e.g. Don't run on Entities/Models, they don't usually do DI).
+    final currentComponent = layerResolver.getComponent(resolver.source.fullName);
+    if (!_isInjectableComponent(currentComponent)) return;
 
     context.registry.addInstanceCreationExpression((node) {
-      // We only care about instantiations that happen in two specific places:
-      // 1. As the initializer for a field declaration.
-      // 2. As the expression in a constructor field initializer.
-      final isFieldInitializer = node.thisOrAncestorOfType<FieldDeclaration>() != null;
-      final isConstructorInitializer =
-          node.thisOrAncestorOfType<ConstructorFieldInitializer>() != null;
+      // 1. Check Location: Is this happening in a field or constructor initializer?
+      // (Instantiating things inside a method body is usually local logic, not dependency wiring).
+      if (!_isFieldOrConstructorInitializer(node)) return;
 
-      if (!isFieldInitializer && !isConstructorInitializer) {
-        return; // The instantiation is happening inside a method body, which is allowed.
-      }
-
-      // Get the type being instantiated.
+      // 2. Check Target: What are we instantiating?
       final type = node.staticType;
-      if (type == null) return;
+      final element = type?.element;
+      if (element == null) return;
 
-      final source = type.element?.firstFragment.libraryFragment?.source;
+      // [Analyzer 8.0.0 Fix] Use firstFragment.source
+      final source = element.library?.firstFragment.source;
       if (source == null) return;
 
-      // The violation occurs if the instantiated type is a "dependency", which we define as
-      // any class from another file within our project (`package:` or relative `file:` URI).
-      // We ignore SDK types (`dart:`) and dependencies from other packages.
-      final isProjectFile =
-          source.uri.isScheme('package') &&
-              source.uri.path.startsWith('${context.pubspec.name}/') ||
-          source.uri.isScheme('file');
+      final targetComponent = layerResolver.getComponent(source.fullName);
 
-      if (isProjectFile && source.fullName != resolver.source.fullName) {
+      // 3. The Violation: Instantiating another Service-like component directly.
+      // e.g. Repository instantiating a DataSource = BAD.
+      // e.g. Repository instantiating a Model = GOOD (Mapping).
+      if (_isServiceComponent(targetComponent)) {
         reporter.atNode(node, _code);
       }
     });
+  }
+
+  bool _isInjectableComponent(ArchComponent component) {
+    return component == ArchComponent.repository ||
+        component == ArchComponent.sourceImplementation ||
+        component == ArchComponent.manager ||
+        component == ArchComponent.usecase ||
+        component == ArchComponent.widget;
+  }
+
+  bool _isServiceComponent(ArchComponent component) {
+    // These are things that should be injected, not created.
+    return component == ArchComponent.repository ||
+        component == ArchComponent.source ||
+        component == ArchComponent.sourceImplementation ||
+        component == ArchComponent.sourceInterface ||
+        component == ArchComponent.usecase ||
+        component == ArchComponent.manager;
+  }
+
+  bool _isFieldOrConstructorInitializer(InstanceCreationExpression node) {
+    // Case 1: `final repo = Repository();` (Field Declaration)
+    if (node.thisOrAncestorOfType<FieldDeclaration>() != null) return true;
+
+    // Case 2: `MyBloc() : repo = Repository();` (Constructor Initializer)
+    if (node.thisOrAncestorOfType<ConstructorFieldInitializer>() != null) return true;
+
+    return false;
   }
 }

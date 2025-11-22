@@ -7,7 +7,6 @@ import 'package:example/features/auth/data/models/user_model.dart';
 import 'package:example/features/auth/domain/entities/entities.violations.dart';
 import 'package:example/features/auth/domain/entities/user.dart';
 
-
 // VIOLATION: enforce_repository_inheritance (does not extend Repository)
 abstract interface class IAnalyticsRepository {
   void getUser(int id);

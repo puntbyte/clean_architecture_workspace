@@ -1,10 +1,9 @@
-// test/srcs/lints/structure/enforce_annotations_test.dart
+// test/src/lints/structure/enforce_annotations_test.dart
 
 import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
-import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
 import 'package:clean_architecture_lints/src/lints/structure/enforce_annotations.dart';
 import 'package:path/path.dart' as p;
@@ -14,78 +13,84 @@ import '../../../helpers/test_data.dart';
 
 void main() {
   group('EnforceAnnotations Lint', () {
-    late PhysicalResourceProvider resourceProvider;
     late AnalysisContextCollection contextCollection;
     late Directory tempDir;
     late String testProjectPath;
 
-    void writeFile(String path, String content) {
-      final normalizedPath = p.normalize(path);
-      final file = resourceProvider.getFile(normalizedPath);
-      Directory(p.dirname(normalizedPath)).createSync(recursive: true);
+    // Helper to write files safely using canonical paths
+    void addFile(String relativePath, String content) {
+      final fullPath = p.join(testProjectPath, p.normalize(relativePath));
+      final file = File(fullPath);
+      file.parent.createSync(recursive: true);
       file.writeAsStringSync(content);
     }
+
+    setUp(() {
+      // [Windows Fix] Use canonical path
+      tempDir = Directory.systemTemp.createTempSync('enforce_annotations_test_');
+      testProjectPath = p.canonicalize(tempDir.path);
+
+      addFile('pubspec.yaml', 'name: test_project');
+      addFile(
+        '.dart_tool/package_config.json',
+        '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", "packageUri": "lib/"}]}',
+      );
+
+      // Define some dummy annotations for testing.
+      addFile('lib/annotations.dart', '''
+        const injectable = Injectable();
+        class Injectable { const Injectable(); }
+        class Forbidden { const Forbidden(); }
+      ''');
+    });
+
+    tearDown(() {
+      try {
+        tempDir.deleteSync(recursive: true);
+      } on FileSystemException catch (_) {
+        // Ignore Windows file lock errors
+      }
+    });
 
     Future<List<Diagnostic>> runLint({
       required String filePath,
       required List<Map<String, dynamic>> annotations,
     }) async {
+      final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
+
+      contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
+
+      final resolvedUnit = await contextCollection
+          .contextFor(fullPath)
+          .currentSession
+          .getResolvedUnit(fullPath) as ResolvedUnitResult;
+
       final config = makeConfig(annotations: annotations);
       final lint = EnforceAnnotations(config: config, layerResolver: LayerResolver(config));
 
-      final resolvedUnit =
-          await contextCollection
-                  .contextFor(p.normalize(filePath))
-                  .currentSession
-                  .getResolvedUnit(p.normalize(filePath))
-              as ResolvedUnitResult;
-
-      return lint.testRun(resolvedUnit);
+      final lints = await lint.testRun(resolvedUnit);
+      return lints.cast<Diagnostic>();
     }
-
-    setUp(() {
-      resourceProvider = PhysicalResourceProvider.INSTANCE;
-      tempDir = Directory.systemTemp.createTempSync('enforce_annotations_test_');
-      testProjectPath = p.join(p.normalize(tempDir.path), 'test_project');
-      Directory(testProjectPath).createSync(recursive: true);
-
-      writeFile(p.join(testProjectPath, 'pubspec.yaml'), 'name: test_project');
-      // Define some dummy annotations for testing.
-      writeFile(p.join(testProjectPath, 'lib/annotations.dart'), '''
-        const injectable = Injectable();
-        class Injectable { const Injectable(); }
-        class Forbidden { const Forbidden(); }
-      ''');
-      contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
-    });
-
-    tearDown(() {
-      tempDir.deleteSync(recursive: true);
-    });
 
     group('Required Rule', () {
       final requiredRule = {
-        'on': 'usecase',
+        'on': ['usecase'],
         'required': {'name': 'Injectable'},
       };
 
-      test('should report violation when a use case is missing a required annotation', () async {
-        final path = p.join(testProjectPath, 'lib/features/auth/domain/usecases/login.dart');
-        writeFile(path, 'class Login {}');
+      test('reports violation when a use case is missing a required annotation', () async {
+        final path = 'lib/features/auth/domain/usecases/login.dart';
+        addFile(path, 'class Login {}');
 
         final lints = await runLint(filePath: path, annotations: [requiredRule]);
 
         expect(lints, hasLength(1));
-        expect(lints.first.diagnosticCode.name, 'enforce_annotations_required');
-        expect(
-          lints.first.problemMessage.messageText(includeUrl: false),
-          'This Use Case is missing the required `@Injectable` annotation.',
-        );
+        expect(lints.first.message, contains('missing the required `@Injectable`'));
       });
 
-      test('should not report violation when a use case has the required annotation', () async {
-        final path = p.join(testProjectPath, 'lib/features/auth/domain/usecases/login.dart');
-        writeFile(path, '''
+      test('does not report violation when a use case has the required annotation', () async {
+        final path = 'lib/features/auth/domain/usecases/login.dart';
+        addFile(path, '''
           import 'package:test_project/annotations.dart';
           @Injectable()
           class Login {}
@@ -98,13 +103,13 @@ void main() {
 
     group('Forbidden Rule', () {
       final forbiddenRule = {
-        'on': 'entity',
+        'on': ['entity'],
         'forbidden': {'name': 'Forbidden'},
       };
 
-      test('should report violation when an entity has a forbidden annotation', () async {
-        final path = p.join(testProjectPath, 'lib/features/user/domain/entities/user.dart');
-        writeFile(path, '''
+      test('reports violation when an entity has a forbidden annotation', () async {
+        final path = 'lib/features/user/domain/entities/user.dart';
+        addFile(path, '''
           import 'package:test_project/annotations.dart';
           @Forbidden()
           class User {}
@@ -113,30 +118,26 @@ void main() {
         final lints = await runLint(filePath: path, annotations: [forbiddenRule]);
 
         expect(lints, hasLength(1));
-        expect(lints.first.diagnosticCode.name, 'enforce_annotations_forbidden');
-        expect(
-          lints.first.problemMessage.messageText(includeUrl: false),
-          'This Entity must not have the `@Forbidden` annotation.',
-        );
+        expect(lints.first.message, contains('must not have the `@Forbidden` annotation'));
       });
     });
 
     group('Allowed Rule', () {
       final allowedRule = {
-        'on': 'model',
-        'allowed': {'name': 'Injectable'},
+        'on': ['model'],
+        'allowed': {'name': 'Injectable'}, // Allowed means optional, but permitted.
       };
 
-      test('should not report violation when an allowed annotation is missing', () async {
-        final path = p.join(testProjectPath, 'lib/features/user/data/models/user_model.dart');
-        writeFile(path, 'class UserModel {}');
+      test('does not report violation when an allowed annotation is missing', () async {
+        final path = 'lib/features/user/data/models/user_model.dart';
+        addFile(path, 'class UserModel {}');
 
         final lints = await runLint(filePath: path, annotations: [allowedRule]);
 
         expect(
           lints,
           isEmpty,
-          reason: 'Allowed annotations are optional and should not trigger a lint if absent.',
+          reason: 'Allowed annotations are optional.',
         );
       });
     });

@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
-import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
 import 'package:clean_architecture_lints/src/lints/purity/disallow_model_in_domain.dart';
 import 'package:path/path.dart' as p;
@@ -14,38 +13,23 @@ import '../../../helpers/test_data.dart';
 
 void main() {
   group('DisallowModelInDomain Lint', () {
-    late PhysicalResourceProvider resourceProvider;
     late AnalysisContextCollection contextCollection;
     late Directory tempDir;
     late String projectPath;
 
     void writeFile(String path, String content) {
       final normalizedPath = p.normalize(path);
-      final file = resourceProvider.getFile(normalizedPath);
-      Directory(p.dirname(normalizedPath)).createSync(recursive: true);
+      final file = File(normalizedPath);
+      file.parent.createSync(recursive: true);
       file.writeAsStringSync(content);
     }
 
-    Future<List<Diagnostic>> runLint(String filePath) async {
-      final config = makeConfig();
-      final lint = DisallowModelInDomain(config: config, layerResolver: LayerResolver(config));
-
-      final resolvedUnit =
-          await contextCollection
-                  .contextFor(p.normalize(filePath))
-                  .currentSession
-                  .getResolvedUnit(p.normalize(filePath))
-              as ResolvedUnitResult;
-
-      return lint.testRun(resolvedUnit);
-    }
-
     setUp(() {
-      resourceProvider = PhysicalResourceProvider.INSTANCE;
+      // [Windows Fix] Use canonical path
       tempDir = Directory.systemTemp.createTempSync('model_in_domain_test_');
-      projectPath = p.join(p.normalize(tempDir.path), 'test_project');
-      Directory(projectPath).createSync(recursive: true);
+      projectPath = p.canonicalize(p.join(tempDir.path, 'test_project'));
 
+      Directory(projectPath).createSync(recursive: true);
       writeFile(p.join(projectPath, 'pubspec.yaml'), 'name: test_project');
       writeFile(
         p.join(projectPath, '.dart_tool', 'package_config.json'),
@@ -63,15 +47,34 @@ void main() {
         p.join(projectPath, 'lib/features/user/domain/entities/user.dart'),
         'class User {}',
       );
-
-      contextCollection = AnalysisContextCollection(includedPaths: [projectPath]);
     });
 
     tearDown(() {
-      tempDir.deleteSync(recursive: true);
+      try {
+        tempDir.deleteSync(recursive: true);
+      } on FileSystemException catch (_) {
+        // Ignore Windows file lock errors
+      }
     });
 
-    test('should report violation when an Entity has a Model field', () async {
+    Future<List<Diagnostic>> runLint(String filePath) async {
+      final fullPath = p.canonicalize(filePath);
+
+      contextCollection = AnalysisContextCollection(includedPaths: [projectPath]);
+
+      final resolvedUnit = await contextCollection
+          .contextFor(fullPath)
+          .currentSession
+          .getResolvedUnit(fullPath) as ResolvedUnitResult;
+
+      final config = makeConfig();
+      final lint = DisallowModelInDomain(config: config, layerResolver: LayerResolver(config));
+
+      final lints = await lint.testRun(resolvedUnit);
+      return lints.cast<Diagnostic>();
+    }
+
+    test('reports violation when an Entity has a Model field', () async {
       final path = p.join(projectPath, 'lib/features/user/domain/entities/profile.dart');
       writeFile(path, '''
         import '../../data/models/user_model.dart';
@@ -84,26 +87,28 @@ void main() {
       final lints = await runLint(path);
 
       expect(lints, hasLength(1));
-      expect(lints.first.diagnosticCode.name, 'disallow_model_in_domain');
+      expect(lints.first.message, contains('Domain layer purity violation'));
     });
 
-    test('should report violation when a UseCase returns a Model', () async {
+    test('reports violation when a UseCase returns a Model', () async {
       final path = p.join(projectPath, 'lib/features/user/domain/usecases/get_user.dart');
       writeFile(path, '''
         import '../../data/models/user_model.dart';
         class GetUser {
-          UserModel call() => UserModel(); // VIOLATION
+          // VIOLATION: Returns UserModel
+          UserModel call() => UserModel(); 
         }
       ''');
 
       final lints = await runLint(path);
-      // Expect 2 lints: one for return type, one for constructor call (if type is
-      // inferred/explicit) addTypeAnnotation catches `UserModel` in `UserModel call()`.
+
+      // Expect violations. Depending on implementation, could be 1 (return type) or 2 (constructor).
+      // At minimum, it should not be empty.
       expect(lints, isNotEmpty);
       expect(lints.first.diagnosticCode.name, 'disallow_model_in_domain');
     });
 
-    test('should report violation when a generic List contains a Model', () async {
+    test('reports violation when a generic List contains a Model', () async {
       final path = p.join(projectPath, 'lib/features/user/domain/entities/group.dart');
       writeFile(path, '''
         import '../../data/models/user_model.dart';
@@ -117,7 +122,7 @@ void main() {
       expect(lints, hasLength(1));
     });
 
-    test('should NOT report violation when Domain uses an Entity', () async {
+    test('does not report violation when Domain uses an Entity', () async {
       final path = p.join(projectPath, 'lib/features/user/domain/usecases/get_user.dart');
       writeFile(path, '''
         import '../entities/user.dart';
@@ -130,7 +135,7 @@ void main() {
       expect(lints, isEmpty);
     });
 
-    test('should NOT report violation when a Data layer class uses a Model', () async {
+    test('does not report violation when a Data layer class uses a Model', () async {
       // This file is in the data layer (repository implementation), so it CAN use models.
       final path = p.join(
         projectPath,

@@ -19,8 +19,10 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
 
   final Set<String> _wrapperTypeNames;
 
-  DisallowModelReturnFromRepository({required super.config, required super.layerResolver})
-      : _wrapperTypeNames = {
+  DisallowModelReturnFromRepository({
+    required super.config,
+    required super.layerResolver,
+  }) : _wrapperTypeNames = {
     ...config.typeSafeties.rules
         .expand((rule) => rule.returns)
         .map((detail) => detail.safeType),
@@ -31,7 +33,11 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
         super(code: _code);
 
   @override
-  void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
+  void run(
+      CustomLintResolver resolver,
+      DiagnosticReporter reporter,
+      CustomLintContext context,
+      ) {
     final component = layerResolver.getComponent(resolver.source.fullName);
     if (component != ArchComponent.repository) return;
 
@@ -44,47 +50,44 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
 
       if (methodElement == null || methodElement.isPrivate) return;
 
+      // Only enforce this rule if the method is implementing a Repository Contract
       if (SemanticUtils.isArchitecturalOverride(methodElement, layerResolver)) {
 
-        // STRATEGY 1: Inspect AST for Wrapper Constructors (e.g., Right(model))
-        // This bypasses type inference upcasting by looking at the argument directly.
+        // STRATEGY 1: Inspect Wrappers (Right(model), Success(model))
         if (expression is InstanceCreationExpression) {
           final typeName = expression.constructorName.type.name2.lexeme;
           if (_isSuccessWrapper(typeName)) {
             final arg = expression.argumentList.arguments.firstOrNull;
-            // Check the static type of the argument (e.g., `model`), which is still `UserModel`.
-            if (arg != null && SemanticUtils.isComponent(arg.staticType, layerResolver, ArchComponent.model)) {
+            if (arg != null && _isModelType(arg.staticType)) {
               reporter.atNode(arg, _code);
               return;
             }
           }
-        }
-        // Handle MethodInvocation wrappers (e.g., right(model) or Future.value(model))
-        else if (expression is MethodInvocation) {
+        } else if (expression is MethodInvocation) {
           final name = expression.methodName.name;
           if (_isSuccessWrapper(name)) {
             final arg = expression.argumentList.arguments.firstOrNull;
-            if (arg != null && SemanticUtils.isComponent(arg.staticType, layerResolver, ArchComponent.model)) {
+            if (arg != null && _isModelType(arg.staticType)) {
               reporter.atNode(arg, _code);
               return;
             }
           }
         }
 
-        // STRATEGY 2: Fallback to checking the expression's static type
-        // This handles cases like `return model;` or `return futureModel;`.
+        // STRATEGY 2: Fallback to checking static type (implicit returns)
         final successType = _extractSuccessType(expression.staticType);
-
-        if (SemanticUtils.isComponent(successType, layerResolver, ArchComponent.model)) {
+        if (_isModelType(successType)) {
           reporter.atNode(expression, _code);
         }
       }
     });
   }
 
-  /// Heuristic to identify wrappers that imply success/returning data.
+  bool _isModelType(DartType? type) {
+    return SemanticUtils.isComponent(type, layerResolver, ArchComponent.model);
+  }
+
   bool _isSuccessWrapper(String name) {
-    // 'Right' is standard FP. 'value' handles Future.value().
     return name == 'Right' || name == 'Success' || name == 'value';
   }
 
@@ -94,16 +97,12 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
     final name = type.element.name;
 
     if (name == 'Future' || name == 'FutureOr') {
-      return type.typeArguments.isEmpty
-          ? null
-          : _extractSuccessType(type.typeArguments.single);
+      return type.typeArguments.isEmpty ? null : _extractSuccessType(type.typeArguments.single);
     }
 
     if (_wrapperTypeNames.contains(name)) {
-      // Assumes the success type is the LAST type argument (standard for Either/Result)
-      return type.typeArguments.isEmpty
-          ? null
-          : _extractSuccessType(type.typeArguments.last);
+      // Assumes Success type is the LAST type argument (Standard Either<L, R>)
+      return type.typeArguments.isEmpty ? null : _extractSuccessType(type.typeArguments.last);
     }
 
     return type;

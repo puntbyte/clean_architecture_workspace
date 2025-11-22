@@ -1,7 +1,7 @@
-// lib/srcs/lints/purity/enforce_contract_api.dart
+// lib/src/lints/purity/enforce_contract_api.dart
 
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/ast/token.dart'; // Import Token
+import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
@@ -15,7 +15,7 @@ class EnforceContractApi extends ArchitectureLintRule {
     name: 'enforce_contract_api',
     problemMessage: 'The public member `{0}` is not defined in the interface contract.',
     correctionMessage:
-        'Make this member private (prefix with `_`) or add it to the interface contract.',
+    'Make this member private (prefix with `_`) or add it to the interface contract.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
@@ -27,12 +27,15 @@ class EnforceContractApi extends ArchitectureLintRule {
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
     final component = layerResolver.getComponent(resolver.source.fullName);
+
+    // Only enforce on implementations that are expected to follow a strict contract.
     if (component != ArchComponent.repository && component != ArchComponent.sourceImplementation) {
       return;
     }
 
     context.registry.addClassDeclaration((classNode) {
       if (classNode.abstractKeyword != null) return;
+
       for (final member in classNode.members) {
         _validateMember(member, reporter);
       }
@@ -41,10 +44,10 @@ class EnforceContractApi extends ArchitectureLintRule {
 
   void _validateMember(ClassMember member, DiagnosticReporter reporter) {
     ExecutableElement? element;
-    // FIX: The name of a declaration is a Token, not an AstNode.
     Token? nameToken;
 
     if (member is MethodDeclaration) {
+      // [Analyzer 8.0.0 Fix] Use declaredFragment
       element = member.declaredFragment?.element;
       nameToken = member.name;
     } else if (member is FieldDeclaration) {
@@ -57,10 +60,12 @@ class EnforceContractApi extends ArchitectureLintRule {
     }
 
     if (element == null || nameToken == null) return;
+
+    // Skip private members, static members, and constructors
     if (element.isPrivate || element.isStatic || element is ConstructorElement) return;
 
+    // Check if this member overrides a member from a Port/Contract interface
     if (!SemanticUtils.isArchitecturalOverride(element, layerResolver)) {
-      // FIX: Use the correct reporter method for a Token.
       reporter.atToken(nameToken, _code, arguments: [nameToken.lexeme]);
     }
   }

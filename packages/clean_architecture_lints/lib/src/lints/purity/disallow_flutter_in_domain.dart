@@ -11,9 +11,7 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 /// **Category:** Purity
 ///
 /// **Reasoning:** The domain layer must be pure and platform-independent to ensure
-/// business logic is decoupled from the UI framework. Dependencies on `dart:ui`
-/// or `package:flutter` make the domain layer hard to test and tightly coupled
-/// to specific platforms.
+/// business logic is decoupled from the UI framework.
 class DisallowFlutterInDomain extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'disallow_flutter_in_domain',
@@ -31,7 +29,7 @@ class DisallowFlutterInDomain extends ArchitectureLintRule {
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
     final component = layerResolver.getComponent(resolver.source.fullName);
 
-    // FIX: Use the new `layer` getter to check if this file belongs to the domain.
+    // Check if file belongs to the domain layer.
     if (component.layer != ArchComponent.domain) return;
 
     // 1. Check for forbidden import statements (Explicit check).
@@ -45,14 +43,13 @@ class DisallowFlutterInDomain extends ArchitectureLintRule {
     });
 
     // 2. Check for forbidden types in code (Implicit check).
-    // Using addTypeAnnotation catches fields, methods, params, variables, and generics.
-    context.registry.addTypeAnnotation((node) {
-      final type = node.type;
-      if (type == null) return;
+    // Catches cases where type is inferred or used without direct import (rare but possible with exports).
+    context.registry.addNamedType((node) {
+      final element = node.element;
+      if (element == null) return;
 
-      // Get the source library of the element being used.
-      final element = type.element;
-      final uri = element?.library?.firstFragment.source.uri;
+      // [Analyzer 8.0.0 Fix] Use firstFragment.source
+      final uri = element.library?.firstFragment.source.uri;
 
       if (uri != null) {
         final isFlutter = uri.isScheme('package') && uri.pathSegments.firstOrNull == 'flutter';

@@ -1,4 +1,4 @@
-// lib/srcs/lints/structure/enforce_type_safety.dart
+// lib/src/lints/structure/enforce_type_safety.dart
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
@@ -25,7 +25,7 @@ class EnforceTypeSafety extends ArchitectureLintRule {
   );
 
   const EnforceTypeSafety({required super.config, required super.layerResolver})
-    : super(code: _returnCode);
+      : super(code: _returnCode);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
@@ -50,20 +50,25 @@ class EnforceTypeSafety extends ArchitectureLintRule {
   }
 
   void _validateReturnType(
-    MethodDeclaration node,
-    List<TypeSafetyRule> rules,
-    DiagnosticReporter reporter,
-  ) {
+      MethodDeclaration node,
+      List<TypeSafetyRule> rules,
+      DiagnosticReporter reporter,
+      ) {
     final returnTypeNode = node.returnType;
-    final returnType = returnTypeNode?.type;
-    if (returnTypeNode == null || returnType == null) return;
+    if (returnTypeNode == null) return;
 
-    final returnTypeName = returnType.element?.name;
-    if (returnTypeName == null) return;
+    final returnType = returnTypeNode.type;
+    if (returnType == null) return;
+
+    // [Analyzer 8.0.0] Access name safely
+    final returnTypeName = returnType.element?.name ?? returnTypeNode.toSource();
 
     // Check against all applicable return rules.
     for (final rule in rules) {
       for (final detail in rule.returns) {
+        // Use 'startsWith' or explicit check to handle generics if needed
+        // e.g. unsafe: 'Future', safe: 'FutureEither'.
+        // 'Future<void>' starts with 'Future'.
         if (returnTypeName == detail.unsafeType) {
           reporter.atNode(
             returnTypeNode,
@@ -77,10 +82,10 @@ class EnforceTypeSafety extends ArchitectureLintRule {
   }
 
   void _validateParameters(
-    MethodDeclaration node,
-    List<TypeSafetyRule> rules,
-    DiagnosticReporter reporter,
-  ) {
+      MethodDeclaration node,
+      List<TypeSafetyRule> rules,
+      DiagnosticReporter reporter,
+      ) {
     if (node.parameters == null) return;
 
     for (final parameter in node.parameters!.parameters) {
@@ -90,8 +95,7 @@ class EnforceTypeSafety extends ArchitectureLintRule {
 
       if (paramName == null || typeNode == null || paramType == null) continue;
 
-      final paramTypeName = paramType.element?.name;
-      if (paramTypeName == null) continue;
+      final paramTypeName = paramType.element?.name ?? typeNode.toSource();
 
       // Check against all applicable parameter rules.
       for (final rule in rules) {
@@ -100,7 +104,7 @@ class EnforceTypeSafety extends ArchitectureLintRule {
           if (paramTypeName == detail.unsafeType) {
             final identifierMatches =
                 detail.identifier == null ||
-                paramName.toLowerCase().contains(detail.identifier!.toLowerCase());
+                    paramName.toLowerCase().contains(detail.identifier!.toLowerCase());
 
             if (identifierMatches) {
               reporter.atNode(

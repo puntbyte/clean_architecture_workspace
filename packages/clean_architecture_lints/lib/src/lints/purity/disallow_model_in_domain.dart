@@ -33,14 +33,18 @@ class DisallowModelInDomain extends ArchitectureLintRule {
     // This rule applies to ANY file within the domain layer.
     if (component.layer != ArchComponent.domain) return;
 
-    // Visit every TypeAnnotation in the file.
-    context.registry.addTypeAnnotation((node) {
+    // OPTIMIZATION: Use addNamedType.
+    // This catches explicit type usages (fields, params, generics like List<Model>).
+    context.registry.addNamedType((node) {
       final type = node.type;
       if (type == null) return;
 
       // Get the source file where this type is defined.
-      // We use the element directly to avoid recursion issues.
-      final source = type.element?.library?.firstFragment.source;
+      final element = node.element;
+      if (element == null) return;
+
+      // [Analyzer 8.0.0 Fix] Use firstFragment.source
+      final source = element.library?.firstFragment.source;
       if (source == null) return;
 
       // Check if the referenced type is defined in a Model component.

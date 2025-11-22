@@ -32,8 +32,6 @@ class CreateUseCaseFix extends DartFix {
       ) {
     context.addPostRunCallback(() async {
       final resolvedUnit = await resolver.getResolvedUnitResult();
-
-      // FIX: Use public API `nodeCovering` instead of internal `NodeLocator2`.
       final node = resolvedUnit.unit.nodeCovering(offset: diagnostic.offset);
 
       final methodNode = node?.thisOrAncestorOfType<MethodDeclaration>();
@@ -61,7 +59,6 @@ class CreateUseCaseFix extends DartFix {
             builder: builder,
             method: methodNode,
             repoNode: repoNode,
-            context: context,
           );
 
           final emitter = cb.DartEmitter(useNullSafetySyntax: true);
@@ -137,7 +134,6 @@ class CreateUseCaseFix extends DartFix {
     return SyntaxBuilder.library(body: bodyElements);
   }
 
-  /// Public and static for testing without a full analyzer context.
   static UseCaseGenerationConfig buildParameterConfigFromParams({
     required List<FormalParameter> params,
     required String methodName,
@@ -155,99 +151,90 @@ class CreateUseCaseFix extends DartFix {
 
     if (params.length == 1) {
       final param = params.first;
-      final paramElement = _getParameterElement(param);
-
-      if (paramElement != null && paramElement.name != null) {
-        final paramType = cb.refer(paramElement.type.getDisplayString());
-        final paramName = paramElement.name!;
-        final isPositional = paramElement.isPositional && !paramElement.isOptionalPositional;
-        final isNamed = paramElement.isNamed;
-
-        return UseCaseGenerationConfig(
-          baseClassName: cb.refer(unaryName),
-          genericTypes: [outputType, paramType],
-          callParams: [SyntaxBuilder.parameter(name: paramName, type: paramType)],
-          repoCallPositionalArgs: isPositional ? [cb.refer(paramName)] : [],
-          repoCallNamedArgs: isNamed ? {paramName: cb.refer(paramName)} : {},
-        );
-      }
-
-      // Fallback for unresolved ASTs
       final astInfo = _extractParamFromAst(param);
+
       if (astInfo.name == null) {
-        return UseCaseGenerationConfig.empty(nullaryName, outputType);
+        // Fallback if something is terribly wrong with AST
+        return UseCaseGenerationConfig(
+            baseClassName: cb.refer(nullaryName),
+            genericTypes: [outputType],
+            callParams: []
+        );
       }
 
       final paramType = cb.refer(astInfo.type ?? 'dynamic');
       final paramName = astInfo.name!;
       final isNamed = astInfo.isNamed;
-      final isOptionalPositional = astInfo.isOptionalPositional;
+
+      // For optional positional ([int? id]), we treat it as a single param for the Unary case.
       final isPositional = !isNamed;
 
       return UseCaseGenerationConfig(
         baseClassName: cb.refer(unaryName),
         genericTypes: [outputType, paramType],
         callParams: [SyntaxBuilder.parameter(name: paramName, type: paramType)],
-        repoCallPositionalArgs: (isPositional && !isOptionalPositional)
-            ? [cb.refer(paramName)]
-            : [],
+        // If it's positional (even optional), we pass it as positional to repo.
+        repoCallPositionalArgs: isPositional ? [cb.refer(paramName)] : [],
+        // If named, pass as named.
         repoCallNamedArgs: isNamed ? {paramName: cb.refer(paramName)} : {},
       );
     }
 
-    // Multi-params -> record param wrapper
+    // Multi-params -> Generate a Record-like TypeDef wrapper
     final useCaseNamePascal = methodName.toPascalCase();
     final recordName = '_${useCaseNamePascal}Params';
     final recordRef = cb.refer(recordName);
 
     final recordFields = <String, cb.Reference>{};
-    final repoCallArgs = <String, cb.Expression>{};
+    final repoCallArgsPositional = <cb.Expression>[];
+    final repoCallArgsNamed = <String, cb.Expression>{};
 
     for (final p in params) {
-      final element = _getParameterElement(p);
-      if (element != null && element.name != null) {
-        final name = element.name!;
-        recordFields[name] = cb.refer(element.type.getDisplayString());
-        repoCallArgs[name] = cb.refer('params').property(name);
-        continue;
-      }
-
       final astInfo = _extractParamFromAst(p);
       if (astInfo.name == null) continue;
+
       final name = astInfo.name!;
       recordFields[name] = cb.refer(astInfo.type ?? 'dynamic');
-      repoCallArgs[name] = cb.refer('params').property(name);
+
+      final fieldRef = cb.refer('params').property(name);
+
+      if (astInfo.isNamed) {
+        repoCallArgsNamed[name] = fieldRef;
+      } else {
+        repoCallArgsPositional.add(fieldRef);
+      }
     }
 
     final recordTypeDef = SyntaxBuilder.typeDef(
       name: recordName,
       definition: SyntaxBuilder.recordType(namedFields: recordFields),
     );
+
     return UseCaseGenerationConfig(
       baseClassName: cb.refer(unaryName),
       genericTypes: [outputType, recordRef],
       callParams: [SyntaxBuilder.parameter(name: 'params', type: recordRef)],
-      repoCallNamedArgs: repoCallArgs,
+      repoCallPositionalArgs: repoCallArgsPositional,
+      repoCallNamedArgs: repoCallArgsNamed,
       recordTypeDef: recordTypeDef,
     );
-  }
-
-  static FormalParameterElement? _getParameterElement(FormalParameter param) {
-    final actual = param is DefaultFormalParameter ? param.parameter : param;
-    return actual.declaredFragment?.element;
   }
 
   static _AstParamInfo _extractParamFromAst(FormalParameter param) {
     final actual = param is DefaultFormalParameter ? param.parameter : param;
     final name = actual.name?.lexeme;
-    String? typeSource;
 
-    if (actual is SimpleFormalParameter) {
-      typeSource = actual.type?.toSource();
-    } else if (actual is FieldFormalParameter) {
-      typeSource = actual.type?.toSource();
-    } else if (actual is FunctionTypedFormalParameter) {
-      typeSource = actual.returnType?.toSource();
+    String? typeSource;
+    // Use resolved element if available for better type strings
+    if (actual.declaredFragment?.element.type != null) {
+      typeSource = actual.declaredFragment!.element.type.getDisplayString();
+    } else {
+      // Fallback to AST source if resolution is partial
+      if (actual is SimpleFormalParameter) {
+        typeSource = actual.type?.toSource();
+      } else if (actual is FieldFormalParameter) {
+        typeSource = actual.type?.toSource();
+      }
     }
 
     return _AstParamInfo(
@@ -262,66 +249,77 @@ class CreateUseCaseFix extends DartFix {
     required DartFileEditBuilder builder,
     required MethodDeclaration method,
     required ClassDeclaration repoNode,
-    required CustomLintContext context,
   }) {
     final importedUris = <String>{};
-    void importLibraryChecked(Uri uri) {
+
+    void importChecked(Uri uri) {
       if (uri.isScheme('dart')) return;
       if (importedUris.add(uri.toString())) {
         builder.importLibrary(uri);
       }
     }
 
-    final repoLibrary = repoNode.declaredFragment?.libraryFragment.element;
+    // Import the Repository definition
+    final repoLibrary = repoNode.declaredFragment?.element.library;
     if (repoLibrary != null) {
-      final src = repoLibrary.firstFragment.source;
-      importLibraryChecked(src.uri);
+      importChecked(repoLibrary.firstFragment.source.uri);
     }
 
+    // Import Annotations (e.g. Injectable)
     config.annotations.ruleFor(ArchComponent.usecase.id)?.required.forEach((detail) {
-      if (detail.import != null) importLibraryChecked(Uri.parse(detail.import!));
+      if (detail.import != null) importChecked(Uri.parse(detail.import!));
     });
 
-    // Fix: Correct check for empty string if import is non-null
+    // Import Base UseCase Classes
     config.inheritances.ruleFor(ArchComponent.usecase.id)?.required.forEach((detail) {
-      importLibraryChecked(Uri.parse(detail.import));
+      importChecked(Uri.parse(detail.import));
     });
 
+    // Import Type Safety Types (e.g. FutureEither, Failure)
     for (final rule in config.typeSafeties.rules) {
       for (final detail in rule.returns) {
-        if (detail.import != null) importLibraryChecked(Uri.parse(detail.import!));
-      }
-      for (final detail in rule.parameters) {
-        if (detail.import != null) importLibraryChecked(Uri.parse(detail.import!));
+        if (detail.import != null) importChecked(Uri.parse(detail.import!));
       }
     }
 
-    _importType(method.returnType?.type, importLibraryChecked);
+    // Helper to import types found in method signature
+    void importType(DartType? type) {
+      if (type == null || (type.element?.library?.isInSdk ?? false)) return;
+      final source = type.element?.library?.firstFragment.source;
+      if (source != null) importChecked(source.uri);
+
+      if (type is InterfaceType) {
+        for (final arg in type.typeArguments) importType(arg);
+      }
+    }
+
+    importType(method.returnType?.type);
     for (final param in method.parameters?.parameters ?? <FormalParameter>[]) {
-      _importType(_getParameterElement(param)?.type, importLibraryChecked);
-    }
-  }
-
-  void _importType(DartType? type, void Function(Uri) importLibrary) {
-    if (type == null || (type.element?.library?.isInSdk ?? false)) return;
-
-    final source = type.element?.library?.firstFragment.source;
-    if (source != null) {
-      importLibrary(source.uri);
-    }
-    if (type is InterfaceType) {
-      for (final arg in type.typeArguments) {
-        _importType(arg, importLibrary);
-      }
+      // Try to resolve param type
+      final paramEl = param.declaredFragment?.element;
+      if (paramEl != null) importType(paramEl.type);
     }
   }
 
   cb.Reference extractOutputType(DartType? returnType) {
     if (returnType is! InterfaceType) return cb.refer('void');
-    final futureArg = returnType.typeArguments.isNotEmpty ? returnType.typeArguments.first : null;
-    if (futureArg is! InterfaceType) return cb.refer('void');
-    final successArg = futureArg.typeArguments.isNotEmpty ? futureArg.typeArguments.last : null;
-    return cb.refer(successArg?.getDisplayString() ?? 'void');
+
+    // Handle Future<T>
+    if (returnType.isDartAsyncFuture || returnType.isDartAsyncFutureOr) {
+      final inner = returnType.typeArguments.firstOrNull;
+      if (inner is InterfaceType) {
+        // Handle Future<Either<L, R>> -> Extract R
+        // Assuming standard Either where R is the last arg.
+        if (inner.typeArguments.isNotEmpty) {
+          // Heuristic: Last generic arg is usually the success type
+          return cb.refer(inner.typeArguments.last.getDisplayString());
+        }
+        return cb.refer(inner.getDisplayString());
+      }
+      return cb.refer(inner?.getDisplayString() ?? 'void');
+    }
+
+    return cb.refer(returnType.getDisplayString());
   }
 }
 
@@ -341,9 +339,6 @@ class UseCaseGenerationConfig {
     this.repoCallNamedArgs = const {},
     this.recordTypeDef,
   });
-
-  UseCaseGenerationConfig.empty(String nullaryName, cb.Reference outputType)
-      : this(baseClassName: cb.refer(nullaryName), genericTypes: [outputType], callParams: []);
 }
 
 class _AstParamInfo {

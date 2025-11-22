@@ -1,10 +1,11 @@
 // lib/src/lints/dependency/enforce_layer_independence.dart
 
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/models/dependencies_config.dart'; // New import
+import 'package:clean_architecture_lints/src/models/dependencies_config.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 /// A generic lint that enforces the dependency graph defined in the configuration.
@@ -33,29 +34,29 @@ class EnforceLayerIndependence extends ArchitectureLintRule {
   }) : super(code: _forbiddenComponentCode);
 
   @override
-  void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
+  void run(
+      CustomLintResolver resolver,
+      DiagnosticReporter reporter,
+      CustomLintContext context,
+      ) {
     if (config.dependencies.rules.isEmpty) return;
 
     final sourceComponent = layerResolver.getComponent(resolver.source.fullName);
     if (sourceComponent == ArchComponent.unknown) return;
 
-    // Check for a rule matching the specific component, then fallback to the layer.
-    final rule =
-        config.dependencies.ruleFor(sourceComponent.id) ??
+    final rule = config.dependencies.ruleFor(sourceComponent.id) ??
         config.dependencies.ruleFor(sourceComponent.layer.id);
 
     if (rule == null) return;
 
     context.registry.addImportDirective((node) {
-      final importedUriString = node.uri.stringValue;
-      if (importedUriString == null) return;
+      final uriString = node.uri.stringValue;
+      if (uriString == null) return;
 
-      final isPackageImport = importedUriString.startsWith('package:');
-
-      // --- FORBIDDEN PACKAGE CHECK ---
-      if (isPackageImport) {
+      // 1. External Package Check (String-based)
+      if (uriString.startsWith('package:')) {
         for (final forbiddenPackage in rule.forbidden.packages) {
-          if (importedUriString.startsWith(forbiddenPackage)) {
+          if (uriString.startsWith(forbiddenPackage)) {
             reporter.atNode(
               node.uri,
               _forbiddenPackageCode,
@@ -66,11 +67,10 @@ class EnforceLayerIndependence extends ArchitectureLintRule {
         }
       }
 
-      // --- COMPONENT CHECKS (Internal) ---
-      final importedComponent = _getImportedComponent(importedUriString, context);
+      // 2. Internal Component Check (Resolution-based)
+      final importedComponent = _resolveImportedComponent(node);
       if (importedComponent == ArchComponent.unknown) return;
 
-      // 1. Forbidden Check (Highest Priority)
       if (_isForbidden(importedComponent, rule)) {
         reporter.atNode(
           node.uri,
@@ -80,8 +80,6 @@ class EnforceLayerIndependence extends ArchitectureLintRule {
         return;
       }
 
-      // 2. Allowed Check (Whitelist Mode)
-      // If an allowed list exists, the import MUST be in it.
       if (rule.allowed.isNotEmpty && !_isAllowed(importedComponent, rule)) {
         reporter.atNode(
           node.uri,
@@ -92,13 +90,15 @@ class EnforceLayerIndependence extends ArchitectureLintRule {
     });
   }
 
-  ArchComponent _getImportedComponent(String uri, CustomLintContext context) {
-    if (uri.startsWith('package:${context.pubspec.name}')) {
-      // Convert `package:my_proj/features/..` to `lib/features/...` for the resolver.
-      final path = uri.replaceFirst('package:${context.pubspec.name}/', 'lib/');
-      return layerResolver.getComponent(path);
-    }
-    return ArchComponent.unknown;
+  ArchComponent _resolveImportedComponent(ImportDirective node) {
+    // [Analyzer 8.0.0 Fix] Use `libraryImport` instead of `element`
+    // `libraryImport` represents the semantic import model.
+    final importedLibrary = node.libraryImport?.importedLibrary;
+
+    final source = importedLibrary?.firstFragment.source;
+    if (source == null) return ArchComponent.unknown;
+
+    return layerResolver.getComponent(source.fullName);
   }
 
   bool _isForbidden(ArchComponent imported, DependencyRule rule) {

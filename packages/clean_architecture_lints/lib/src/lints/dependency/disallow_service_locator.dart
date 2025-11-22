@@ -10,14 +10,16 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 /// A lint that forbids the use of the Service Locator pattern (e.g., `getIt<T>()`)
 /// within architectural layers.
 ///
+/// **Category:** Dependency / Purity
+///
 /// **Reasoning:** Dependencies should be explicit and injected via constructors.
-/// Using a global service locator hides dependencies, making code harder to test,
-/// understand, and refactor. It couples the class to the locator framework.
+/// Using a global service locator hides dependencies (Dependency Hiding Anti-pattern),
+/// making code harder to test and confusing to refactor.
 class DisallowServiceLocator extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'disallow_service_locator',
     problemMessage:
-        'Do not use a service locator. Dependencies should be explicit and injected via the '
+    'Do not use a service locator. Dependencies should be explicit and injected via the '
         'constructor.',
     correctionMessage: 'Add this dependency as a constructor parameter.',
     errorSeverity: DiagnosticSeverity.WARNING,
@@ -30,39 +32,31 @@ class DisallowServiceLocator extends ArchitectureLintRule {
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    // We want to enforce this in all known architectural components.
+    // 1. Scope: Run on all architectural components (Domain, Data, Presentation).
+    // We exclude 'unknown' components (like main.dart or injection_container.dart)
+    // because that is where the Service Locator is typically initialized/used legitimately.
     final component = layerResolver.getComponent(resolver.source.fullName);
     if (component == ArchComponent.unknown) return;
 
-    // Access the configured locator names (e.g., ['getIt', 'sl', 'locator']).
+    // 2. Config: Get the list of banned names (e.g. 'getIt', 'sl').
     final locatorNames = config.services.dependencyInjection.serviceLocatorNames.toSet();
     if (locatorNames.isEmpty) return;
 
-    // Helper to check and report.
-    void checkName(String name, AstNode node) {
-      if (locatorNames.contains(name)) {
-        reporter.atNode(node, _code);
-      }
-    }
-
-    // 1. Check Method Invocations (e.g., `getIt<Type>()` or `getIt()`)
-    context.registry.addMethodInvocation((node) {
-      if (node.target == null && locatorNames.contains(node.methodName.name)) {
-        reporter.atNode(node, _code);
-      }
-    });
-
-    // 2. Check Property/Identifier Access (e.g., `final x = getIt;` or `getIt.call<T>()`)
+    // 3. Check: Listen for identifier usage.
     context.registry.addSimpleIdentifier((node) {
-      // Skip if it's the method name in an invocation (handled above) or a declaration.
-      if (node.parent is MethodInvocation) {
-        final methodInvocation = node.parent as MethodInvocation?;
-        if (methodInvocation?.methodName == node) return;
-      }
+      // Check if the name matches one of the forbidden locator names.
+      if (!locatorNames.contains(node.name)) return;
 
+      // Ignore declarations (e.g. 'final getIt = ...').
+      // We only want to catch *usages*.
       if (node.inDeclarationContext()) return;
 
-      checkName(node.name, node);
+      // Ignore if it is being used as a named parameter label (e.g. func(getIt: x)).
+      // (Though highly unlikely a param would be named 'getIt', it's good AST hygiene).
+      if (node.parent is Label) return;
+
+      // Report the usage.
+      reporter.atNode(node, _code);
     });
   }
 }
