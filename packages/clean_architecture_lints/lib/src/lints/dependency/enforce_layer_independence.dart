@@ -4,10 +4,10 @@ import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/models/locations_config.dart';
+import 'package:clean_architecture_lints/src/models/dependencies_config.dart'; // New import
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-/// A generic lint that enforces the dependency graph defined in the `locations` configuration.
+/// A generic lint that enforces the dependency graph defined in the configuration.
 class EnforceLayerIndependence extends ArchitectureLintRule {
   static const _forbiddenComponentCode = LintCode(
     name: 'enforce_layer_independence_forbidden_component',
@@ -34,14 +34,16 @@ class EnforceLayerIndependence extends ArchitectureLintRule {
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    if (config.locations.rules.isEmpty) return;
+    if (config.dependencies.rules.isEmpty) return;
 
     final sourceComponent = layerResolver.getComponent(resolver.source.fullName);
     if (sourceComponent == ArchComponent.unknown) return;
 
+    // Check for a rule matching the specific component, then fallback to the layer.
     final rule =
-        config.locations.ruleFor(sourceComponent.id) ??
-        config.locations.ruleFor(sourceComponent.layer.id);
+        config.dependencies.ruleFor(sourceComponent.id) ??
+        config.dependencies.ruleFor(sourceComponent.layer.id);
+
     if (rule == null) return;
 
     context.registry.addImportDirective((node) {
@@ -59,16 +61,16 @@ class EnforceLayerIndependence extends ArchitectureLintRule {
               _forbiddenPackageCode,
               arguments: [sourceComponent.label, forbiddenPackage],
             );
-            return; // One violation is enough per import.
+            return;
           }
         }
       }
 
-      // --- COMPONENT CHECKS (for internal project imports) ---
+      // --- COMPONENT CHECKS (Internal) ---
       final importedComponent = _getImportedComponent(importedUriString, context);
       if (importedComponent == ArchComponent.unknown) return;
 
-      // FORBIDDEN COMPONENT CHECK
+      // 1. Forbidden Check (Highest Priority)
       if (_isForbidden(importedComponent, rule)) {
         reporter.atNode(
           node.uri,
@@ -78,7 +80,8 @@ class EnforceLayerIndependence extends ArchitectureLintRule {
         return;
       }
 
-      // ALLOWED COMPONENT CHECK (only if an `allowed` block exists)
+      // 2. Allowed Check (Whitelist Mode)
+      // If an allowed list exists, the import MUST be in it.
       if (rule.allowed.isNotEmpty && !_isAllowed(importedComponent, rule)) {
         reporter.atNode(
           node.uri,
@@ -98,29 +101,13 @@ class EnforceLayerIndependence extends ArchitectureLintRule {
     return ArchComponent.unknown;
   }
 
-  bool _isForbidden(ArchComponent imported, LocationRule rule) {
+  bool _isForbidden(ArchComponent imported, DependencyRule rule) {
     return rule.forbidden.components.contains(imported.id) ||
         rule.forbidden.components.contains(imported.layer.id);
   }
 
-  bool _isAllowed(ArchComponent imported, LocationRule rule) {
+  bool _isAllowed(ArchComponent imported, DependencyRule rule) {
     return rule.allowed.components.contains(imported.id) ||
         rule.allowed.components.contains(imported.layer.id);
-  }
-}
-
-// Helper to get the parent layer (domain, data, presentation) of a component.
-extension ArchComponentLayer on ArchComponent {
-  ArchComponent get layer {
-    if (ArchComponent.domainLayer.contains(this) || this == ArchComponent.domain) {
-      return ArchComponent.domain;
-    }
-    if (ArchComponent.dataLayer.contains(this) || this == ArchComponent.data) {
-      return ArchComponent.data;
-    }
-    if (ArchComponent.presentationLayer.contains(this) || this == ArchComponent.presentation) {
-      return ArchComponent.presentation;
-    }
-    return ArchComponent.unknown;
   }
 }

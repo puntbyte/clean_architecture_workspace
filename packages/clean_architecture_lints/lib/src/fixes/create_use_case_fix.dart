@@ -4,10 +4,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
-
-// Intentionally imported (still common in plugin code)
-// ignore: implementation_imports
-import 'package:analyzer/src/dart/ast/utilities.dart' show NodeLocator2;
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_dart.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
@@ -28,17 +24,21 @@ class CreateUseCaseFix extends DartFix {
 
   @override
   void run(
-    CustomLintResolver resolver,
-    ChangeReporter reporter,
-    CustomLintContext context,
-    Diagnostic diagnostic,
-    List<Diagnostic> others,
-  ) {
+      CustomLintResolver resolver,
+      ChangeReporter reporter,
+      CustomLintContext context,
+      Diagnostic diagnostic,
+      List<Diagnostic> others,
+      ) {
     context.addPostRunCallback(() async {
       final resolvedUnit = await resolver.getResolvedUnitResult();
-      final node = NodeLocator2(diagnostic.offset).searchWithin(resolvedUnit.unit);
+
+      // FIX: Use public API `nodeCovering` instead of internal `NodeLocator2`.
+      final node = resolvedUnit.unit.nodeCovering(offset: diagnostic.offset);
+
       final methodNode = node?.thisOrAncestorOfType<MethodDeclaration>();
       if (methodNode == null) return;
+
       final repoNode = methodNode.thisOrAncestorOfType<ClassDeclaration>();
       if (repoNode == null) return;
 
@@ -51,34 +51,33 @@ class CreateUseCaseFix extends DartFix {
 
       reporter
           .createChangeBuilder(
-            message: 'Create UseCase for `${methodNode.name.lexeme}`',
-            priority: 90,
-          )
-          // Use named parameter `customPath` to write to a new file path.
+        message: 'Create UseCase for `${methodNode.name.lexeme}`',
+        priority: 90,
+      )
           .addDartFileEdit(
             (DartFileEditBuilder builder) {
-              final library = _buildUseCaseLibrary(method: methodNode, repoNode: repoNode);
-              _addImports(
-                builder: builder,
-                method: methodNode,
-                repoNode: repoNode,
-                context: context,
-              );
-
-              final emitter = cb.DartEmitter();
-              final raw = library.accept(emitter).toString();
-
-              final formattedCode = DartFormatter(
-                languageVersion: DartFormatter.latestLanguageVersion,
-              ).format(raw);
-
-              builder.addInsertion(
-                0,
-                (EditBuilder editBuilder) => editBuilder.write(formattedCode),
-              );
-            },
-            customPath: useCaseFilePath,
+          final library = _buildUseCaseLibrary(method: methodNode, repoNode: repoNode);
+          _addImports(
+            builder: builder,
+            method: methodNode,
+            repoNode: repoNode,
+            context: context,
           );
+
+          final emitter = cb.DartEmitter(useNullSafetySyntax: true);
+          final raw = library.accept(emitter).toString();
+
+          final formattedCode = DartFormatter(
+            languageVersion: DartFormatter.latestLanguageVersion,
+          ).format(raw);
+
+          builder.addInsertion(
+            0,
+                (EditBuilder editBuilder) => editBuilder.write(formattedCode),
+          );
+        },
+        customPath: useCaseFilePath,
+      );
     });
   }
 
@@ -96,20 +95,17 @@ class CreateUseCaseFix extends DartFix {
       params: method.parameters?.parameters ?? [],
       methodName: methodName,
       outputType: outputType,
-      // use config to derive names if available
-      unaryName:
-          config.inheritances
-              .ruleFor(ArchComponent.usecase.id)
-              ?.required
-              .firstWhereOrNull((d) => d.name.contains('Unary'))
-              ?.name ??
+      unaryName: config.inheritances
+          .ruleFor(ArchComponent.usecase.id)
+          ?.required
+          .firstWhereOrNull((d) => d.name.contains('Unary'))
+          ?.name ??
           'UnaryUsecase',
-      nullaryName:
-          config.inheritances
-              .ruleFor(ArchComponent.usecase.id)
-              ?.required
-              .firstWhereOrNull((d) => d.name.contains('Nullary'))
-              ?.name ??
+      nullaryName: config.inheritances
+          .ruleFor(ArchComponent.usecase.id)
+          ?.required
+          .firstWhereOrNull((d) => d.name.contains('Nullary'))
+          ?.name ??
           'NullaryUsecase',
     );
 
@@ -141,10 +137,7 @@ class CreateUseCaseFix extends DartFix {
     return SyntaxBuilder.library(body: bodyElements);
   }
 
-  /// Public — made testable.
-  ///
-  /// This is robust both for resolved ASTs (where `declaredElement` is present)
-  /// and for unresolved ASTs (where we fallback to reading the type/name from the AST).
+  /// Public and static for testing without a full analyzer context.
   static UseCaseGenerationConfig buildParameterConfigFromParams({
     required List<FormalParameter> params,
     required String methodName,
@@ -162,13 +155,10 @@ class CreateUseCaseFix extends DartFix {
 
     if (params.length == 1) {
       final param = params.first;
-
-      // Prefer resolved element when available
       final paramElement = _getParameterElement(param);
+
       if (paramElement != null && paramElement.name != null) {
-        final paramType = cb.refer(
-          paramElement.type.getDisplayString(),
-        ); // DartType.getDisplayString exists
+        final paramType = cb.refer(paramElement.type.getDisplayString());
         final paramName = paramElement.name!;
         final isPositional = paramElement.isPositional && !paramElement.isOptionalPositional;
         final isNamed = paramElement.isNamed;
@@ -182,7 +172,7 @@ class CreateUseCaseFix extends DartFix {
         );
       }
 
-      // Fallback: extract info from AST for unresolved units
+      // Fallback for unresolved ASTs
       final astInfo = _extractParamFromAst(param);
       if (astInfo.name == null) {
         return UseCaseGenerationConfig.empty(nullaryName, outputType);
@@ -205,24 +195,23 @@ class CreateUseCaseFix extends DartFix {
       );
     }
 
-    // multi params -> record param wrapper
+    // Multi-params -> record param wrapper
     final useCaseNamePascal = methodName.toPascalCase();
     final recordName = '_${useCaseNamePascal}Params';
     final recordRef = cb.refer(recordName);
 
     final recordFields = <String, cb.Reference>{};
     final repoCallArgs = <String, cb.Expression>{};
+
     for (final p in params) {
       final element = _getParameterElement(p);
       if (element != null && element.name != null) {
         final name = element.name!;
-
-        recordFields[name] = cb.refer(element.runtimeType.toString());
+        recordFields[name] = cb.refer(element.type.getDisplayString());
         repoCallArgs[name] = cb.refer('params').property(name);
         continue;
       }
 
-      // fallback from AST
       final astInfo = _extractParamFromAst(p);
       if (astInfo.name == null) continue;
       final name = astInfo.name!;
@@ -243,25 +232,13 @@ class CreateUseCaseFix extends DartFix {
     );
   }
 
-  // Replace the old helper with this:
   static FormalParameterElement? _getParameterElement(FormalParameter param) {
-    // Unwrap DefaultFormalParameter to get the inner normalized node
     final actual = param is DefaultFormalParameter ? param.parameter : param;
-
-    // Try fragment-based element (analyzer 8.x)
-    final fragment = actual.declaredFragment;
-    if (fragment != null) {
-      final elem = fragment.element;
-      return elem;
-    }
-
-    // No resolved element available
-    return null;
+    return actual.declaredFragment?.element;
   }
 
   static _AstParamInfo _extractParamFromAst(FormalParameter param) {
     final actual = param is DefaultFormalParameter ? param.parameter : param;
-
     final name = actual.name?.lexeme;
     String? typeSource;
 
@@ -273,14 +250,11 @@ class CreateUseCaseFix extends DartFix {
       typeSource = actual.returnType?.toSource();
     }
 
-    final isNamed = param.isNamed;
-    final isOptionalPositional = param.isOptionalPositional;
-
     return _AstParamInfo(
       name: name,
       type: typeSource,
-      isNamed: isNamed,
-      isOptionalPositional: isOptionalPositional,
+      isNamed: param.isNamed,
+      isOptionalPositional: param.isOptionalPositional,
     );
   }
 
@@ -307,8 +281,10 @@ class CreateUseCaseFix extends DartFix {
     config.annotations.ruleFor(ArchComponent.usecase.id)?.required.forEach((detail) {
       if (detail.import != null) importLibraryChecked(Uri.parse(detail.import!));
     });
+
+    // Fix: Correct check for empty string if import is non-null
     config.inheritances.ruleFor(ArchComponent.usecase.id)?.required.forEach((detail) {
-      if (detail.import.isNotEmpty) importLibraryChecked(Uri.parse(detail.import));
+      importLibraryChecked(Uri.parse(detail.import));
     });
 
     for (final rule in config.typeSafeties.rules) {
@@ -349,7 +325,6 @@ class CreateUseCaseFix extends DartFix {
   }
 }
 
-/// Public config returned from the parameter builder.
 class UseCaseGenerationConfig {
   final cb.Reference baseClassName;
   final List<cb.Reference> genericTypes;
@@ -368,7 +343,7 @@ class UseCaseGenerationConfig {
   });
 
   UseCaseGenerationConfig.empty(String nullaryName, cb.Reference outputType)
-    : this(baseClassName: cb.refer(nullaryName), genericTypes: [outputType], callParams: []);
+      : this(baseClassName: cb.refer(nullaryName), genericTypes: [outputType], callParams: []);
 }
 
 class _AstParamInfo {

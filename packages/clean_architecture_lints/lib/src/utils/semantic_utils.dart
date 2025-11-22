@@ -5,32 +5,36 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
 
-/// A utility class for common semantic analysis tasks related to the element model.
 class SemanticUtils {
   const SemanticUtils._();
 
   /// Checks if an executable element is an override of a member from an
-  /// architectural contract (a Port). This is the definitive check.
+  /// architectural contract (a Port).
   static bool isArchitecturalOverride(ExecutableElement element, LayerResolver layerResolver) {
     final enclosingClass = element.enclosingElement;
     if (enclosingClass is! InterfaceElement) return false;
-    if (element.isStatic || element.name == null) return false;
+    if (element.isStatic) return false;
 
-    // Iterate through all interfaces and superclasses this class implements or extends.
+    final elementName = element.name;
+    if (elementName == null) return false;
+
     for (final supertype in enclosingClass.allSupertypes) {
       final supertypeElement = supertype.element;
-      final sourcePath = supertypeElement.library.firstFragment.source.fullName;
+      // FIX: Use the robust library source check
+      final source = supertypeElement.library?.firstFragment.source;
+      if (source == null) continue;
 
       // Check if this supertype is defined in a "port" file.
-      if (layerResolver.getComponent(sourcePath) == ArchComponent.port) {
-        // Check if the Port interface itself DIRECTLY DECLARES a member with the same name.
-        if (element is MethodElement && supertypeElement.methods.any((m) => m.name == element.name)) {
-          return true;
+      if (layerResolver.getComponent(source.fullName) == ArchComponent.port) {
+        // Check methods
+        if (element is MethodElement) {
+          if (supertypeElement.methods.any((m) => m.name == elementName)) return true;
         }
-        // FIX: Check `getters` and `setters` lists separately, as `accessors` does not exist.
+
+        // Check getters/setters
         if (element is PropertyAccessorElement) {
-          if (supertypeElement.getters.any((g) => g.name == element.name) ||
-              supertypeElement.setters.any((s) => s.name == element.name)) {
+          if (supertypeElement.getters.any((g) => g.name == elementName) ||
+              supertypeElement.setters.any((s) => s.name == elementName)) {
             return true;
           }
         }
@@ -40,7 +44,6 @@ class SemanticUtils {
     return false;
   }
 
-  /// Recursively checks if a type or any of its generic arguments is from Flutter.
   static bool isFlutterType(DartType? type) {
     if (type == null) return false;
     final uri = type.element?.library?.firstFragment.source.uri;
@@ -55,8 +58,6 @@ class SemanticUtils {
     return false;
   }
 
-  /// Recursively checks if a type or any of its generic arguments is a specific
-  /// architectural component by its file location.
   static bool isComponent(
       DartType? type,
       LayerResolver layerResolver,

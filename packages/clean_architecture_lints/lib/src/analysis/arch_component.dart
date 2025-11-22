@@ -23,15 +23,12 @@ enum ArchComponent {
   // --- Presentation Components ---
   presentation('presentation', label: 'Presentation'),
   manager('manager', label: 'Manager (Bloc/Cubit)'),
-
   event('event', label: 'Event'),
   eventInterface('event.interface', label: 'Event Interface'),
   eventImplementation('event.implementation', label: 'Event Implementation'),
-
   state('state', label: 'State'),
   stateInterface('state.interface', label: 'State Interface'),
   stateImplementation('state.implementation', label: 'State Implementation'),
-
   page('page', label: 'Page'),
   widget('widget', label: 'Widget'),
 
@@ -48,8 +45,12 @@ enum ArchComponent {
   const ArchComponent(this.id, {required this.label});
 
   /// A reverse lookup to find an enum value from its string [id].
-  static ArchComponent fromId(String id) =>
-      values.firstWhere((value) => value.id == id, orElse: () => .unknown);
+  static ArchComponent fromId(String id) {
+    // FIX: Handle legacy 'contract' id by mapping it to 'port'
+    if (id == 'contract') return .port;
+
+    return values.firstWhere((value) => value.id == id, orElse: () => .unknown);
+  }
 
   Set<ArchComponent> get children => switch (this) {
     .domain => {.entity, .port, .usecase},
@@ -80,7 +81,35 @@ enum ArchComponent {
     }
   }
 
-  static Set<ArchComponent> get layer => {.domain, .data, .presentation};
+  /// Returns the parent layer of this component.
+  ///
+  /// Implemented as a performant switch expression using dot shorthands.
+  ArchComponent get layer => switch (this) {
+    // Domain Layer & Components
+    .domain || .entity || .port || .usecase || .usecaseParameter => .domain,
+
+    // Data Layer & Components
+    .data || .model || .repository || .source || .sourceInterface || .sourceImplementation => .data,
+
+    // Presentation Layer & Components
+    .presentation ||
+    .page ||
+    .widget ||
+    .manager ||
+    .event ||
+    .eventInterface ||
+    .eventImplementation ||
+    .state ||
+    .stateInterface ||
+    .stateImplementation => .presentation,
+
+    // Default
+    _ => .unknown,
+  };
+
+  /// Returns a set of the top-level layers.
+  /// Renamed to `layers` (plural) to avoid conflict with the instance getter.
+  static Set<ArchComponent> get layers => {.domain, .data, .presentation};
 
   // for the time being we can keep them until we remove dependencies on this components
   // --- Layer Composition Getters ---

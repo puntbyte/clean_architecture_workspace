@@ -16,7 +16,7 @@ import 'package:clean_architecture_lints/src/lints/error_handling/disallow_throw
 import 'package:clean_architecture_lints/src/lints/error_handling/enforce_exception_on_data_source.dart';
 import 'package:clean_architecture_lints/src/lints/error_handling/enforce_try_catch_in_repository.dart';
 import 'package:clean_architecture_lints/src/lints/location/enforce_file_and_folder_location.dart';
-import 'package:clean_architecture_lints/src/lints/location/enforce_layer_independence.dart';
+import 'package:clean_architecture_lints/src/lints/dependency/enforce_layer_independence.dart';
 import 'package:clean_architecture_lints/src/lints/naming/enforce_naming_conventions.dart';
 import 'package:clean_architecture_lints/src/lints/naming/enforce_semantic_naming.dart';
 import 'package:clean_architecture_lints/src/lints/purity/disallow_entity_in_data_source.dart';

@@ -13,6 +13,7 @@ class ConfigKey {
   static const layer = _LayerKeys();
   static const rule = _RuleKeys();
   static const service = _ServiceKeys();
+  static const dependency = _DependencyKeys();
   static const proxy = _ProxyKeys();
 }
 
@@ -25,7 +26,7 @@ class _RootKeys {
   String get namings => 'naming_conventions';
   String get typeSafeties => 'type_safeties';
   String get inheritances => 'inheritances';
-  String get locations => 'locations';
+  String get dependencies => 'dependencies';
   String get annotations => 'annotations';
   String get services => 'services';
 }
@@ -125,4 +126,14 @@ class _ProxyKeys {
 
   String get package => 'package:';
   String get lib => 'lib/';
+}
+
+// New keys helper
+class _DependencyKeys {
+  const _DependencyKeys();
+  String get on => 'on';
+  String get allowed => 'allowed';
+  String get forbidden => 'forbidden';
+  String get component => 'component'; // Used for both layers and components
+  String get package => 'package';
 }

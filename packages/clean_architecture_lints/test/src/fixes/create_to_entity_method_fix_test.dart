@@ -1,129 +1,159 @@
+// test/src/fixes/create_to_entity_method_fix_test.dart
+
 import 'dart:io';
-import 'package:analyzer_plugin/protocol/protocol_common.dart';
-import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
-import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
+
+import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
+import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:clean_architecture_lints/src/fixes/create_to_entity_method_fix.dart';
-import 'package:clean_architecture_lints/src/lints/purity/require_to_entity_method.dart';
+import 'package:code_builder/code_builder.dart' as cb;
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-import '../../helpers/analyzer_test_utils.dart';
-import '../../helpers/test_data.dart';
-
-String applySourceChanges(String sourceText, List<SourceChange> changes) {
-  String result = sourceText;
-  for (final change in changes) {
-    for (final edit in change.edits) {
-      result = SourceEdit.applySequence(result, edit.edits);
-    }
-  }
-  return result;
-}
-
 void main() {
-  group('CreateToEntityMethodFix', () {
+  group('CreateToEntityMethodFix Logic', () {
+    late PhysicalResourceProvider resourceProvider;
+    late AnalysisContextCollection contextCollection;
     late Directory tempDir;
-    late String testProjectPath;
-    late AnalyzerTestUtils analyzer;
-    late LayerResolver debugLayerResolver;
+    late String projectPath;
 
-    setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('create_to_entity_fix_test_');
-      testProjectPath = p.join(tempDir.path, 'test_project');
+    setUp(() {
+      resourceProvider = PhysicalResourceProvider.INSTANCE;
+      tempDir = Directory.systemTemp.createTempSync('to_entity_fix_test_');
+      projectPath = p.normalize(tempDir.path);
+      final testProjectPath = p.join(projectPath, 'test_project');
       Directory(testProjectPath).createSync(recursive: true);
 
-      analyzer = AnalyzerTestUtils(testProjectPath);
-      debugLayerResolver = LayerResolver(makeConfig());
+      final pubspecPath = p.join(testProjectPath, 'pubspec.yaml');
+      resourceProvider.getFile(pubspecPath)
+        ..parent.create()
+        ..writeAsStringSync('name: test_project');
 
-      analyzer.writeFile('pubspec.yaml', 'name: test_project');
-      analyzer.writeFile('.dart_tool/package_config.json',
-          '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", "packageUri": "lib/"}]}');
+      final packageConfigPath = p.join(testProjectPath, '.dart_tool', 'package_config.json');
+      resourceProvider.getFile(packageConfigPath)
+        ..parent.create()
+        ..writeAsStringSync(
+          '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", '
+          '"packageUri": "lib/"}]}',
+        );
 
-      final entityPath = 'lib/features/user/domain/entities/user.dart';
-      analyzer.writeFile(entityPath, '''
-        class User {
+      contextCollection = AnalysisContextCollection(
+        includedPaths: [testProjectPath],
+        resourceProvider: resourceProvider,
+      );
+    });
+
+    tearDown(() {
+      tempDir.deleteSync(recursive: true);
+    });
+
+    test('should generate valid toEntity method with matching fields mapping', () async {
+      final testProjectPath = p.join(projectPath, 'test_project');
+
+      // 1. Define the Entity in the virtual FS.
+      // FIX: Use p.join for all path segments and normalize.
+      final entityPath = p.normalize(p.join(testProjectPath, 'lib', 'entity.dart'));
+      resourceProvider.getFile(entityPath)
+        ..parent.create()
+        ..writeAsStringSync('''
+        class UserEntity {
           final String id;
           final String name;
-          const User({required this.id, required this.name});
+          UserEntity(this.id, {required this.name});
         }
       ''');
 
-      // Debug: Verify component resolution
-      final resolvedComponent = debugLayerResolver.getComponent(p.join(testProjectPath, entityPath));
-      print('[DEBUG] Component for entity file ($entityPath): $resolvedComponent');
-    });
-
-    tearDown(() async {
-      await tempDir.delete(recursive: true);
-    });
-
-    test('should create a new toEntity method when one is missing', () async {
-      final modelPath = 'lib/features/user/data/models/user_model.dart';
-      analyzer.writeFile(modelPath, '''
-        import 'package:test_project/features/user/domain/entities/user.dart';
-        
-        class UserModel extends User {
-          const UserModel({required super.id, required super.name});
+      // 2. Define the Model in the virtual FS.
+      final modelPath = p.normalize(p.join(testProjectPath, 'lib', 'model.dart'));
+      resourceProvider.getFile(modelPath).writeAsStringSync('''
+        import 'entity.dart';
+        class UserModel {
+          final String id;
+          final String name;
+          final String other;
         }
       ''');
 
-      // Debug: Verify component resolution
-      final resolvedComponent = debugLayerResolver.getComponent(p.join(testProjectPath, modelPath));
-      print('[DEBUG] Component for model file ($modelPath): $resolvedComponent');
+      // 3. Resolve the files to get real Elements and Nodes.
+      final entityResult =
+          await contextCollection.contextFor(entityPath).currentSession.getResolvedUnit(entityPath)
+              as ResolvedUnitResult;
 
-      final config = makeConfig();
-      final lints = await analyzer.getLints(
-        filePath: modelPath,
-        lint: RequireToEntityMethod(config: config, layerResolver: analyzer.layerResolver),
+      final modelResult =
+          await contextCollection.contextFor(modelPath).currentSession.getResolvedUnit(modelPath)
+              as ResolvedUnitResult;
+
+      // 4. Extract the specific inputs for the builder.
+      final entityElement =
+          entityResult.unit.declarations.first.declaredFragment!.element as InterfaceElement;
+      final modelNode = modelResult.unit.declarations.first as ClassDeclaration;
+
+      // 5. Execute the static builder logic.
+      final methodSpec = CreateToEntityMethodFix.buildToEntityMethod(
+        modelNode: modelNode,
+        entityElement: entityElement,
+        entityName: 'UserEntity',
       );
 
-      print('[DEBUG] Lints found: ${lints.length}');
-      expect(lints, hasLength(1), reason: 'Lint should detect missing toEntity method');
+      // 6. Verify the output using CodeBuilder emitter.
+      final emitter = cb.DartEmitter(useNullSafetySyntax: true);
+      final source = methodSpec.accept(emitter).toString();
 
-      final fix = CreateToEntityMethodFix(config: config);
-      final changes = await analyzer.getFixes(lints.first, fix);
+      // Expect the method signature
+      expect(source, contains('@override'));
+      expect(source, contains('UserEntity toEntity()'));
 
-      expect(changes, hasLength(1), reason: 'Fix should generate one change');
-
-      final result = applySourceChanges(analyzer.readFile(modelPath), changes);
-
-      print('[DEBUG] Final generated code:\n$result');
-
-      expect(result, contains('@override'));
-      expect(result, contains('User toEntity()'));
-      expect(result, contains('return User(id: id, name: name);'));
+      // Expect correct mapping: id (positional) -> id, name (named) -> name
+      // Positional arg:
+      expect(source, contains('UserEntity(id,'));
+      // Named arg:
+      expect(source, contains('name: name'));
     });
 
-    test('should correct an existing toEntity method with the wrong signature', () async {
-      final modelPath = 'lib/features/user/data/models/user_model.dart';
-      analyzer.writeFile(modelPath, '''
-        import 'package:test_project/features/user/domain/entities/user.dart';
-        
-        class UserModel extends User {
-          const UserModel({required super.id, required super.name});
-          
-          void toEntity() {} // Wrong signature
+    test('should generate UnimplementedError for missing fields', () async {
+      final testProjectPath = p.join(projectPath, 'test_project');
+
+      // Entity requires 'email', but Model doesn't have it.
+      final entityPath = p.normalize(p.join(testProjectPath, 'lib', 'entity.dart'));
+      resourceProvider.getFile(entityPath)
+        ..parent.create()
+        ..writeAsStringSync('''
+        class UserEntity {
+          final String email;
+          UserEntity({required this.email});
         }
       ''');
 
-      final config = makeConfig();
-      final lints = await analyzer.getLints(
-        filePath: modelPath,
-        lint: RequireToEntityMethod(config: config, layerResolver: analyzer.layerResolver),
+      final modelPath = p.normalize(p.join(testProjectPath, 'lib', 'model.dart'));
+      resourceProvider.getFile(modelPath).writeAsStringSync('''
+        class UserModel {
+          final String name; 
+        }
+      ''');
+
+      final entityResult =
+          await contextCollection.contextFor(entityPath).currentSession.getResolvedUnit(entityPath)
+              as ResolvedUnitResult;
+      final modelResult =
+          await contextCollection.contextFor(modelPath).currentSession.getResolvedUnit(modelPath)
+              as ResolvedUnitResult;
+
+      final entityElement =
+          entityResult.unit.declarations.first.declaredFragment!.element as InterfaceElement;
+      final modelNode = modelResult.unit.declarations.first as ClassDeclaration;
+
+      final methodSpec = CreateToEntityMethodFix.buildToEntityMethod(
+        modelNode: modelNode,
+        entityElement: entityElement,
+        entityName: 'UserEntity',
       );
 
-      print('[DEBUG] Lints found (correction test): ${lints.length}');
-      expect(lints, hasLength(1), reason: 'Lint should detect incorrect toEntity method');
+      final source = methodSpec.accept(cb.DartEmitter(useNullSafetySyntax: true)).toString();
 
-      final fix = CreateToEntityMethodFix(config: config);
-      final changes = await analyzer.getFixes(lints.first, fix);
-
-      expect(changes, hasLength(1), reason: 'Fix should generate one change');
-
-      final result = applySourceChanges(analyzer.readFile(modelPath), changes);
-
-      expect(result, contains('@override\n  User toEntity()'));
-      expect(result, isNot(contains('void toEntity()')));
+      // Expect the specific TODO message for the missing field
+      expect(source, contains("throw UnimplementedError('TODO: Map field \"email\"')"));
     });
   });
 }

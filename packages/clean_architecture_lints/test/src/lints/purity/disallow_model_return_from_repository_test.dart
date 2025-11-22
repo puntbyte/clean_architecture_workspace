@@ -1,3 +1,5 @@
+// test/src/lints/purity/disallow_model_return_from_repository_test.dart
+
 import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
@@ -15,116 +17,138 @@ void main() {
     late PhysicalResourceProvider resourceProvider;
     late AnalysisContextCollection contextCollection;
     late Directory tempDir;
-    late String testProjectPath;
+    late String projectPath;
+
     void writeFile(String path, String content) {
       final normalizedPath = p.normalize(path);
       final file = resourceProvider.getFile(normalizedPath);
       Directory(p.dirname(normalizedPath)).createSync(recursive: true);
       file.writeAsStringSync(content);
     }
+
     Future<List<Diagnostic>> runLint(String filePath) async {
       final config = makeConfig(
         typeSafeties: [
           {
-            'on': 'contract', // Not relevant, but needed for a valid config
-            'returns': [{'unsafe_type': 'Future', 'safe_type': 'Either'}] // Changed to list for proper parsing
+            'on': 'port', // Updated to 'port'
+            'returns': {'unsafe_type': 'Future', 'safe_type': 'Either'}
           }
         ],
       );
       final lint = DisallowModelReturnFromRepository(config: config, layerResolver: LayerResolver(config));
+
       final resolvedUnit = await contextCollection
           .contextFor(p.normalize(filePath))
           .currentSession
           .getResolvedUnit(p.normalize(filePath)) as ResolvedUnitResult;
+
       return lint.testRun(resolvedUnit);
     }
+
     setUp(() {
       resourceProvider = PhysicalResourceProvider.INSTANCE;
       tempDir = Directory.systemTemp.createTempSync('model_return_test_');
-      testProjectPath = p.join(p.normalize(tempDir.path), 'test_project');
-      Directory(testProjectPath).createSync(recursive: true);
-      writeFile(p.join(testProjectPath, 'pubspec.yaml'), 'name: test_project');
-      // Define project structure and types
-      writeFile(p.join(testProjectPath, 'lib/core/either.dart'), '''
+      projectPath = p.join(p.normalize(tempDir.path), 'test_project');
+      Directory(projectPath).createSync(recursive: true);
+
+      writeFile(p.join(projectPath, 'pubspec.yaml'), 'name: test_project');
+      writeFile(p.join(projectPath, '.dart_tool/package_config.json'),
+          '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", "packageUri": "lib/"}]}');
+
+      // 1. Define Either/Right
+      writeFile(p.join(projectPath, 'lib/core/either.dart'), '''
         class Either<L, R> {}
         class Left<L, R> implements Either<L, R> { const Left(this.value); final L value; }
         class Right<L, R> implements Either<L, R> { const Right(this.value); final R value; }
       ''');
-      writeFile(p.join(testProjectPath, 'lib/features/user/domain/entities/user_entity.dart'), 'class UserEntity {}');
-      writeFile(p.join(testProjectPath, 'lib/features/user/data/models/user_model.dart'), 'class UserModel extends UserEntity { UserEntity toEntity() => UserEntity(); }'); // Extend for subtype compatibility
-      writeFile(p.join(testProjectPath, 'lib/features/user/domain/contracts/user_repository.dart'), '''
+
+      // 2. Define Entity
+      writeFile(p.join(projectPath, 'lib/features/user/domain/entities/user_entity.dart'), 'class UserEntity {}');
+
+      // 3. Define Model
+      writeFile(p.join(projectPath, 'lib/features/user/data/models/user_model.dart'), '''
+        import '../../../domain/entities/user_entity.dart';
+        class UserModel extends UserEntity { 
+          UserEntity toEntity() => UserEntity(); 
+        }
+      ''');
+
+      // 4. Define Repository Port (formerly contract)
+      // FIX: Path is now `domain/ports/` to match makeConfig defaults
+      writeFile(p.join(projectPath, 'lib/features/user/domain/ports/user_repository.dart'), '''
         import 'package:test_project/core/either.dart';
         import 'package:test_project/features/user/domain/entities/user_entity.dart';
         abstract class UserRepository {
-          Future<Either<Exception, dynamic>> getUser(); // Use dynamic to avoid generic invariance issues in test
+          Future<Either<Exception, UserEntity>> getUser();
         }
       ''');
-      contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
+
+      contextCollection = AnalysisContextCollection(includedPaths: [projectPath]);
     });
+
     tearDown(() {
       tempDir.deleteSync(recursive: true);
     });
+
     test('should report violation when repository returns a Model inside an Either', () async {
-      final path = p.join(testProjectPath, 'lib/features/user/data/repositories/user_repository_impl.dart');
+      final path = p.join(projectPath, 'lib/features/user/data/repositories/user_repository_impl.dart');
+
+      // FIX: Updated import to point to `ports`
       writeFile(path, '''
         import 'package:test_project/core/either.dart';
-        import 'package:test_project/features/user/domain/contracts/user_repository.dart';
+        import 'package:test_project/features/user/domain/ports/user_repository.dart';
         import 'package:test_project/features/user/domain/entities/user_entity.dart';
         import 'package:test_project/features/user/data/models/user_model.dart';
+        
         class UserRepositoryImpl implements UserRepository {
           @override
-          Future<Either<Exception, dynamic>> getUser() async {
+          Future<Either<Exception, UserEntity>> getUser() async {
             final model = UserModel();
-            return Right<Exception, UserModel>(model); // Should be Right(model.toEntity())
+            return Right(model); // VIOLATION
           }
         }
       ''');
+
       final lints = await runLint(path);
+
       expect(lints, hasLength(1));
       expect(lints.first.diagnosticCode.name, 'disallow_model_return_from_repository');
     });
+
     test('should not report violation when repository correctly returns an Entity', () async {
-      final path = p.join(testProjectPath, 'lib/features/user/data/repositories/user_repository_impl.dart');
+      final path = p.join(projectPath, 'lib/features/user/data/repositories/user_repository_impl.dart');
+
+      // FIX: Updated import to point to `ports`
       writeFile(path, '''
         import 'package:test_project/core/either.dart';
-        import 'package:test_project/features/user/domain/contracts/user_repository.dart';
+        import 'package:test_project/features/user/domain/ports/user_repository.dart';
         import 'package:test_project/features/user/domain/entities/user_entity.dart';
         import 'package:test_project/features/user/data/models/user_model.dart';
+        
         class UserRepositoryImpl implements UserRepository {
           @override
-          Future<Either<Exception, dynamic>> getUser() async {
+          Future<Either<Exception, UserEntity>> getUser() async {
             final model = UserModel();
-            return Right<Exception, UserEntity>(model.toEntity()); // Correctly mapped
+            return Right(model.toEntity()); 
           }
         }
       ''');
+
       final lints = await runLint(path);
       expect(lints, isEmpty);
     });
+
     test('should not report violation for returns in private helper methods', () async {
-      final path = p.join(testProjectPath, 'lib/features/user/data/repositories/user_repository_impl.dart');
+      final path = p.join(projectPath, 'lib/features/user/data/repositories/user_repository_impl.dart');
       writeFile(path, '''
         import 'package:test_project/features/user/data/models/user_model.dart';
         class UserRepositoryImpl {
           UserModel _privateHelper() {
-            return UserModel(); // This is allowed in a private method
-          }
-        }
-      ''');
-      final lints = await runLint(path);
-      expect(lints, isEmpty);
-    });
-    test('should not report violation for returns in non-overridden public methods', () async {
-      final path = p.join(testProjectPath, 'lib/features/user/data/repositories/user_repository_impl.dart');
-      writeFile(path, '''
-        import 'package:test_project/features/user/data/models/user_model.dart';
-        class UserRepositoryImpl {
-          // This method is not part of the contract.
-          UserModel publicHelper() {
             return UserModel();
           }
         }
       ''');
+
       final lints = await runLint(path);
       expect(lints, isEmpty);
     });

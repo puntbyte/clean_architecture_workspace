@@ -1,18 +1,19 @@
 // lib/src/lints/purity/disallow_flutter_in_domain.dart
 
-import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/utils/ast_utils.dart';
-import 'package:clean_architecture_lints/src/utils/semantic_utils.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 /// A lint that forbids any dependency on the Flutter SDK within the domain layer.
 ///
+/// **Category:** Purity
+///
 /// **Reasoning:** The domain layer must be pure and platform-independent to ensure
-/// business logic is decoupled from the UI framework.
+/// business logic is decoupled from the UI framework. Dependencies on `dart:ui`
+/// or `package:flutter` make the domain layer hard to test and tightly coupled
+/// to specific platforms.
 class DisallowFlutterInDomain extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'disallow_flutter_in_domain',
@@ -28,37 +29,39 @@ class DisallowFlutterInDomain extends ArchitectureLintRule {
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    // This rule applies to any file within the domain layer.
     final component = layerResolver.getComponent(resolver.source.fullName);
 
-    // THE IMPROVEMENT: A clean, single lookup in the static set.
-    if (!ArchComponent.domainLayer.contains(component)) return;
+    // FIX: Use the new `layer` getter to check if this file belongs to the domain.
+    if (component.layer != ArchComponent.domain) return;
 
-    // Check for forbidden import statements.
+    // 1. Check for forbidden import statements (Explicit check).
     context.registry.addImportDirective((node) {
       final importUri = node.uri.stringValue;
-      if (importUri != null &&
-          (importUri.startsWith('package:flutter/') || importUri == 'dart:ui')) {
-        reporter.atNode(node, _code);
+      if (importUri != null) {
+        if (importUri.startsWith('package:flutter/') || importUri == 'dart:ui') {
+          reporter.atNode(node, _code);
+        }
       }
     });
 
-    // A generic helper to validate any type annotation using the central utility.
-    void validate(TypeAnnotation? typeNode) {
-      if (typeNode != null && SemanticUtils.isFlutterType(typeNode.type)) {
-        reporter.atNode(typeNode, _code);
-      }
-    }
+    // 2. Check for forbidden types in code (Implicit check).
+    // Using addTypeAnnotation catches fields, methods, params, variables, and generics.
+    context.registry.addTypeAnnotation((node) {
+      final type = node.type;
+      if (type == null) return;
 
-    // Apply the check comprehensively.
-    context.registry.addMethodDeclaration((node) {
-      validate(node.returnType);
-      node.parameters?.parameters.forEach(
-        (param) => validate(AstUtils.getParameterTypeNode(param)),
-      );
+      // Get the source library of the element being used.
+      final element = type.element;
+      final uri = element?.library?.firstFragment.source.uri;
+
+      if (uri != null) {
+        final isFlutter = uri.isScheme('package') && uri.pathSegments.firstOrNull == 'flutter';
+        final isDartUi = uri.isScheme('dart') && uri.pathSegments.firstOrNull == 'ui';
+
+        if (isFlutter || isDartUi) {
+          reporter.atNode(node, _code);
+        }
+      }
     });
-    context.registry.addFieldDeclaration((node) => validate(node.fields.type));
-    context.registry.addTopLevelVariableDeclaration((node) => validate(node.variables.type));
-    context.registry.addVariableDeclarationStatement((node) => validate(node.variables.type));
   }
 }

@@ -22,7 +22,7 @@ ArchitectureConfig makeConfig({
   List<Map<String, dynamic>>? inheritances,
   List<Map<String, dynamic>>? annotations,
   List<Map<String, dynamic>>? typeSafeties,
-  List<Map<String, dynamic>>? locations,
+  List<Map<String, dynamic>>? dependencies,
   Map<String, dynamic>? services,
 }) {
   // FIX: Provide a complete set of default naming rules that the
@@ -68,7 +68,7 @@ ArchitectureConfig makeConfig({
     'inheritances': inheritances ?? [],
     'annotations': annotations ?? [],
     'type_safeties': typeSafeties ?? [],
-    'locations': locations ?? [],
+    'dependencies': dependencies ?? [],
     'services': services ?? {'service_locator': {'name': ['getIt', 'locator', 'sl']}},
   });
 }

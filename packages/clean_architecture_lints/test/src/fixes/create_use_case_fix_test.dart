@@ -20,7 +20,6 @@ void main() {
           .first;
 
       final config = CreateUseCaseFix.buildParameterConfigFromParams(
-        // note: calling static-like via instance would also work if you prefer
         params: method.parameters?.parameters ?? [],
         methodName: 'doSomething',
         outputType: dummyOutput,

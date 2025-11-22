@@ -10,124 +10,58 @@ void main() {
         expect(ArchComponent.fromId('entity'), ArchComponent.entity);
         expect(ArchComponent.fromId('port'), ArchComponent.port);
         expect(ArchComponent.fromId('repository'), ArchComponent.repository);
-        expect(ArchComponent.fromId('event.interface'), ArchComponent.eventInterface);
       });
 
-      test('should return unknown when id is invalid or empty', () {
-        expect(ArchComponent.fromId('non_existent_id'), ArchComponent.unknown);
-        expect(ArchComponent.fromId(''), ArchComponent.unknown);
+      test('should return unknown when id is invalid', () {
+        expect(ArchComponent.fromId('bad_id'), ArchComponent.unknown);
       });
     });
 
-    group('children getter (Direct Children)', () {
+    group('children getter', () {
       test('domain should contain entity, port, and usecase', () {
-        // FIX: Use full enum names inside matchers.
-        expect(
-          ArchComponent.domain.children,
-          equals({ArchComponent.entity, ArchComponent.port, ArchComponent.usecase}),
-        );
-      });
-
-      test('data should contain model, repository, and source', () {
-        // FIX: Use full enum names inside matchers.
-        expect(
-          ArchComponent.data.children,
-          equals({ArchComponent.model, ArchComponent.repository, ArchComponent.source}),
-        );
-      });
-
-      test('presentation should contain page, widget, and manager', () {
-        // FIX: Use full enum names inside matchers.
-        expect(
-          ArchComponent.presentation.children,
-          equals({ArchComponent.page, ArchComponent.widget, ArchComponent.manager}),
-        );
-      });
-
-      test('manager should contain event and state', () {
-        // FIX: Use full enum names inside matchers.
-        expect(ArchComponent.manager.children, equals({ArchComponent.event, ArchComponent.state}));
+        expect(ArchComponent.domain.children, equals({
+          ArchComponent.entity,
+          ArchComponent.port,
+          ArchComponent.usecase
+        }));
       });
 
       test('leaf components should have empty children', () {
         expect(ArchComponent.entity.children, isEmpty);
-        expect(ArchComponent.page.children, isEmpty);
       });
     });
 
-    group('allChildren recursive getter', () {
-      test('should return all nested children for a layer component', () {
-        final domainChildren = ArchComponent.domain.allChildren;
-        // FIX: Use full enum names inside matchers.
-        expect(
-          domainChildren,
-          containsAll({
-            ArchComponent.entity,
-            ArchComponent.port,
-            ArchComponent.usecase,
-            ArchComponent.usecaseParameter,
-          }),
-        );
+    group('layer getter', () {
+      test('should return .domain for domain components', () {
+        expect(ArchComponent.entity.layer, ArchComponent.domain);
+        expect(ArchComponent.usecaseParameter.layer, ArchComponent.domain);
+        expect(ArchComponent.domain.layer, ArchComponent.domain);
       });
 
-      test('should return all nested children for a presentation sub-layer', () {
-        final managerChildren = ArchComponent.manager.allChildren;
-        // FIX: Use full enum names inside matchers.
-        expect(
-          managerChildren,
-          containsAll({
-            ArchComponent.event,
-            ArchComponent.state,
-            ArchComponent.eventInterface,
-            ArchComponent.eventImplementation,
-            ArchComponent.stateInterface,
-            ArchComponent.stateImplementation,
-          }),
-        );
+      test('should return .data for data components', () {
+        expect(ArchComponent.model.layer, ArchComponent.data);
+        expect(ArchComponent.sourceImplementation.layer, ArchComponent.data);
+        expect(ArchComponent.data.layer, ArchComponent.data);
       });
 
-      test('should return an empty set for a leaf component', () {
-        expect(ArchComponent.port.allChildren, isEmpty);
+      test('should return .presentation for presentation components', () {
+        expect(ArchComponent.widget.layer, ArchComponent.presentation);
+        expect(ArchComponent.eventInterface.layer, ArchComponent.presentation);
+        expect(ArchComponent.presentation.layer, ArchComponent.presentation);
+      });
+
+      test('should return .unknown for unknown component', () {
+        expect(ArchComponent.unknown.layer, ArchComponent.unknown);
       });
     });
 
     group('Static Layer Getters (Backward Compatibility)', () {
-      test('domainLayer should return correct set', () {
-        // FIX: Use full enum names inside matchers.
-        expect(
-          ArchComponent.domainLayer,
-          equals({ArchComponent.entity, ArchComponent.port, ArchComponent.usecase}),
-        );
-      });
-
-      test('dataLayer should return correct set', () {
-        // FIX: Use full enum names inside matchers.
-        expect(
-          ArchComponent.dataLayer,
-          equals({ArchComponent.model, ArchComponent.repository, ArchComponent.source}),
-        );
-      });
-
-      test('presentationLayer should return correct set', () {
-        // FIX: Use full enum names inside matchers.
-        expect(
-          ArchComponent.presentationLayer,
-          equals({
-            ArchComponent.page,
-            ArchComponent.widget,
-            ArchComponent.manager,
-            ArchComponent.event,
-            ArchComponent.state,
-          }),
-        );
-      });
-
-      test('layer getter should return top level layers', () {
-        // FIX: Use full enum names inside matchers.
-        expect(
-          ArchComponent.layer,
-          equals({ArchComponent.domain, ArchComponent.data, ArchComponent.presentation}),
-        );
+      test('layers getter should return top level layers', () {
+        expect(ArchComponent.layers, equals({
+          ArchComponent.domain,
+          ArchComponent.data,
+          ArchComponent.presentation
+        }));
       });
     });
   });

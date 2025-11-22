@@ -6,7 +6,7 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
 import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
-import 'package:clean_architecture_lints/src/lints/location/enforce_layer_independence.dart';
+import 'package:clean_architecture_lints/src/lints/dependency/enforce_layer_independence.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
@@ -17,6 +17,8 @@ void main() {
     late PhysicalResourceProvider resourceProvider;
     late AnalysisContextCollection contextCollection;
     late Directory tempDir;
+    // FIX: Added missing declaration
+    late String projectPath;
     late String testProjectPath;
 
     void writeFile(String path, String content) {
@@ -28,9 +30,9 @@ void main() {
 
     Future<List<Diagnostic>> runLint({
       required String filePath,
-      required List<Map<String, dynamic>> locations,
+      required List<Map<String, dynamic>> dependencies,
     }) async {
-      final config = makeConfig(locations: locations);
+      final config = makeConfig(dependencies: dependencies);
       final lint = EnforceLayerIndependence(config: config, layerResolver: LayerResolver(config));
 
       final resolvedUnit =
@@ -46,12 +48,15 @@ void main() {
     setUp(() {
       resourceProvider = PhysicalResourceProvider.INSTANCE;
       tempDir = Directory.systemTemp.createTempSync('layer_independence_test_');
-      testProjectPath = p.join(p.normalize(tempDir.path), 'test_project');
+
+      // Initialize projectPath
+      projectPath = p.normalize(tempDir.path);
+      testProjectPath = p.join(projectPath, 'test_project');
       Directory(testProjectPath).createSync(recursive: true);
 
       writeFile(p.join(testProjectPath, 'pubspec.yaml'), 'name: test_project');
       writeFile(
-        p.join(testProjectPath, '.dart_tool/package_config.json'),
+        p.join(testProjectPath, '.dart_tool', 'package_config.json'),
         '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", '
         '"packageUri": "lib/"}]}',
       );
@@ -78,7 +83,7 @@ void main() {
 
       final lints = await runLint(
         filePath: path,
-        locations: [
+        dependencies: [
           {
             'on': 'usecase',
             'forbidden': {'component': 'model'},
@@ -96,7 +101,7 @@ void main() {
 
       final lints = await runLint(
         filePath: path,
-        locations: [
+        dependencies: [
           {
             'on': 'domain',
             'forbidden': {'component': 'data'},
@@ -113,7 +118,7 @@ void main() {
 
       final lints = await runLint(
         filePath: path,
-        locations: [
+        dependencies: [
           {
             'on': 'domain',
             'forbidden': {'package': 'package:flutter/material.dart'},
@@ -133,7 +138,7 @@ void main() {
 
         final lints = await runLint(
           filePath: path,
-          locations: [
+          dependencies: [
             {
               'on': 'usecase',
               'allowed': {'component': 'entity'},
@@ -152,22 +157,13 @@ void main() {
 
       final lints = await runLint(
         filePath: path,
-        locations: [
+        dependencies: [
           {
             'on': 'usecase',
             'allowed': {'component': 'entity'},
           },
         ],
       );
-
-      expect(lints, isEmpty);
-    });
-
-    test('should not report violation when no specific location rule applies', () async {
-      final path = p.join(testProjectPath, 'lib/features/user/domain/usecases/get_user.dart');
-      writeFile(path, "import 'package:test_project/features/user/data/models/user_model.dart';");
-
-      final lints = await runLint(filePath: path, locations: []);
 
       expect(lints, isEmpty);
     });

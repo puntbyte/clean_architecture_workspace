@@ -186,7 +186,7 @@ custom_lint:
               safe_type: 'StringId'
               import: 'package:example/core/utils/types.dart'
 
-      locations:
+      dependencies:
         # Domain layer
         - on: 'domain'
           allowed:
