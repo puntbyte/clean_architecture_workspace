@@ -1,4 +1,4 @@
-// lib/srcs/lints/naming/enforce_naming_conventions.dart
+// lib/src/lints/naming/enforce_naming_conventions.dart
 
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
@@ -31,8 +31,8 @@ class EnforceNamingConventions extends ArchitectureLintRule {
   final List<_ComponentPattern> _sortedPatterns;
 
   EnforceNamingConventions({required super.config, required super.layerResolver})
-    : _sortedPatterns = _createSortedPatterns(config.namingConventions.rules),
-      super(code: _patternCode);
+      : _sortedPatterns = _createSortedPatterns(config.namingConventions.rules),
+        super(code: _patternCode);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
@@ -49,11 +49,27 @@ class EnforceNamingConventions extends ArchitectureLintRule {
       if (rule == null) return;
 
       // --- Pre-Check for Mislocation ---
-      // If the best guess from the name doesn't match the location, this is a
-      // location problem, not a naming problem. Defer to the location lint.
-      final bestGuessComponent = _getBestGuessComponent(className);
-      if (bestGuessComponent != null && bestGuessComponent != actualComponent) {
-        return;
+      // If the class name clearly indicates a different component (that is more specific than the
+      // current location pattern), we skip reporting here.
+      // Example: 'UserModel' (len 13) inside 'entities' (pattern {{name}}, len 8).
+      // 'UserModel' is a better match for 'Model' than 'Entity'. Let Location lint handle it.
+
+      // But if 'Login' (len 5) inside 'usecases' (pattern {{name}}, len 8), it matches both.
+      // We should NOT skip here, because it is ambiguous.
+
+      final bestMatch = _sortedPatterns.firstWhereOrNull(
+            (p) => NamingUtils.validateName(name: className, template: p.pattern),
+      );
+
+      if (bestMatch != null && bestMatch.component != actualComponent) {
+        // Only skip if the best guess is strictly "better" (e.g. more specific) or equal
+        // AND does not also match the current component pattern.
+        final matchesCurrent = NamingUtils.validateName(name: className, template: rule.pattern);
+
+        // If it matches current pattern, we enforce current rules (anti-patterns etc)
+        if (!matchesCurrent) {
+          return;
+        }
       }
 
       // --- Anti-Pattern Check ---
@@ -79,26 +95,20 @@ class EnforceNamingConventions extends ArchitectureLintRule {
     });
   }
 
-  ArchComponent? _getBestGuessComponent(String className) {
-    return _sortedPatterns
-        .firstWhereOrNull((p) => NamingUtils.validateName(name: className, template: p.pattern))
-        ?.component;
-  }
-
   static List<_ComponentPattern> _createSortedPatterns(List<NamingRule> rules) {
     final patterns =
-        rules
-            .expand((rule) {
-              return rule.on.map((componentId) {
-                final component = ArchComponent.fromId(componentId);
-                return component != ArchComponent.unknown
-                    ? _ComponentPattern(pattern: rule.pattern, component: component)
-                    : null;
-              });
-            })
-            .whereNotNull()
-            .toList()
-          ..sort((a, b) => b.pattern.length.compareTo(a.pattern.length));
+    rules
+        .expand((rule) {
+      return rule.on.map((componentId) {
+        final component = ArchComponent.fromId(componentId);
+        return component != ArchComponent.unknown
+            ? _ComponentPattern(pattern: rule.pattern, component: component)
+            : null;
+      });
+    })
+        .whereNotNull()
+        .toList()
+      ..sort((a, b) => b.pattern.length.compareTo(a.pattern.length));
     return patterns;
   }
 }

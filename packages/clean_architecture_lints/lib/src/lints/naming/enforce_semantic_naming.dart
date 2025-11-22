@@ -1,4 +1,4 @@
-// lib/srcs/lints/naming/enforce_semantic_naming.dart
+// lib/src/lints/naming/enforce_semantic_naming.dart
 
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
@@ -26,16 +26,24 @@ class EnforceSemanticNaming extends ArchitectureLintRule {
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
     context.registry.addClassDeclaration((node) {
       final className = node.name.lexeme;
+
+      // 1. Identify component
       final component = layerResolver.getComponent(resolver.source.fullName, className: className);
       if (component == ArchComponent.unknown) return;
 
+      // 2. Get Rule
       final rule = config.namingConventions.getRuleFor(component);
       final grammar = rule?.grammar;
       if (grammar == null || grammar.isEmpty) return;
 
+      // 3. Validate
       final validator = _GrammarValidator(grammar, nlpUtils);
       if (!validator.isValid(className)) {
-        reporter.atToken(node.name, _code, arguments: [className, grammar, component.label]);
+        reporter.atToken(
+          node.name,
+          _code,
+          arguments: [className, grammar, component.label],
+        );
       }
     });
   }
@@ -73,9 +81,8 @@ class _GrammarValidator {
       final baseWords = baseName.splitPascalCase();
       if (baseWords.isEmpty) return false;
 
-      // --- FIX IS HERE ---
-      // A noun phrase should end with a noun and should not contain any verbs.
-      // This correctly invalidates names like "FetchUserModel".
+      // A noun phrase should end with a noun and should NOT act like a verb phrase.
+      // e.g. "FetchUserModel" -> Fetch (Verb) User (Noun) -> Invalid Noun Phrase.
       final endsWithNoun = nlp.isNoun(baseWords.last);
       final containsNoVerbs = !baseWords.any(nlp.isVerb);
 
