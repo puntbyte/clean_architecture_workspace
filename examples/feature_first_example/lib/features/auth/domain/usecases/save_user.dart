@@ -1,6 +1,6 @@
 import 'package:example/core/usecase/usecase.dart';
 import 'package:example/core/utils/types.dart';
-import 'package:example/features/auth/domain/contracts/auth_repository.dart';
+import 'package:example/features/auth/domain/contracts/auth_port.dart';
 import 'package:fpdart/fpdart.dart';
 
 typedef _SaveUserParams = ({

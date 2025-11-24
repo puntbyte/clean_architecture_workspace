@@ -1,7 +1,7 @@
 import 'package:example/core/usecase/usecase.dart';
 import 'package:example/core/utils/types.dart';
 import 'package:example/features/auth/domain/entities/user.dart';
-import 'package:example/features/auth/domain/ports/auth_repository.dart';
+import 'package:example/features/auth/domain/ports/auth_port.dart';
 
 // CORRECT: Extends UnaryUsecase, Semantic name (Verb+Noun).
 class LoginUser implements UnaryUsecase<User, ({String user, String pass})> {

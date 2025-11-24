@@ -1,12 +1,12 @@
 // example/lib/features/auth/presentation/bloc/auth_bloc.violations.dart
 import 'package:bloc/bloc.dart';
-import 'package:example/features/auth/domain/contracts/auth_repository.dart';
+import 'package:example/features/auth/domain/contracts/auth_port.dart';
 import 'package:example/features/auth/presentation/managers/bloc/auth_bloc.dart';
 
 import 'package:bloc/bloc.dart';
 // LINT: disallow_repository_in_presentation
 // Reason: Presentation cannot touch Repositories directly.
-import 'package:example/features/auth/domain/contracts/auth_repository.dart';
+import 'package:example/features/auth/domain/contracts/auth_port.dart';
 // LINT: disallow_service_locator
 import 'package:get_it/get_it.dart';
 

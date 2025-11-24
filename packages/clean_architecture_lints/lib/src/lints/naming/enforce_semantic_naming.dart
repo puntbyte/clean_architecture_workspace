@@ -1,5 +1,4 @@
-// lib/src/lints/naming/enforce_semantic_naming.dart
-
+import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
@@ -7,11 +6,11 @@ import 'package:clean_architecture_lints/src/utils/extensions/string_extension.d
 import 'package:clean_architecture_lints/src/utils/nlp/natural_language_utils.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-/// Enforces that classes follow the semantic naming conventions (`grammar`).
 class EnforceSemanticNaming extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_semantic_naming',
-    problemMessage: 'The name `{0}` does not follow the grammatical structure `{1}` for a {2}.',
+    problemMessage: 'Invalid name `{0}` for a {2}: {1}',
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   final NaturalLanguageUtils nlpUtils;
@@ -27,87 +26,149 @@ class EnforceSemanticNaming extends ArchitectureLintRule {
     context.registry.addClassDeclaration((node) {
       final className = node.name.lexeme;
 
-      // 1. Identify component
       final component = layerResolver.getComponent(resolver.source.fullName, className: className);
       if (component == ArchComponent.unknown) return;
 
-      // 2. Get Rule
       final rule = config.namingConventions.getRuleFor(component);
       final grammar = rule?.grammar;
       if (grammar == null || grammar.isEmpty) return;
 
-      // 3. Validate
-      final validator = _GrammarValidator(grammar, nlpUtils);
-      if (!validator.isValid(className)) {
+      final validator = _GrammarValidator(grammar, nlpUtils, component.label);
+      final result = validator.validate(className);
+
+      if (!result.isValid) {
         reporter.atToken(
           node.name,
           _code,
-          arguments: [className, grammar, component.label],
+          arguments: [
+            className,
+            result.message ?? 'Does not follow the required grammatical structure.',
+            component.label
+          ],
         );
       }
     });
   }
 }
 
-/// A private helper class for parsing and validating a grammar pattern.
+class _ValidationResult {
+  final bool isValid;
+  final String? message;
+  const _ValidationResult.valid() : isValid = true, message = null;
+  const _ValidationResult.invalid(this.message) : isValid = false;
+}
+
 class _GrammarValidator {
   final String grammar;
   final NaturalLanguageUtils nlp;
+  final String componentLabel;
 
-  _GrammarValidator(this.grammar, this.nlp);
+  _GrammarValidator(this.grammar, this.nlp, this.componentLabel);
 
-  bool isValid(String className) {
+  _ValidationResult validate(String className) {
     final words = className.splitPascalCase();
-    if (words.isEmpty) return false;
+    if (words.isEmpty) return const _ValidationResult.valid();
 
-    // --- Heuristic-based Grammar Parsing ---
-
-    // Case 1: {{verb.present}}{{noun.phrase}} (e.g., Usecases)
-    // Example: "GetUser", "LoginUser"
+    // --- 1. UseCase: Verb + Noun ---
     if (grammar == '{{verb.present}}{{noun.phrase}}') {
-      if (words.length < 2) return false;
-      // First word must be a verb (e.g. Get, Save)
-      // Last word must be a noun (e.g. User, Data)
-      return nlp.isVerb(words.first) && nlp.isNoun(words.last);
+      if (words.length < 2) {
+        return const _ValidationResult.invalid('Name is too short. Expected "ActionSubject" (e.g. GetUser).');
+      }
+      if (!nlp.isVerb(words.first)) {
+        return _ValidationResult.invalid('Must start with an action (Verb). "${words.first}" is [${_identifyPOS(words.first)}].');
+      }
+      if (!nlp.isNoun(words.last)) {
+        return _ValidationResult.invalid('Must end with a subject (Noun). "${words.last}" is [${_identifyPOS(words.last)}].');
+      }
+      return const _ValidationResult.valid();
     }
 
-    // Case 2: {{noun.phrase}} (with optional suffix)
-    // Examples: "User" (Entity), "UserModel" (Model)
-    if (grammar.startsWith('{{noun.phrase}}')) {
-      final suffix = grammar.substring('{{noun.phrase}}'.length);
+    // --- 2. Noun Phrases (Singular, Plural, or Any) ---
+    if (grammar.startsWith('{{noun.')) {
+      final tokenEndIndex = grammar.indexOf('}}');
+      if (tokenEndIndex == -1) return const _ValidationResult.valid();
 
-      // Check strict suffix match if present
-      if (suffix.isNotEmpty && !className.endsWith(suffix)) return false;
+      final token = grammar.substring(2, tokenEndIndex); // noun.phrase, noun.singular, noun.plural
+      final suffix = grammar.substring(tokenEndIndex + 2);
+
+      if (suffix.isNotEmpty && !className.endsWith(suffix)) {
+        return _ValidationResult.invalid('It must end with the suffix "$suffix".');
+      }
 
       final baseName = suffix.isNotEmpty
           ? className.substring(0, className.length - suffix.length)
           : className;
 
       final baseWords = baseName.splitPascalCase();
-      if (baseWords.isEmpty) return false;
+      if (baseWords.isEmpty) return const _ValidationResult.valid();
 
-      // A noun phrase:
-      // 1. Should end with a noun (The subject).
-      final endsWithNoun = nlp.isNoun(baseWords.last);
+      final lastWord = baseWords.last;
 
-      // 2. Should NOT contain verbs or gerunds (actions).
-      // "FetchingUser" -> "Fetching" is a gerund -> Invalid.
-      // "GetUser" -> "Get" is a verb -> Invalid.
-      final containsNoVerbs = !baseWords.any((w) => nlp.isVerb(w) || nlp.isVerbGerund(w));
+      // Check based on specific tag
+      if (token == 'noun.plural') {
+        if (!nlp.isNounPlural(lastWord)) {
+          return _ValidationResult.invalid(
+              'The subject "$lastWord" must be a Plural Noun. Currently identified as [${_identifyPOS(lastWord)}].'
+          );
+        }
+      } else if (token == 'noun.singular') {
+        if (!nlp.isNounSingular(lastWord)) {
+          return _ValidationResult.invalid(
+              'The subject "$lastWord" must be a Singular Noun. Currently identified as [${_identifyPOS(lastWord)}].'
+          );
+        }
+      } else {
+        // noun.phrase (Any Noun)
+        if (!nlp.isNoun(lastWord)) {
+          return _ValidationResult.invalid(
+              'The subject "$lastWord" must be a Noun. Currently identified as [${_identifyPOS(lastWord)}].'
+          );
+        }
+      }
 
-      return endsWithNoun && containsNoVerbs;
+      // No Verbs allowed in any noun phrase
+      for (final word in baseWords) {
+        final isStrictVerb = nlp.isVerb(word) && !nlp.isNoun(word);
+        final isGerund = nlp.isVerbGerund(word);
+        if (isStrictVerb || isGerund) {
+          return _ValidationResult.invalid(
+            'It contains "$word" (identified as [${_identifyPOS(word)}]), which implies an action.',
+          );
+        }
+      }
+
+      return const _ValidationResult.valid();
     }
 
-    // Case 3: {{subject}}({{adjective}}|{{verb.gerund}}|{{verb.past}}) (e.g., States)
-    // Examples: "AuthLoading", "AuthLoaded", "AuthInitial"
+    // --- 3. State Grammar ---
     if (grammar.contains('{{adjective}}|{{verb.gerund}}|{{verb.past}}')) {
-      if (words.length < 2) return false;
+      if (words.length < 2) return const _ValidationResult.invalid('Name too short for a State.');
       final lastWord = words.last;
-      // The last word describes the state of the subject
-      return nlp.isAdjective(lastWord) || nlp.isVerbGerund(lastWord) || nlp.isVerbPast(lastWord);
+      final isValid = nlp.isAdjective(lastWord) || nlp.isVerbGerund(lastWord) || nlp.isVerbPast(lastWord) || nlp.isNoun(lastWord);
+
+      if (!isValid) {
+        return _ValidationResult.invalid(
+          'Suffix "$lastWord" is [${_identifyPOS(lastWord)}], but a state description is expected.',
+        );
+      }
+      return const _ValidationResult.valid();
     }
 
-    // Default to true if the grammar is not yet supported by our heuristics.
-    return true;
+    return const _ValidationResult.valid();
+  }
+
+  String _identifyPOS(String word) {
+    final types = <String>[];
+    if (nlp.isNounSingular(word)) types.add('Singular Noun');
+    if (nlp.isNounPlural(word)) types.add('Plural Noun');
+    // Fallback if neither specific check passed but isNoun did (e.g. mass nouns)
+    if (types.isEmpty && nlp.isNoun(word)) types.add('Noun');
+
+    if (nlp.isVerb(word) && !word.toLowerCase().endsWith('ed')) types.add('Verb');
+    if (nlp.isAdjective(word)) types.add('Adjective');
+    if (nlp.isVerbGerund(word)) types.add('Gerund');
+
+    if (types.isEmpty) return 'Unknown';
+    return types.join(' & ');
   }
 }

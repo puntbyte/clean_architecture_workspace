@@ -32,8 +32,7 @@ class CreateUseCaseFix extends DartFix {
       ) {
     context.addPostRunCallback(() async {
       final resolvedUnit = await resolver.getResolvedUnitResult();
-
-      // [Analyzer 8.0.0] Use nodeCovering
+      final resourceProvider = resolvedUnit.session.resourceProvider;
       final node = resolvedUnit.unit.nodeCovering(offset: diagnostic.offset);
 
       final methodNode = node?.thisOrAncestorOfType<MethodDeclaration>();
@@ -46,6 +45,7 @@ class CreateUseCaseFix extends DartFix {
         methodName: methodNode.name.lexeme,
         repoPath: diagnostic.source.fullName,
         config: config,
+        resourceProvider: resourceProvider,
       );
       if (useCaseFilePath == null) return;
 
@@ -56,11 +56,11 @@ class CreateUseCaseFix extends DartFix {
       )
           .addDartFileEdit(
             (DartFileEditBuilder builder) {
-          final library = _buildUseCaseLibrary(method: methodNode, repoNode: repoNode);
-          _addImports(
-            builder: builder,
+          final imports = _collectImports(method: methodNode, repoNode: repoNode);
+          final library = _buildUseCaseLibrary(
             method: methodNode,
             repoNode: repoNode,
+            imports: imports,
           );
 
           final emitter = cb.DartEmitter(useNullSafetySyntax: true);
@@ -83,17 +83,21 @@ class CreateUseCaseFix extends DartFix {
   cb.Library _buildUseCaseLibrary({
     required MethodDeclaration method,
     required ClassDeclaration repoNode,
+    required Set<String> imports,
   }) {
+    final directives = imports
+        .map((url) => cb.Directive.import(url))
+        .toList()
+      ..sort((a, b) => a.url.compareTo(b.url));
+
     final bodyElements = <cb.Spec>[];
     final methodName = method.name.lexeme;
     final returnType = method.returnType?.type;
     final returnTypeRef = cb.refer(returnType?.getDisplayString() ?? 'void');
     final outputType = extractOutputType(returnType);
 
-    // Resolve base class names from config or use defaults
     final rules = config.inheritances.ruleFor(ArchComponent.usecase.id)?.required ?? [];
 
-    // Look for a configured class that looks like a Unary/Nullary base
     final configuredUnary = rules
         .firstWhereOrNull((d) => d.name?.contains('Unary') ?? false)
         ?.name;
@@ -135,7 +139,59 @@ class CreateUseCaseFix extends DartFix {
       ),
     );
 
-    return SyntaxBuilder.library(body: bodyElements);
+    return cb.Library((b) => b
+      ..directives.addAll(directives)
+      ..body.addAll(bodyElements));
+  }
+
+  Set<String> _collectImports({
+    required MethodDeclaration method,
+    required ClassDeclaration repoNode,
+  }) {
+    final importedUris = <String>{};
+
+    void addImport(String? uri) {
+      if (uri != null && !uri.startsWith('dart:core')) {
+        importedUris.add(uri);
+      }
+    }
+
+    final repoLibrary = repoNode.declaredFragment?.element.library;
+    addImport(repoLibrary?.firstFragment.source.uri.toString());
+
+    config.annotations.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) => addImport(d.import));
+    config.inheritances.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) => addImport(d.import));
+    for (final rule in config.typeSafeties.rules) {
+      for (final d in rule.returns) addImport(d.import);
+    }
+
+    void collectFromType(DartType? type) {
+      if (type == null) return;
+      // FIX: Check type instance instead of using missing getters isVoid/isDynamic
+      if (type is VoidType || type is DynamicType) return;
+
+      final element = type.element;
+      if (element != null) {
+        addImport(element.library?.firstFragment.source.uri.toString());
+      }
+
+      if (type is InterfaceType) {
+        for (final arg in type.typeArguments) collectFromType(arg);
+      }
+
+      if (type.alias != null) {
+        final aliasElement = type.alias!.element;
+        addImport(aliasElement.library.firstFragment.source.uri.toString());
+        for (final arg in type.alias!.typeArguments) collectFromType(arg);
+      }
+    }
+
+    collectFromType(method.returnType?.type);
+    for (final param in method.parameters?.parameters ?? <FormalParameter>[]) {
+      collectFromType(param.declaredFragment?.element.type);
+    }
+
+    return importedUris;
   }
 
   static UseCaseGenerationConfig buildParameterConfigFromParams({
@@ -179,7 +235,6 @@ class CreateUseCaseFix extends DartFix {
       );
     }
 
-    // Multi-params -> Generate a Record-like TypeDef wrapper
     final useCaseNamePascal = methodName.toPascalCase();
     final recordName = '_${useCaseNamePascal}Params';
     final recordRef = cb.refer(recordName);
@@ -224,11 +279,9 @@ class CreateUseCaseFix extends DartFix {
     final name = actual.name?.lexeme;
 
     String? typeSource;
-    // Use resolved element if available for better type strings
     if (actual.declaredFragment?.element.type != null) {
       typeSource = actual.declaredFragment!.element.type.getDisplayString();
     } else {
-      // Fallback to AST source if resolution is partial
       if (actual is SimpleFormalParameter) {
         typeSource = actual.type?.toSource();
       } else if (actual is FieldFormalParameter) {
@@ -244,70 +297,12 @@ class CreateUseCaseFix extends DartFix {
     );
   }
 
-  void _addImports({
-    required DartFileEditBuilder builder,
-    required MethodDeclaration method,
-    required ClassDeclaration repoNode,
-  }) {
-    final importedUris = <String>{};
-
-    void importChecked(Uri uri) {
-      if (uri.isScheme('dart')) return;
-      if (importedUris.add(uri.toString())) {
-        builder.importLibrary(uri);
-      }
-    }
-
-    // Import the Repository definition
-    final repoLibrary = repoNode.declaredFragment?.element.library;
-    if (repoLibrary != null) {
-      importChecked(repoLibrary.firstFragment.source.uri);
-    }
-
-    // Import Annotations
-    config.annotations.ruleFor(ArchComponent.usecase.id)?.required.forEach((detail) {
-      if (detail.import != null) importChecked(Uri.parse(detail.import!));
-    });
-
-    // Import Base UseCase Classes
-    config.inheritances.ruleFor(ArchComponent.usecase.id)?.required.forEach((detail) {
-      if (detail.import != null) importChecked(Uri.parse(detail.import!));
-    });
-
-    // Import Type Safety Types
-    for (final rule in config.typeSafeties.rules) {
-      for (final detail in rule.returns) {
-        if (detail.import != null) importChecked(Uri.parse(detail.import!));
-      }
-    }
-
-    // Import types from method signature
-    void importType(DartType? type) {
-      if (type == null || (type.element?.library?.isInSdk ?? false)) return;
-
-      // [Analyzer 8.0.0] Use firstFragment.source
-      final source = type.element?.library?.firstFragment.source;
-      if (source != null) importChecked(source.uri);
-
-      if (type is InterfaceType) {
-        for (final arg in type.typeArguments) importType(arg);
-      }
-    }
-
-    importType(method.returnType?.type);
-    for (final param in method.parameters?.parameters ?? <FormalParameter>[]) {
-      final paramEl = param.declaredFragment?.element;
-      if (paramEl != null) importType(paramEl.type);
-    }
-  }
-
   cb.Reference extractOutputType(DartType? returnType) {
     if (returnType is! InterfaceType) return cb.refer('void');
 
     if (returnType.isDartAsyncFuture || returnType.isDartAsyncFutureOr) {
       final inner = returnType.typeArguments.firstOrNull;
       if (inner is InterfaceType) {
-        // Heuristic: If inner type is generic (e.g. Either<L, R>), try to get the success type (R).
         if (inner.typeArguments.isNotEmpty) {
           return cb.refer(inner.typeArguments.last.getDisplayString());
         }

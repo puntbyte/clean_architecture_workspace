@@ -2,7 +2,7 @@
 
 import 'package:example/core/utils/types.dart';
 import 'package:example/features/auth/data/sources/auth_remote_data_source.dart';
-import 'package:example/features/auth/domain/contracts/auth_repository.dart';
+import 'package:example/features/auth/domain/contracts/auth_port.dart';
 import 'package:example/features/auth/domain/entities/user.dart';
 import 'package:example/features/auth/domain/entities/user.violations.dart';
 import 'package:example/features/auth/domain/entities/user.dart' hide User;

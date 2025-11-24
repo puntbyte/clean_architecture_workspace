@@ -2,7 +2,7 @@ import 'package:example/core/usecase/usecase.dart';
 import 'package:injectable/injectable.dart';
 
 import '../../../../core/utils/types.dart';
-import '../contracts/auth_repository.dart';
+import '../contracts/auth_port.dart';
 import '../entities/user.dart';
 
 @Injectable()

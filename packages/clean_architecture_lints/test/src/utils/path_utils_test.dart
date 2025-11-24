@@ -1,114 +1,201 @@
-// test/src/utils/path_utils_test.dart
-
-import 'dart:io';
-
+import 'package:analyzer/file_system/memory_file_system.dart';
+import 'package:clean_architecture_lints/src/models/architecture_config.dart';
 import 'package:clean_architecture_lints/src/utils/file/path_utils.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-import '../../helpers/test_data.dart';
-
 void main() {
   group('PathUtils', () {
-    late Directory tempDir;
+    late MemoryResourceProvider provider;
     late String projectRoot;
 
-    setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('path_utils_test_');
-      projectRoot = tempDir.path;
-      await File(p.join(projectRoot, 'pubspec.yaml')).writeAsString('name: test_project');
+    setUp(() {
+      provider = MemoryResourceProvider();
+      // MemoryResourceProvider usually mimics the host OS separator,
+      // but we can rely on its pathContext to be consistent.
+      projectRoot = provider.convertPath('/my_project');
+
+      // Create the project root and pubspec
+      provider.newFolder(projectRoot);
+      provider.newFile(provider.pathContext.join(projectRoot, 'pubspec.yaml'), 'name: test');
     });
 
-    tearDown(() async {
-      if (tempDir.existsSync()) {
-        await tempDir.delete(recursive: true);
-      }
-    });
+    /// Helper to quickly create a config for testing
+    ArchitectureConfig createConfig({
+      String type = 'feature_first',
+      String featuresDir = 'features',
+      String domainDir = 'domain',
+      String usecaseDir = 'usecases',
+      String? useCaseNamingPattern,
+    }) {
+      return ArchitectureConfig.fromMap({
+        'module_definitions': {
+          'type': type,
+          'core': 'core',
+          'features': featuresDir,
+          'layers': {
+            'domain': domainDir,
+            'data': 'data',
+            'presentation': 'presentation',
+          }
+        },
+        'layer_definitions': {
+          'domain': {
+            'entity': 'entities',
+            'ports': 'ports',
+            'usecase': usecaseDir,
+          },
+          // Other layers required by model but not used in these tests
+          'data': {'model': 'models', 'repository': 'repositories', 'source': 'sources'},
+          'presentation': {'page': 'pages', 'widget': 'widgets', 'manager': 'managers'},
+        },
+        'naming_conventions': [
+          if (useCaseNamingPattern != null)
+            {'on': 'usecase', 'pattern': useCaseNamingPattern}
+        ],
+        // Empty defaults for required sections
+        'inheritances': [],
+        'annotations': [],
+        'type_safeties': [],
+        'dependencies': [],
+        'services': {},
+        'type_definitions': {},
+        'error_handlers': [],
+      });
+    }
 
     group('findProjectRoot', () {
-      test('should find project root when file is deeply nested inside lib', () async {
-        final nestedFile = await File(
-          p.join(projectRoot, 'lib', 'a', 'b', 'c.dart'),
-        ).create(recursive: true);
-        final foundRoot = PathUtils.findProjectRoot(nestedFile.path);
-        expect(p.normalize(foundRoot!), p.normalize(projectRoot));
+      test('finds root when file is deep in the structure', () {
+        final deepPath = provider.pathContext.join(
+            projectRoot, 'lib', 'features', 'auth', 'data', 'repo.dart');
+        provider.newFile(deepPath, '');
+
+        final root = PathUtils.findProjectRoot(deepPath, provider);
+        expect(root, equals(projectRoot));
       });
 
-      test('should return null when pubspec.yaml is not found in parent directories', () {
-        final outsidePath = Directory.systemTemp.path;
-        final foundRoot = PathUtils.findProjectRoot(p.join(outsidePath, 'file.dart'));
-        expect(foundRoot, isNull);
+      test('returns null if no pubspec.yaml is found', () {
+        // Create a path outside the project
+        final outsidePath = provider.convertPath('/other/lib/file.dart');
+        provider.newFile(outsidePath, '');
+
+        final root = PathUtils.findProjectRoot(outsidePath, provider);
+        expect(root, isNull);
+      });
+
+      test('returns root if file is exactly at root (unlikely but possible)', () {
+        final rootFile = provider.pathContext.join(projectRoot, 'main.dart');
+        provider.newFile(rootFile, '');
+
+        final root = PathUtils.findProjectRoot(rootFile, provider);
+        expect(root, equals(projectRoot));
       });
     });
 
     group('getUseCasesDirectoryPath', () {
-      test('should return correct path for a feature when in a feature-first project', () async {
-        final repoFile = await File(
-          p.join(projectRoot, 'lib', 'features', 'auth', 'domain', 'contracts', 'repo.dart'),
-        ).create(recursive: true);
-        final config = makeConfig(type: 'feature_first');
-        final result = PathUtils.getUseCasesDirectoryPath(repoFile.path, config);
-        final expected = p.join(projectRoot, 'lib', 'features', 'auth', 'domain', 'usecases');
-        expect(p.normalize(result!), p.normalize(expected));
+      test('Feature First: locates usecase dir inside the specific feature', () {
+        final config = createConfig(
+          type: 'feature_first',
+          featuresDir: 'feats',
+          domainDir: 'dom',
+          usecaseDir: 'cases',
+        );
+
+        final repoPath = provider.pathContext.join(
+            projectRoot, 'lib', 'feats', 'auth', 'dom', 'repos', 'repo.dart');
+
+        final result = PathUtils.getUseCasesDirectoryPath(repoPath, config, provider);
+
+        final expected = provider.pathContext.join(
+            projectRoot, 'lib', 'feats', 'auth', 'dom', 'cases');
+
+        expect(result, equals(expected));
       });
 
-      test('should return correct path for a domain when in a layer-first project', () async {
-        final repoFile = await File(
-          p.join(projectRoot, 'lib', 'domain', 'contracts', 'repo.dart'),
-        ).create(recursive: true);
-        final config = makeConfig(type: 'layer_first');
-        final result = PathUtils.getUseCasesDirectoryPath(repoFile.path, config);
-        final expected = p.join(projectRoot, 'lib', 'domain', 'usecases');
-        expect(p.normalize(result!), p.normalize(expected));
+      test('Layer First: locates usecase dir inside the global domain layer', () {
+        final config = createConfig(
+          type: 'layer_first',
+          domainDir: 'domain_layer',
+          usecaseDir: 'use_cases',
+        );
+
+        final repoPath = provider.pathContext.join(
+            projectRoot, 'lib', 'domain_layer', 'repos', 'repo.dart');
+
+        final result = PathUtils.getUseCasesDirectoryPath(repoPath, config, provider);
+
+        final expected = provider.pathContext.join(
+            projectRoot, 'lib', 'domain_layer', 'use_cases');
+
+        expect(result, equals(expected));
       });
 
-      test('should return correct path when usecase directory name is customized', () async {
-        final repoFile = await File(
-          p.join(projectRoot, 'lib', 'domain', 'contracts', 'repo.dart'),
-        ).create(recursive: true);
-        final config = makeConfig(type: 'layer_first', usecaseDir: 'domain_actions');
-        final result = PathUtils.getUseCasesDirectoryPath(repoFile.path, config);
-        final expected = p.join(projectRoot, 'lib', 'domain', 'domain_actions');
-        expect(p.normalize(result!), p.normalize(expected));
-      });
+      test('Returns null if file is not inside lib', () {
+        final config = createConfig();
+        final binPath = provider.pathContext.join(projectRoot, 'bin', 'script.dart');
 
-      test('should return null when path is not inside the lib directory', () async {
-        final repoFile = await File(
-          p.join(projectRoot, 'test', 'some_repo.dart'),
-        ).create(recursive: true);
-        final config = makeConfig();
-        final result = PathUtils.getUseCasesDirectoryPath(repoFile.path, config);
+        final result = PathUtils.getUseCasesDirectoryPath(binPath, config, provider);
+
         expect(result, isNull);
       });
     });
 
     group('getUseCaseFilePath', () {
-      test('should construct full file path when given a method and repo path', () async {
-        final repoFile = await File(
-          p.join(projectRoot, 'lib', 'features', 'auth', 'domain', 'contracts', 'repo.dart'),
-        ).create(recursive: true);
-        final config = makeConfig(
-          namingRules: [
-            {'on': 'usecase', 'pattern': '{{name}}Action'},
-          ],
-        );
+      test('Generates standard snake_case file name', () {
+        final config = createConfig(useCaseNamingPattern: '{{name}}');
+        final repoPath = provider.pathContext.join(
+            projectRoot, 'lib', 'features', 'auth', 'domain', 'repos', 'repo.dart');
 
-        final resultPath = PathUtils.getUseCaseFilePath(
-          methodName: 'getUser',
-          repoPath: repoFile.path,
+        final result = PathUtils.getUseCaseFilePath(
+          methodName: 'loginUser',
+          repoPath: repoPath,
           config: config,
+          resourceProvider: provider,
         );
 
-        final expectedPath = p.join(
-          projectRoot,
-          'lib',
-          'features',
-          'auth',
-          'domain',
-          'usecases',
-          'get_user_action.dart',
+        // loginUser -> LoginUser (Pascal) -> login_user.dart (Snake)
+        final expected = provider.pathContext.join(
+            projectRoot, 'lib', 'features', 'auth', 'domain', 'usecases', 'login_user.dart');
+
+        expect(result, equals(expected));
+      });
+
+      test('Generates file name with suffix if naming pattern requires it', () {
+        final config = createConfig(useCaseNamingPattern: '{{name}}UseCase');
+        final repoPath = provider.pathContext.join(
+            projectRoot, 'lib', 'features', 'auth', 'domain', 'repos', 'repo.dart');
+
+        final result = PathUtils.getUseCaseFilePath(
+          methodName: 'getProfile',
+          repoPath: repoPath,
+          config: config,
+          resourceProvider: provider,
         );
-        expect(p.normalize(resultPath!), p.normalize(expectedPath));
+
+        // getProfile -> GetProfile (Pascal) -> GetProfileUseCase (Pattern) -> get_profile_use_case.dart
+        final expected = provider.pathContext.join(
+            projectRoot, 'lib', 'features', 'auth', 'domain', 'usecases', 'get_profile_use_case.dart');
+
+        expect(result, equals(expected));
+      });
+
+      test('Handles Acronyms correctly in file name', () {
+        final config = createConfig(useCaseNamingPattern: '{{name}}');
+        final repoPath = provider.pathContext.join(
+            projectRoot, 'lib', 'features', 'auth', 'domain', 'repos', 'repo.dart');
+
+        final result = PathUtils.getUseCaseFilePath(
+          methodName: 'getJSONData',
+          repoPath: repoPath,
+          config: config,
+          resourceProvider: provider,
+        );
+
+        // getJSONData -> GetJSONData (Pascal) -> get_json_data.dart (Snake)
+        final expected = provider.pathContext.join(
+            projectRoot, 'lib', 'features', 'auth', 'domain', 'usecases', 'get_json_data.dart');
+
+        expect(result, equals(expected));
       });
     });
   });

@@ -1,9 +1,12 @@
 // lib/src/lints/location/enforce_file_and_folder_location.dart
 
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
+import 'package:clean_architecture_lints/src/models/inheritances_config.dart';
 import 'package:clean_architecture_lints/src/models/naming_conventions_config.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/iterable_extension.dart';
 import 'package:clean_architecture_lints/src/utils/nlp/naming_utils.dart';
@@ -34,50 +37,118 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
     context.registry.addClassDeclaration((node) {
       final className = node.name.lexeme;
       final filePath = resolver.source.fullName;
+      final classElement = node.declaredFragment?.element;
 
+      // 1. Actual Location
       final actualComponent = layerResolver.getComponent(filePath);
       if (actualComponent == ArchComponent.unknown) return;
 
-      // 1. Find the BEST match (longest/most specific pattern).
-      final bestMatch = _sortedPatterns.firstWhereOrNull(
-            (p) => NamingUtils.validateName(name: className, template: p.pattern),
-      );
+      // 2. Best Guess based on Name
+      final bestMatch = _getBestMatch(className);
+      if (bestMatch == null) return;
 
-      if (bestMatch == null) return; // Name doesn't match anything known
+      final expectedComponent = bestMatch.component;
 
-      // 2. If the best guess matches the actual location, we are good.
-      if (bestMatch.component == actualComponent) return;
+      // 3. Compare
+      if (expectedComponent != actualComponent) {
 
-      // 3. Collision Handling:
-      // If the actual component matches BUT the pattern was weaker (shorter) than the bestMatch,
-      // it is likely a misnamed/misplaced file.
-      // Example: 'UserModel' inside 'entities'.
-      //   - bestMatch: Model ('{{name}}Model', len 13)
-      //   - actual: Entity ('{{name}}', len 8)
-      //   - Result: 8 < 13 -> VIOLATION.
-      //
-      // Example: 'Login' inside 'usecases'.
-      //   - bestMatch: Entity ('{{name}}', len 8) (assuming sorted order)
-      //   - actual: Usecase ('{{name}}', len 8)
-      //   - Result: 8 >= 8 -> AMBIGUOUS -> NO VIOLATION.
+        // CHECK A: Collision / Specificity Logic
+        final actualPattern = _sortedPatterns.firstWhereOrNull(
+              (p) => p.component == actualComponent &&
+              NamingUtils.validateName(name: className, template: p.pattern),
+        );
 
-      final isAmbiguousOrValid = _sortedPatterns.any((p) =>
-      p.component == actualComponent &&
-          NamingUtils.validateName(name: className, template: p.pattern) &&
-          p.pattern.length >= bestMatch.pattern.length);
+        if (actualPattern != null) {
+          // If Actual pattern is equally specific or MORE specific -> OK.
+          if (actualPattern.pattern.length >= bestMatch.pattern.length) {
+            return;
+          }
+        }
 
-      if (isAmbiguousOrValid) return;
+        // CHECK B: Inheritance Intent (The Fix)
+        // If the class EXTENDS/IMPLEMENTS the type required for the ACTUAL location,
+        // we assume the location is correct and the name is just wrong/unique.
+        // This prevents "Entity found in Port" errors for classes like 'AuthContract'.
+        if (classElement != null && _satisfiesInheritanceRule(classElement, actualComponent)) {
+          return;
+        }
 
-      reporter.atToken(
-        node.name,
-        _code,
-        arguments: [
-          bestMatch.component.label, // e.g. "Model"
-          actualComponent.label,     // e.g. "Entity"
-          bestMatch.component.label, // e.g. "Model"
-        ],
-      );
+        reporter.atToken(
+          node.name,
+          _code,
+          arguments: [
+            expectedComponent.label, // e.g. "Entity"
+            actualComponent.label,   // e.g. "Port"
+            expectedComponent.label, // e.g. "Entity"
+          ],
+        );
+      }
     });
+  }
+
+  bool _satisfiesInheritanceRule(ClassElement element, ArchComponent targetComponent) {
+    final rule = config.inheritances.ruleFor(targetComponent.id);
+    if (rule == null || rule.required.isEmpty) return false;
+    return rule.required.any((detail) => _hasSupertype(element, detail));
+  }
+
+  bool _hasSupertype(ClassElement element, InheritanceDetail detail) {
+    if (detail.name == null || detail.import == null) return false;
+
+    return element.allSupertypes.any((supertype) {
+      final superElement = supertype.element;
+
+      // 1. Name Check
+      if (superElement.name != detail.name) return false;
+
+      // 2. URI Check (Robust)
+      // [Analyzer 8.0.0] Use firstFragment.source
+      final libraryUri = superElement.library.firstFragment.source.uri.toString();
+      final configUri = detail.import!;
+
+      // A. Exact Match
+      if (libraryUri == configUri) return true;
+
+      // B. Suffix/Path Match (Robust against package vs file URIs)
+      final libSuffix = _extractPathSuffix(libraryUri);
+      final configSuffix = _extractPathSuffix(configUri);
+
+      if (libSuffix != null && configSuffix != null && libSuffix == configSuffix) {
+        return true;
+      }
+
+      // Fallback
+      if (libraryUri.endsWith(configUri)) return true;
+
+      return false;
+    });
+  }
+
+  /// Extracts the path relative to the 'lib' folder or the package root.
+  String? _extractPathSuffix(String uriString) {
+    final uri = Uri.tryParse(uriString);
+    if (uri == null) return null;
+
+    if (uri.scheme == 'package') {
+      // package:example/core/port.dart -> core/port.dart
+      if (uri.pathSegments.length > 1) {
+        return uri.pathSegments.sublist(1).join('/');
+      }
+    } else if (uri.scheme == 'file') {
+      // file:///.../lib/core/port.dart -> core/port.dart
+      final segments = uri.pathSegments;
+      final libIndex = segments.lastIndexOf('lib');
+      if (libIndex != -1 && libIndex < segments.length - 1) {
+        return segments.sublist(libIndex + 1).join('/');
+      }
+    }
+    return uriString;
+  }
+
+  _ComponentPattern? _getBestMatch(String className) {
+    return _sortedPatterns.firstWhereOrNull(
+          (p) => NamingUtils.validateName(name: className, template: p.pattern),
+    );
   }
 
   static List<_ComponentPattern> _createSortedPatterns(List<NamingRule> rules) {
@@ -90,10 +161,7 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
       });
     }).whereNotNull().toList();
 
-    // Sort by pattern length descending.
-    // Longer patterns usually imply higher specificity (e.g. "UserModel" > "User").
     patterns.sort((a, b) => b.pattern.length.compareTo(a.pattern.length));
-
     return patterns;
   }
 }

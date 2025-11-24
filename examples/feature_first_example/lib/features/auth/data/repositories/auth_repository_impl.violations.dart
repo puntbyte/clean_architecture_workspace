@@ -3,7 +3,7 @@
 import 'package:example/core/utils/types.dart';
 import 'package:example/features/auth/data/models/user_model.dart';
 import 'package:example/features/auth/data/sources/auth_remote_data_source.dart';
-import 'package:example/features/auth/domain/contracts/auth_repository.dart';
+import 'package:example/features/auth/domain/contracts/auth_port.dart';
 import 'package:fpdart/fpdart.dart';
 
 

@@ -1,98 +1,120 @@
-// test/src/utils/natural_language_utils_test.dart
+// test/src/lints/naming/enforce_semantic_naming_test.dart
 
+import 'dart:io';
+import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
+import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/diagnostic/diagnostic.dart';
+import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
+import 'package:clean_architecture_lints/src/lints/naming/enforce_semantic_naming.dart';
 import 'package:clean_architecture_lints/src/utils/nlp/natural_language_utils.dart';
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+import '../../helpers/test_data.dart';
+
 void main() {
-  group('NaturalLanguageUtils', () {
+  group('EnforceSemanticNaming Lint', () {
+    late AnalysisContextCollection contextCollection;
+    late Directory tempDir;
+    late String testProjectPath;
     late NaturalLanguageUtils nlpUtils;
 
-    setUpAll(() {
-      final posOverrides = <String, Set<String>>{
-        'get': {'VERB'}, 'save': {'VERB'}, 'update': {'VERB'}, 'request': {'VERB'}, 'apply': {'VERB'},
-        'user': {'NOUN'}, 'profile': {'NOUN'}, 'email': {'NOUN'}, 'morning': {'NOUN'},
-        'successful': {'ADJ'}, 'empty': {'ADJ'}, 'invalid': {'ADJ'},
-        // Ambiguous words for testing precedence rules
-        'building': {'NOUN'},
-        'nested': {'ADJ'},
-      };
-      nlpUtils = NaturalLanguageUtils(posOverrides: posOverrides);
-    });
+    void addFile(String relativePath, String content) {
+      final fullPath = p.join(testProjectPath, p.normalize(relativePath));
+      final file = File(fullPath);
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(content);
+    }
 
     setUp(() {
-      nlpUtils.clearCache();
+      tempDir = Directory.systemTemp.createTempSync('semantic_naming_test_');
+      testProjectPath = p.canonicalize(tempDir.path);
+
+      addFile('pubspec.yaml', 'name: test_project');
+      addFile('.dart_tool/package_config.json', '{"configVersion": 2, "packages": []}');
+
+      nlpUtils = NaturalLanguageUtils(
+        posOverrides: {
+          'user': {'NOUN'},      // Singular
+          'violation': {'NOUN'}, // Singular
+          'violations': {},      // Unknown directly (to test automatic plural detection)
+          'list': {'NOUN'},
+        },
+      );
     });
 
-    group('Part of Speech checks', () {
-      test('should return true for verbs defined in overrides', () {
-        expect(nlpUtils.isVerb('Get'), isTrue);
-        expect(nlpUtils.isVerb('Save'), isTrue);
+    tearDown(() {
+      try { tempDir.deleteSync(recursive: true); } catch (_) {}
+    });
+
+    Future<List<Diagnostic>> runLint({
+      required String filePath,
+      required List<Map<String, dynamic>> namingRules,
+    }) async {
+      final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
+      contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
+      final resolvedUnit = await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath) as ResolvedUnitResult;
+
+      final config = makeConfig(namingRules: namingRules);
+      final lint = EnforceSemanticNaming(
+        config: config,
+        layerResolver: LayerResolver(config),
+        nlpUtils: nlpUtils,
+      );
+
+      return lint.testRun(resolvedUnit);
+    }
+
+    group('Plural Grammar: {{noun.plural}}', () {
+      final listRule = {'on': 'model', 'grammar': '{{noun.plural}}List'};
+
+      test('validates "UsersList" (Plural Noun)', () async {
+        final path = 'lib/features/user/data/models/users_list.dart';
+        addFile(path, 'class UsersList {}'); // "Users" -> "User" (Noun) -> Plural
+
+        final lints = await runLint(filePath: path, namingRules: [listRule]);
+        expect(lints, isEmpty);
       });
 
-      test('should return true for nouns defined in overrides', () {
-        expect(nlpUtils.isNoun('User'), isTrue);
-        expect(nlpUtils.isNoun('Email'), isTrue);
-      });
+      test('reports violation for "UserList" (Singular Noun)', () async {
+        final path = 'lib/features/user/data/models/user_list.dart';
+        addFile(path, 'class UserList {}'); // "User" is singular
 
-      test('should return true for adjectives defined in overrides', () {
-        expect(nlpUtils.isAdjective('Successful'), isTrue);
-        expect(nlpUtils.isAdjective('Invalid'), isTrue);
-      });
-
-      test('should return false for unknown words when dictionary is disabled', () {
-        expect(nlpUtils.isVerb('NonExistentVerb'), isFalse);
-        expect(nlpUtils.isNoun('NonExistentNoun'), isFalse);
+        final lints = await runLint(filePath: path, namingRules: [listRule]);
+        expect(lints, hasLength(1));
+        expect(lints.first.message, contains('must be a Plural Noun'));
       });
     });
 
-    group('isVerbGerund', () {
-      test('should return true for simple -ing form of a known verb', () {
-        expect(nlpUtils.isVerbGerund('Updating'), isTrue); // update -> updating
+    group('Singular Grammar: {{noun.singular}}', () {
+      final entityRule = {'on': 'entity', 'grammar': '{{noun.singular}}'};
+
+      test('validates "User" (Singular)', () async {
+        final path = 'lib/features/user/domain/entities/user.dart';
+        addFile(path, 'class User {}');
+        final lints = await runLint(filePath: path, namingRules: [entityRule]);
+        expect(lints, isEmpty);
       });
 
-      test('should return true for -ing form with a dropped e', () {
-        expect(nlpUtils.isVerbGerund('Saving'), isTrue); // save -> saving
-      });
-
-      test('should return false for a word that is primarily a noun ending in -ing', () {
-        expect(nlpUtils.isVerbGerund('Building'), isFalse, reason: 'Building is defined as a noun.');
-        expect(nlpUtils.isVerbGerund('Morning'), isFalse);
-      });
-    });
-
-    group('isVerbPast', () {
-      test('should return true for regular -ed verb', () {
-        expect(nlpUtils.isVerbPast('Requested'), isTrue);
-      });
-
-      test('should return true for -ied verb from a "y" stem', () {
-        expect(nlpUtils.isVerbPast('Applied'), isTrue); // apply -> applied
-      });
-
-      test('should return true for common irregular verbs', () {
-        expect(nlpUtils.isVerbPast('Sent'), isTrue);
-        expect(nlpUtils.isVerbPast('Built'), isTrue);
-      });
-
-      test('should return false for a word that is primarily an adjective ending in -ed', () {
-        expect(nlpUtils.isVerbPast('Nested'), isFalse, reason: 'Nested is defined as an adjective.');
+      test('reports violation for "Users" (Plural)', () async {
+        final path = 'lib/features/user/domain/entities/users.dart';
+        addFile(path, 'class Users {}');
+        final lints = await runLint(filePath: path, namingRules: [entityRule]);
+        expect(lints, hasLength(1));
+        expect(lints.first.message, contains('must be a Singular Noun'));
       });
     });
 
-    group('Caching', () {
-      test('should cache results to avoid re-computation', () {
-        expect(nlpUtils.cacheSize, 0);
+    test('Port Example: TypeSafetyViolationsPort (Violations = Plural Noun)', () async {
+      // Grammar is generic {{noun.phrase}}Port, which allows singular OR plural.
+      // "Violations" ends in 's', stem "Violation" is Noun. So it is a Noun.
+      final portRule = {'on': 'port', 'grammar': '{{noun.phrase}}Port'};
 
-        // First call populates the cache
-        final result1 = nlpUtils.isNoun('User');
-        expect(result1, isTrue);
-        expect(nlpUtils.cacheSize, 1);
+      final path = 'lib/features/user/domain/ports/violations_port.dart';
+      addFile(path, 'abstract interface class TypeSafetyViolationsPort {}');
 
-        // Second call should hit the cache
-        final result2 = nlpUtils.isNoun('User');
-        expect(result2, isTrue);
-        expect(nlpUtils.cacheSize, 1, reason: 'Cache size should not increase on a cache hit.');
-      });
+      final lints = await runLint(filePath: path, namingRules: [portRule]);
+      expect(lints, isEmpty);
     });
   });
 }

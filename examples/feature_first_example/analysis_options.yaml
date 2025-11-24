@@ -49,7 +49,8 @@ custom_lint:
     - disallow_throwing_from_presentation: true # Enable the new rule
 
     # 5. Naming Convention Rules
-    - enforce_naming_conventions: true
+    - enforce_naming_antipattern: true
+    - enforce_naming_pattern: true
     - enforce_semantic_naming: true
 
     # 6. Code Generation Rule
@@ -85,8 +86,6 @@ custom_lint:
           manager: ['managers', 'bloc', 'cubit']
           widget: 'widgets'
           page: 'pages'
-
-
 
       # [3. Inheritance] Define base classes for components.
       inheritances:
@@ -244,41 +243,41 @@ custom_lint:
         # --- Domain Layer ---
         # The default rule used for [no_flutter_in_domain_layer].
         # Defining is not required unless for overringing the values.
-        - on: 'domain'
+        - on: domain
           forbidden:
             package: ['package:flutter/**', 'dart:ui']
 
         # The default rule used for [entity_in_domain_layer].
         # Defining is not required unless for overringing the values.
-        - on: 'entity'
+        - on: entity
           allowed: ['domain', 'manager']
 
         # The default rule used for [port_in_repository].
         # Defining is not required unless for overringing the values.
-        - on: 'port'
+        - on: port
           allowed: 'repository'
 
         # The default rule used for [usecase_in_repository].
         # Defining is not required unless for overringing the values.
-        - on: 'usecase'
+        - on: usecase
           allowed: 'repository'
 
         # --- Data Layer ---
         # The default rule used for [model_in_data_layer].
         # Defining is not required unless for overringing the values.
-        - on: 'model'
+        - on: model
           allowed: 'data'
 
         # The default two rules used for [source_in_repository].
         # Defining is not required unless for overringing the values.
-        - on: 'source.interface'
+        - on: source.interface
           allowed: 'source.implementation'
-        - on: 'source.implementation'
+        - on: source.implementation
           allowed: 'repository'
 
         # The default rule used for [repository_in_data_layer].
         # Defining is not required unless for overringing the values.
-        - on: 'repository'
+        - on: repository
           allowed: 'data'
 
         # --- Presentation Layer ---
@@ -357,7 +356,7 @@ custom_lint:
         # The default rule used for [domain_layer_type_safety].
         # Defining is not required unless for overringing the values.
         # Port and Usecase must return wrapper FutureEither.
-        - on: [ 'port', 'usecase' ]
+        - on: [ port, usecase ]
           returns:
             unsafe_type: 'result.future'
             safe_type: 'result.wrapper'
@@ -365,7 +364,7 @@ custom_lint:
         # The default rule used for [data_layer_type_safety].
         # Defining is not required unless for overringing the values.
         # Source Interface and Implementation must return raw Futures.
-        - on: 'source'
+        - on: source
           returns:
             unsafe_type: 'result.wrapper'
             safe_type: 'result.future'
@@ -373,7 +372,7 @@ custom_lint:
         # User defined rule used for [enforce_custom_type_safety].
         # Defining is required in order the lint to work.
         # Strong ID parameter enforcement.
-        - on: [ 'port', 'usecase', 'source', 'repository' ]
+        - on: [ port, usecase, source, repository ]
           parameters:
             - unsafe_type: 'int'
               identifier: 'id'
@@ -389,7 +388,7 @@ custom_lint:
         # Default rule used for [exception_on_source_implementation].
         # Defining is not required unless for overringing the default values.
         # Responsible for interacting with external worlds and throwing specific exceptions.
-        - on: 'source.implementation'
+        - on: source.implementation
           role: 'producer'
           required:
             # Must have a try block which returns any Object
@@ -408,7 +407,7 @@ custom_lint:
         # [convert_exceptions_to_failures].
         # Defining is not required unless for overringing the default values.
         # Responsible for catching Exceptions and converting them to Failures.
-        - on: 'repository'
+        - on: repository
           role: 'boundary'
           required:
             # Must have a try block which returns a subtype of Either
@@ -437,7 +436,7 @@ custom_lint:
         # Default rule used for [no_throwing_from_presentation].
         # Defining is not required unless for overringing the default values.
         # Responsible for mapping Failures to user messages/states.
-        - on: 'presentation'
+        - on: presentation
           role: 'consumer'
           forbidden:
             # Must not throw or rethrow any subtype of dart Exception.
@@ -448,14 +447,14 @@ custom_lint:
         # --- Domain Layer ---
         # User defined rule used for [enforce_annotation].
         # Defining is required in order the lint to work.
-        - on: 'entity'
+        - on: entity
           forbidden:
             name: [ 'injectable', 'LazySingleton' ]
             import: 'package:injectable/injectable.dart'
 
         # User defined rule used for [enforce_annotation].
         # Defining is required in order the lint to work.
-        - on: 'usecase'
+        - on: usecase
           required:
             name: 'Injectable'
             import: 'package:injectable/injectable.dart'
@@ -463,7 +462,7 @@ custom_lint:
         # --- Data Layer ---
         # User defined rule used for [enforce_annotation].
         # Defining is required in order the lint to work.
-        - on: 'model'
+        - on: model
           allowed:
             - name: 'freezed'
               import: 'package:freezed_annotation/freezed_annotation.dart'
@@ -472,7 +471,7 @@ custom_lint:
 
         # User defined rule used for [enforce_annotation].
         # Defining is required in order the lint to work.
-        - on: 'repository'
+        - on: repository
           required:
             name: ['LazySingleton', 'Singleton']
             import: 'package:injectable/injectable.dart'

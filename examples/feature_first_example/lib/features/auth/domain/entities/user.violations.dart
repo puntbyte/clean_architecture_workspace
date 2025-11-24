@@ -1,4 +1,4 @@
-// example/lib/features/auth/domain/entities/user.violations.dart
+// lib/features/auth/domain/entities/user.violations.dart
 
 import 'package:example/core/entity/entity.dart';
 
@@ -14,7 +14,7 @@ import 'package:example/features/auth/data/models/user_model.dart'; // <-- LINT 
 // Reason: Entities should be simple POJOs and not use Dependency Injection annotations.
 import 'package:injectable/injectable.dart'; // <-- LINT WARNING HERE
 
-// 4. LINT: enforce_naming_conventions
+// 4. LINT: enforce_naming_antipattern
 // Reason: The class name matches the antipattern `{{name}}Entity`.
 // Entities should be named `User`, not `UserEntity`.
 @Injectable() // <-- LINT WARNING HERE (3. enforce_annotations)

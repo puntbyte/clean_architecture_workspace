@@ -14,7 +14,7 @@ void main() {
         setUp(() => resolver = LayerResolver(makeConfig(type: 'feature_first')));
 
         test('should resolve port from its domain layer path', () {
-          const path = '/project/lib/features/auth/domain/ports/auth_repository.dart';
+          const path = '/project/lib/features/auth/domain/ports/auth_port.dart';
           expect(resolver.getComponent(path), ArchComponent.port);
         });
 

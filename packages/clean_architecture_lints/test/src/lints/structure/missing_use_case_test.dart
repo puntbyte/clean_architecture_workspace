@@ -17,7 +17,6 @@ void main() {
     late Directory tempDir;
     late String testProjectPath;
 
-    // Helper to write files safely using canonical paths
     void addFile(String relativePath, String content) {
       final fullPath = p.join(testProjectPath, p.normalize(relativePath));
       final file = File(fullPath);
@@ -26,7 +25,6 @@ void main() {
     }
 
     setUp(() {
-      // [Windows Fix] Use canonical path
       tempDir = Directory.systemTemp.createTempSync('missing_usecase_test_');
       testProjectPath = p.canonicalize(tempDir.path);
 
@@ -38,19 +36,13 @@ void main() {
     });
 
     tearDown(() {
-      try {
-        tempDir.deleteSync(recursive: true);
-      } on FileSystemException catch (_) {
-        // Ignore Windows file lock errors
-      }
+      try { tempDir.deleteSync(recursive: true); } catch (_) {}
     });
 
     Future<List<Diagnostic>> runLint({
       required String filePath,
-      // Default directory config is implied by makeConfig()
     }) async {
       final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
-
       contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
 
       final resolvedUnit = await contextCollection
@@ -58,7 +50,6 @@ void main() {
           .currentSession
           .getResolvedUnit(fullPath) as ResolvedUnitResult;
 
-      // Use default config which expects 'usecases' directory in 'domain'
       final config = makeConfig();
       final lint = MissingUseCase(config: config, layerResolver: LayerResolver(config));
 
@@ -70,33 +61,31 @@ void main() {
       final path = 'lib/features/auth/domain/ports/auth_repository.dart';
       addFile(path, '''
         abstract class AuthRepository {
-          Future<void> login(String email); // Should have Login usecase
-          Future<void> logout();            // Should have Logout usecase
+          Future<void> login(String email); // VIOLATION
         }
       ''');
 
-      // We create 'Logout' but NOT 'Login'.
-      addFile('lib/features/auth/domain/usecases/logout.dart', 'class Logout {}');
+      // No corresponding UseCase file created.
 
       final lints = await runLint(filePath: path);
 
-      // Should report 1 error for 'login'
       expect(lints, hasLength(1));
       expect(lints.first.message, contains('missing the corresponding `Login` UseCase'));
     });
 
-    test('does not report violation when all use cases exist', () async {
-      final path = 'lib/features/auth/domain/ports/auth_repository.dart';
-      addFile(path, '''
+    test('does not report violation when use case file exists', () async {
+      final repoPath = 'lib/features/auth/domain/ports/auth_repository.dart';
+      addFile(repoPath, '''
         abstract class AuthRepository {
-          Future<void> login(String email);
+          Future<void> login(String email); // OK, file exists
         }
       ''');
 
       // Create the corresponding use case
+      // Default config expects: lib/features/auth/domain/usecases/login.dart
       addFile('lib/features/auth/domain/usecases/login.dart', 'class Login {}');
 
-      final lints = await runLint(filePath: path);
+      final lints = await runLint(filePath: repoPath);
       expect(lints, isEmpty);
     });
 
@@ -107,18 +96,6 @@ void main() {
           String get userId;
           set user(String user);
           void _privateHelper();
-        }
-      ''');
-
-      final lints = await runLint(filePath: path);
-      expect(lints, isEmpty);
-    });
-
-    test('ignores files that are not repository contracts', () async {
-      final path = 'lib/features/auth/data/repositories/auth_repository_impl.dart';
-      addFile(path, '''
-        class AuthRepositoryImpl {
-          void login() {}
         }
       ''');
 

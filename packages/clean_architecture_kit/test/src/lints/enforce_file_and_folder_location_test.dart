@@ -73,7 +73,7 @@ void main() {
       // ACT
       final reporter = runTest(
         config: config,
-        path: '/project/lib/domain/repositories/auth_repository.dart',
+        path: '/project/lib/domain/repositories/auth_port.dart',
         content: 'abstract class AuthRepository {}',
       );
 
@@ -98,7 +98,7 @@ void main() {
       // ACT
       final reporter = runTest(
         config: config,
-        path: '/project/lib/domain/repositories/auth_repository.dart',
+        path: '/project/lib/domain/repositories/auth_port.dart',
         content: 'abstract class AuthRepository {}',
       );
 

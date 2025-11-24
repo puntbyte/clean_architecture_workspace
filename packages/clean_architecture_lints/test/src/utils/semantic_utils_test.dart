@@ -54,12 +54,12 @@ void main() {
           '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", "packageUri": "lib/"}, {"name": "flutter", "rootUri": "${p.toUri(flutterPackagePath)}", "packageUri": "lib/"}]}');
 
       // Files for isArchitecturalOverride tests
-      writeFile(p.join(testProjectPath, 'lib/features/auth/domain/ports/auth_repository.dart'),
+      writeFile(p.join(testProjectPath, 'lib/features/auth/domain/ports/auth_port.dart'),
           'abstract class AuthRepository { void getUser(); String get userId; }');
       writeFile(p.join(testProjectPath, 'lib/data/base_repo.dart'),
           'abstract class BaseRepo { void commonMethod(); }');
       writeFile(p.join(testProjectPath, 'lib/repo_impl.dart'), '''
-        import 'package:test_project/features/auth/domain/ports/auth_repository.dart';
+        import 'package:test_project/features/auth/domain/ports/auth_port.dart';
         import 'package:test_project/data/base_repo.dart';
         class RepoImpl extends BaseRepo implements AuthRepository { 
           @override void getUser() {} 

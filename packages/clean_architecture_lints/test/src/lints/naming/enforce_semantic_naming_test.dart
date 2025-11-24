@@ -31,22 +31,14 @@ void main() {
       testProjectPath = p.canonicalize(tempDir.path);
 
       addFile('pubspec.yaml', 'name: test_project');
-      addFile(
-        '.dart_tool/package_config.json',
-        '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", "packageUri": "lib/"}]}',
-      );
+      addFile('.dart_tool/package_config.json', '{"configVersion": 2, "packages": []}');
 
-      // Mock Dictionary for consistent results
       nlpUtils = NaturalLanguageUtils(
         posOverrides: {
-          'get': {'VERB'},
-          'fetch': {'VERB'},
-          'fetching': {'VERB'}, // Gerunds usually derived, but explicit override helps test stability
-          'user': {'NOUN'},
-          'profile': {'NOUN'},
-          'loading': {'NOUN', 'ADJ'},
-          'loaded': {'VERB', 'ADJ'},
-          'initial': {'ADJ'},
+          'user': {'NOUN'},      // Singular
+          'violation': {'NOUN'}, // Singular
+          'violations': {},      // Unknown directly (to test automatic plural detection)
+          'list': {'NOUN'},
         },
       );
     });
@@ -61,10 +53,7 @@ void main() {
     }) async {
       final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
       contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
-      final resolvedUnit = await contextCollection
-          .contextFor(fullPath)
-          .currentSession
-          .getResolvedUnit(fullPath) as ResolvedUnitResult;
+      final resolvedUnit = await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath) as ResolvedUnitResult;
 
       final config = makeConfig(namingRules: namingRules);
       final lint = EnforceSemanticNaming(
@@ -76,60 +65,56 @@ void main() {
       return lint.testRun(resolvedUnit);
     }
 
-    group('Entity Grammar: {{noun.phrase}}', () {
-      final entityRule = {'on': 'entity', 'grammar': '{{noun.phrase}}'};
+    group('Plural Grammar: {{noun.plural}}', () {
+      final listRule = {'on': 'model', 'grammar': '{{noun.plural}}List'};
 
-      test('reports violation for "FetchingUser" (Gerund/Verb start)', () async {
-        final path = 'lib/features/user/domain/entities/fetching_user.dart';
-        addFile(path, 'class FetchingUser {}');
+      test('validates "UsersList" (Plural Noun)', () async {
+        final path = 'lib/features/user/data/models/users_list.dart';
+        addFile(path, 'class UsersList {}'); // "Users" -> "User" (Noun) -> Plural
 
-        final lints = await runLint(filePath: path, namingRules: [entityRule]);
-
-        expect(lints, hasLength(1));
-        expect(lints.first.message, contains('does not follow the grammatical structure'));
-      });
-
-      test('reports violation for "GetUser" (Verb start)', () async {
-        final path = 'lib/features/user/domain/entities/get_user.dart';
-        addFile(path, 'class GetUser {}');
-
-        final lints = await runLint(filePath: path, namingRules: [entityRule]);
-        expect(lints, hasLength(1));
-      });
-
-      test('reports violation for "UserFetch" (Verb end)', () async {
-        final path = 'lib/features/user/domain/entities/user_fetch.dart';
-        addFile(path, 'class UserFetch {}'); // Ends with verb, not noun
-
-        final lints = await runLint(filePath: path, namingRules: [entityRule]);
-        expect(lints, hasLength(1));
-      });
-
-      test('validates "UserProfile" (Noun Phrase)', () async {
-        final path = 'lib/features/user/domain/entities/user_profile.dart';
-        addFile(path, 'class UserProfile {}');
-
-        final lints = await runLint(filePath: path, namingRules: [entityRule]);
+        final lints = await runLint(filePath: path, namingRules: [listRule]);
         expect(lints, isEmpty);
+      });
+
+      test('reports violation for "UserList" (Singular Noun)', () async {
+        final path = 'lib/features/user/data/models/user_list.dart';
+        addFile(path, 'class UserList {}'); // "User" is singular
+
+        final lints = await runLint(filePath: path, namingRules: [listRule]);
+        expect(lints, hasLength(1));
+        expect(lints.first.message, contains('must be a Plural Noun'));
       });
     });
 
-    group('Usecase Grammar: {{verb.present}}{{noun.phrase}}', () {
-      final usecaseRule = {'on': 'usecase', 'grammar': '{{verb.present}}{{noun.phrase}}'};
+    group('Singular Grammar: {{noun.singular}}', () {
+      final entityRule = {'on': 'entity', 'grammar': '{{noun.singular}}'};
 
-      test('validates "GetUser" (Verb+Noun)', () async {
-        final path = 'lib/features/user/domain/usecases/get_user.dart';
-        addFile(path, 'class GetUser {}');
-        final lints = await runLint(filePath: path, namingRules: [usecaseRule]);
+      test('validates "User" (Singular)', () async {
+        final path = 'lib/features/user/domain/entities/user.dart';
+        addFile(path, 'class User {}');
+        final lints = await runLint(filePath: path, namingRules: [entityRule]);
         expect(lints, isEmpty);
       });
 
-      test('reports violation for "UserGet" (Noun+Verb)', () async {
-        final path = 'lib/features/user/domain/usecases/user_get.dart';
-        addFile(path, 'class UserGet {}');
-        final lints = await runLint(filePath: path, namingRules: [usecaseRule]);
+      test('reports violation for "Users" (Plural)', () async {
+        final path = 'lib/features/user/domain/entities/users.dart';
+        addFile(path, 'class Users {}');
+        final lints = await runLint(filePath: path, namingRules: [entityRule]);
         expect(lints, hasLength(1));
+        expect(lints.first.message, contains('must be a Singular Noun'));
       });
+    });
+
+    test('Port Example: TypeSafetyViolationsPort (Violations = Plural Noun)', () async {
+      // Grammar is generic {{noun.phrase}}Port, which allows singular OR plural.
+      // "Violations" ends in 's', stem "Violation" is Noun. So it is a Noun.
+      final portRule = {'on': 'port', 'grammar': '{{noun.phrase}}Port'};
+
+      final path = 'lib/features/user/domain/ports/violations_port.dart';
+      addFile(path, 'abstract interface class TypeSafetyViolationsPort {}');
+
+      final lints = await runLint(filePath: path, namingRules: [portRule]);
+      expect(lints, isEmpty);
     });
   });
 }

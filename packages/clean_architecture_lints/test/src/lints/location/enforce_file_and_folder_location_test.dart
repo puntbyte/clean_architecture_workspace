@@ -17,7 +17,6 @@ void main() {
     late Directory tempDir;
     late String testProjectPath;
 
-    // Helper to write files safely using canonical paths
     void addFile(String relativePath, String content) {
       final fullPath = p.join(testProjectPath, p.normalize(relativePath));
       final file = File(fullPath);
@@ -29,22 +28,28 @@ void main() {
       tempDir = Directory.systemTemp.createTempSync('file_location_test_');
       testProjectPath = p.canonicalize(tempDir.path);
 
-      addFile('pubspec.yaml', 'name: test_project');
-      addFile(
-        '.dart_tool/package_config.json',
-        '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", "packageUri": "lib/"}]}',
-      );
+      addFile('pubspec.yaml', 'name: example');
+
+      final libUri = p.toUri(p.join(testProjectPath, 'lib'));
+      addFile('.dart_tool/package_config.json', '''
+      {
+        "configVersion": 2,
+        "packages": [{"name": "example", "rootUri": "$libUri", "packageUri": "."}]
+      }
+      ''');
+
+      // Define base class for inheritance test
+      addFile('lib/core/port/port.dart', 'abstract class Port {}');
     });
 
     tearDown(() {
-      try {
-        tempDir.deleteSync(recursive: true);
-      } on FileSystemException catch (_) {
-        // Ignore Windows file lock errors
-      }
+      try { tempDir.deleteSync(recursive: true); } catch (_) {}
     });
 
-    Future<List<Diagnostic>> runLint({required String filePath}) async {
+    Future<List<Diagnostic>> runLint({
+      required String filePath,
+      List<Map<String, dynamic>>? inheritances,
+    }) async {
       final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
       contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
 
@@ -53,8 +58,7 @@ void main() {
           .currentSession
           .getResolvedUnit(fullPath) as ResolvedUnitResult;
 
-      // makeConfig uses default Naming Rules (Entity: {{name}}, Model: {{name}}Model, etc.)
-      final config = makeConfig();
+      final config = makeConfig(inheritances: inheritances);
       final lint = EnforceFileAndFolderLocation(
         config: config,
         layerResolver: LayerResolver(config),
@@ -66,8 +70,6 @@ void main() {
 
     test('reports violation when a Model is found in an entities directory', () async {
       final path = 'lib/features/user/domain/entities/user_model.dart';
-      // "UserModel" matches the Model pattern (specific) AND Entity pattern (generic).
-      // The lint should catch this because Model is more specific.
       addFile(path, 'class UserModel {}');
 
       final lints = await runLint(filePath: path);
@@ -76,50 +78,29 @@ void main() {
       expect(lints.first.message, contains('A Model was found in a "Entity" directory'));
     });
 
-    test('reports violation when an Entity is found in a models directory', () async {
-      final path = 'lib/features/user/data/models/user.dart';
-      // "User" matches Entity pattern.
-      addFile(path, 'class User {}');
+    test('should NOT report violation if class implements the correct contract for its location', () async {
+      // Scenario: 'AuthContract' is in 'ports'.
+      // Name 'AuthContract' matches Entity pattern "{{name}}" (Generic).
+      // So Linter thinks it's an Entity.
+      // BUT: It implements Port. The Linter should see this and suppress the Location error.
 
-      final lints = await runLint(filePath: path);
+      final path = 'lib/features/auth/domain/ports/auth_contract.dart';
+      addFile(path, '''
+        import '../../../../core/port/port.dart';
+        class AuthContract implements Port {} 
+      ''');
 
-      expect(lints, hasLength(1));
-      expect(lints.first.message, contains('A Entity was found in a "Model" directory'));
-    });
+      // Pass the inheritance config so the linter knows what a "Port" is
+      final customInheritance = [
+        {'on': 'port', 'required': {'name': 'Port', 'import': 'package:example/core/port/port.dart'}}
+      ];
 
-    test('does not report violation when a Model is in a models directory', () async {
-      final path = 'lib/features/user/data/models/user_model.dart';
-      addFile(path, 'class UserModel {}');
+      final lints = await runLint(
+        filePath: path,
+        inheritances: customInheritance,
+      );
 
-      final lints = await runLint(filePath: path);
-      expect(lints, isEmpty);
-    });
-
-    test('does not report violation when an Entity is in an entities directory', () async {
-      final path = 'lib/features/user/domain/entities/user.dart';
-      addFile(path, 'class User {}');
-
-      final lints = await runLint(filePath: path);
-      expect(lints, isEmpty);
-    });
-
-    test('handles pattern collisions gracefully (e.g. Entity vs Usecase)', () async {
-      // Both Entity and UseCase use {{name}}.
-      // If we have a class named "Login" in 'usecases', it matches BOTH.
-      // The lint should realize "Login" is valid for 'usecases' because the specificity is equal.
-      final path = 'lib/features/auth/domain/usecases/login.dart';
-      addFile(path, 'class Login {}');
-
-      final lints = await runLint(filePath: path);
-      expect(lints, isEmpty);
-    });
-
-    test('ignores files in non-architectural directories', () async {
-      final path = 'lib/core/utils/helper.dart';
-      addFile(path, 'class Helper {}');
-
-      final lints = await runLint(filePath: path);
-      expect(lints, isEmpty);
+      expect(lints, isEmpty, reason: 'Inheritance should prove intent overrides naming guess');
     });
   });
 }

@@ -99,7 +99,7 @@ void main() {
         final resolver = LayerResolver(config);
 
         test('should return ArchLayer.domain for a domain file', () {
-          const path = '/project/lib/domain/repositories/auth_repository.dart';
+          const path = '/project/lib/domain/repositories/auth_port.dart';
           expect(resolver.getLayer(path), ArchLayer.domain);
         });
 
@@ -126,7 +126,7 @@ void main() {
       final resolver = LayerResolver(config);
 
       test('should return ArchSubLayer.domainRepository for a domain contract file', () {
-        const path = '/project/lib/features/auth/domain/contracts/auth_repository.dart';
+        const path = '/project/lib/features/auth/domain/contracts/auth_port.dart';
         expect(resolver.getSubLayer(path), ArchSubLayer.domainRepository);
       });
 
@@ -164,7 +164,7 @@ void main() {
         () {
           // Since we configured 'contracts' for repositories, a file in the default
           // 'repositories' folder within the domain layer should be unknown.
-          const path = '/project/lib/features/auth/domain/repositories/auth_repository.dart';
+          const path = '/project/lib/features/auth/domain/repositories/auth_port.dart';
           expect(resolver.getSubLayer(path), ArchSubLayer.unknown);
         },
       );
