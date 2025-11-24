@@ -1,8 +1,5 @@
-// lib/src/models/rules/inheritance_rule.dart
-
 part of '../inheritances_config.dart';
 
-/// Represents a single, user-defined inheritance rule.
 class InheritanceRule {
   final String on;
   final List<InheritanceDetail> required;
@@ -16,10 +13,9 @@ class InheritanceRule {
     this.forbidden = const [],
   });
 
-  /// Creates an instance from a map, returning null if essential data is missing.
   static InheritanceRule? tryFromMap(Map<String, dynamic> map) {
-    final on = _parseOn(map);
-    if (on == null) return null;
+    final on = map.asString(ConfigKey.rule.on);
+    if (on.isEmpty) return null;
 
     return InheritanceRule(
       on: on,
@@ -29,24 +25,21 @@ class InheritanceRule {
     );
   }
 
-  static String? _parseOn(Map<String, dynamic> map) {
-    final on = map.asString(ConfigKey.rule.on);
-    return on.isEmpty ? null : on;
-  }
-
   static List<InheritanceDetail> _parseDetails(Map<String, dynamic> map, String key) {
     final data = map[key];
 
+    // Case 1: Single Map (possibly with list of names)
+    // required: { name: ['A', 'B'], import: '...' }
     if (data is Map<String, dynamic>) {
-      final detail = InheritanceDetail.tryFromMap(data);
-      return detail != null ? [detail] : [];
+      return InheritanceDetail.fromMapWithExpansion(data);
     }
 
+    // Case 2: List of Maps
+    // required: [ {name: 'A', import: '...'}, ... ]
     if (data is List) {
       return data
           .whereType<Map<String, dynamic>>()
-          .map(InheritanceDetail.tryFromMap)
-          .whereType<InheritanceDetail>()
+          .expand((item) => InheritanceDetail.fromMapWithExpansion(item))
           .toList();
     }
 

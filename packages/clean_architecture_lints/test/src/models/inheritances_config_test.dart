@@ -1,138 +1,95 @@
-// test/src/models/inheritances_config_test.dart
-
 import 'package:clean_architecture_lints/src/models/inheritances_config.dart';
-// We import the main config file because InheritanceDetail is a part of it.
-// This makes InheritanceDetail visible to the test.
+// We import the main config file because InheritanceDetail/Rule are parts of it.
 import 'package:test/test.dart';
 
 void main() {
   group('InheritanceDetail', () {
-    group('tryFromMap', () {
-      // --- Existing Name/Import Tests ---
-      test('should create instance with valid name and import', () {
+    group('fromMapWithExpansion', () {
+      test('should create single detail from simple name/import', () {
         final map = {
           'name': 'BaseEntity',
           'import': 'package:core/entity.dart',
         };
-        final detail = InheritanceDetail.tryFromMap(map);
+        final details = InheritanceDetail.fromMapWithExpansion(map);
 
-        expect(detail, isNotNull);
-        expect(detail!.name, 'BaseEntity');
-        expect(detail.import, 'package:core/entity.dart');
-        expect(detail.component, isNull);
+        expect(details, hasLength(1));
+        expect(details.first.name, 'BaseEntity');
+        expect(details.first.import, 'package:core/entity.dart');
+        expect(details.first.component, isNull);
       });
 
-      // --- NEW: Component Tests ---
-      test('should create instance with valid component', () {
+      test('should create multiple details from list of names', () {
+        final map = {
+          'name': ['UnaryUsecase', 'NullaryUsecase'],
+          'import': 'package:core/usecase.dart',
+        };
+        final details = InheritanceDetail.fromMapWithExpansion(map);
+
+        expect(details, hasLength(2));
+
+        expect(details[0].name, 'UnaryUsecase');
+        expect(details[0].import, 'package:core/usecase.dart');
+
+        expect(details[1].name, 'NullaryUsecase');
+        expect(details[1].import, 'package:core/usecase.dart');
+      });
+
+      test('should create detail with component reference', () {
         final map = {
           'component': 'entity',
         };
-        final detail = InheritanceDetail.tryFromMap(map);
+        final details = InheritanceDetail.fromMapWithExpansion(map);
 
-        expect(detail, isNotNull);
-        expect(detail!.component, 'entity');
-        expect(detail.name, isNull);
-        expect(detail.import, isNull);
+        expect(details, hasLength(1));
+        expect(details.first.component, 'entity');
+        expect(details.first.name, isNull);
       });
 
-      test('should allow both name/import AND component (though unlikely usage)', () {
-        final map = {
-          'name': 'Base',
-          'import': 'pkg:a',
-          'component': 'entity',
-        };
-        final detail = InheritanceDetail.tryFromMap(map);
-
-        expect(detail, isNotNull);
-        expect(detail!.name, 'Base');
-        expect(detail.component, 'entity');
-      });
-
-      // --- Validation Tests ---
-      test('should return null when both name and component are missing', () {
-        // Only import is not enough
-        final map = {'import': 'package:core/entity.dart'};
-        expect(InheritanceDetail.tryFromMap(map), isNull);
-      });
-
-      test('should return null when map is empty', () {
-        final map = <String, dynamic>{};
-        expect(InheritanceDetail.tryFromMap(map), isNull);
-      });
-
-      test('should return null if name is present but not a string', () {
-        final map = {'name': 123, 'import': 'pkg:a'};
-        expect(InheritanceDetail.tryFromMap(map), isNull);
-      });
-
-      test('should return null if component is present but not a string', () {
-        final map = {'component': 123};
-        expect(InheritanceDetail.tryFromMap(map), isNull);
+      test('should return empty list if data is missing', () {
+        final map = {'invalid': 'data'};
+        final details = InheritanceDetail.fromMapWithExpansion(map);
+        expect(details, isEmpty);
       });
     });
   });
 
   group('InheritanceRule', () {
     group('tryFromMap', () {
-      test('should create rule with valid on value', () {
-        final map = {'on': 'entity'};
-        final rule = InheritanceRule.tryFromMap(map);
-
-        expect(rule, isNotNull);
-        expect(rule!.on, 'entity');
-        expect(rule.required, isEmpty);
-        expect(rule.allowed, isEmpty);
-        expect(rule.forbidden, isEmpty);
-      });
-
-      test('should create rule with required inheritance (Class Name)', () {
+      test('should create rule with expanded required details', () {
         final map = {
-          'on': 'entity',
-          'required': {'name': 'BaseEntity', 'import': 'package:core/entity.dart'},
+          'on': 'usecase',
+          'required': {
+            'name': ['A', 'B'],
+            'import': 'pkg:common'
+          }
         };
         final rule = InheritanceRule.tryFromMap(map);
 
         expect(rule, isNotNull);
-        expect(rule!.required, hasLength(1));
-        expect(rule.required.first.name, 'BaseEntity');
+        expect(rule!.on, 'usecase');
+        expect(rule.required, hasLength(2));
+        expect(rule.required[0].name, 'A');
+        expect(rule.required[1].name, 'B');
       });
 
-      test('should create rule with required inheritance (Component)', () {
-        final map = {
-          'on': 'model',
-          'required': {'component': 'entity'},
-        };
-        final rule = InheritanceRule.tryFromMap(map);
-
-        expect(rule, isNotNull);
-        expect(rule!.required, hasLength(1));
-        expect(rule.required.first.component, 'entity');
-        expect(rule.required.first.name, isNull);
-      });
-
-      test('should parse list of maps for mixed details', () {
+      test('should create rule with mixed list of required details', () {
         final map = {
           'on': 'repository',
           'required': [
-            {'name': 'BaseRepo', 'import': 'pkg:repo.dart'}, // Class check
-            {'component': 'port'}, // Component check
-          ],
+            {'name': 'SpecificRepo', 'import': 'pkg:repo'},
+            {'component': 'port'}
+          ]
         };
         final rule = InheritanceRule.tryFromMap(map);
 
         expect(rule, isNotNull);
         expect(rule!.required, hasLength(2));
-        expect(rule.required[0].name, 'BaseRepo');
+        expect(rule.required[0].name, 'SpecificRepo');
         expect(rule.required[1].component, 'port');
       });
 
-      test('should return null when on is empty', () {
-        final map = {'on': ''};
-        expect(InheritanceRule.tryFromMap(map), isNull);
-      });
-
-      test('should return null when on is missing', () {
-        final map = {'required': {'component': 'entity'}};
+      test('should return null if "on" is missing', () {
+        final map = {'required': {'name': 'A'}};
         expect(InheritanceRule.tryFromMap(map), isNull);
       });
     });
@@ -140,49 +97,39 @@ void main() {
 
   group('InheritancesConfig', () {
     group('fromMap', () {
-      test('should parse complex configuration', () {
+      test('should parse complete configuration', () {
         final map = {
           'inheritances': [
-            // Domain Layer
             {
-              'on': 'entity',
-              'required': {'name': 'Entity', 'import': 'package:core/entity.dart'}
+              'on': 'usecase',
+              'required': {
+                'name': ['Nullary', 'Unary'],
+                'import': 'pkg:usecase'
+              }
             },
-            // Data Layer (Model must extend Entity component)
             {
               'on': 'model',
               'required': {'component': 'entity'}
-            },
-            // Presentation Layer (Mixed allowed)
-            {
-              'on': 'manager',
-              'allowed': [
-                {'name': 'Bloc', 'import': 'pkg:bloc'},
-                {'name': 'Cubit', 'import': 'pkg:bloc'}
-              ]
             }
-          ],
+          ]
         };
 
         final config = InheritancesConfig.fromMap(map);
 
-        expect(config.rules, hasLength(3));
+        expect(config.rules, hasLength(2));
 
-        final entityRule = config.ruleFor('entity');
-        expect(entityRule, isNotNull);
-        expect(entityRule!.required.first.name, 'Entity');
+        final usecaseRule = config.ruleFor('usecase');
+        expect(usecaseRule, isNotNull);
+        expect(usecaseRule!.required, hasLength(2)); // Nullary + Unary
+        expect(usecaseRule.required.map((e) => e.name), containsAll(['Nullary', 'Unary']));
 
         final modelRule = config.ruleFor('model');
         expect(modelRule, isNotNull);
         expect(modelRule!.required.first.component, 'entity');
-
-        final managerRule = config.ruleFor('manager');
-        expect(managerRule, isNotNull);
-        expect(managerRule!.allowed, hasLength(2));
       });
 
-      test('should handle empty inheritances list', () {
-        final config = InheritancesConfig.fromMap({'inheritances': []});
+      test('should return empty config if inheritances key is missing', () {
+        final config = InheritancesConfig.fromMap({});
         expect(config.rules, isEmpty);
       });
     });

@@ -1,5 +1,3 @@
-// lib/src/fixes/create_use_case_fix.dart
-
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -56,7 +54,10 @@ class CreateUseCaseFix extends DartFix {
       )
           .addDartFileEdit(
             (DartFileEditBuilder builder) {
+          // 1. Collect Imports
           final imports = _collectImports(method: methodNode, repoNode: repoNode);
+
+          // 2. Build Library
           final library = _buildUseCaseLibrary(
             method: methodNode,
             repoNode: repoNode,
@@ -156,18 +157,28 @@ class CreateUseCaseFix extends DartFix {
       }
     }
 
+    // 1. Repository Import
     final repoLibrary = repoNode.declaredFragment?.element.library;
     addImport(repoLibrary?.firstFragment.source.uri.toString());
 
-    config.annotations.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) => addImport(d.import));
-    config.inheritances.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) => addImport(d.import));
+    // 2. Inheritance Config Imports (NullaryUsecase, UnaryUsecase)
+    config.inheritances.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) {
+      addImport(d.import);
+    });
+
+    // 3. Annotation Imports (Injectable)
+    config.annotations.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) {
+      addImport(d.import);
+    });
+
+    // 4. Type Safety Imports (FutureEither)
     for (final rule in config.typeSafeties.rules) {
       for (final d in rule.returns) addImport(d.import);
     }
 
+    // 5. Method Type Imports
     void collectFromType(DartType? type) {
       if (type == null) return;
-      // FIX: Check type instance instead of using missing getters isVoid/isDynamic
       if (type is VoidType || type is DynamicType) return;
 
       final element = type.element;
