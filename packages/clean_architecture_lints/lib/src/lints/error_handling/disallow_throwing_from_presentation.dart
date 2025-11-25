@@ -1,6 +1,5 @@
 // lib/src/lints/error_handling/disallow_throwing_from_presentation.dart
 
-import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
@@ -27,17 +26,18 @@ class DisallowThrowingFromPresentation extends ArchitectureLintRule {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     final component = layerResolver.getComponent(resolver.source.fullName);
 
     // 1. Scope Check: Only run if we are in the Presentation Layer
     if (component.layer != ArchComponent.presentation) return;
 
     // 2. Config Lookup: Find the error handler rule for this component/layer
-    final rule = config.errorHandlers.ruleFor(component.id) ??
+    final rule =
+        config.errorHandlers.ruleFor(component.id) ??
         config.errorHandlers.ruleFor(component.layer.id);
 
     if (rule == null) return;

@@ -49,9 +49,7 @@ class DisallowRepositoryInPresentation extends ArchitectureLintRule {
       // 3. Validate: Is the referenced type a Repository Interface (Port)?
       final targetComponent = layerResolver.getComponent(source.fullName);
 
-      if (targetComponent == ArchComponent.port) {
-        reporter.atNode(node, _code);
-      }
+      if (targetComponent == ArchComponent.port) reporter.atNode(node, _code);
     });
   }
 }

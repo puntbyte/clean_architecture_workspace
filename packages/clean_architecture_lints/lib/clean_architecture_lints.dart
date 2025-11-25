@@ -30,7 +30,7 @@ import 'package:clean_architecture_lints/src/lints/structure/enforce_annotations
 import 'package:clean_architecture_lints/src/lints/structure/enforce_type_safety.dart';
 import 'package:clean_architecture_lints/src/lints/structure/missing_use_case.dart';
 import 'package:clean_architecture_lints/src/models/architecture_config.dart';
-import 'package:clean_architecture_lints/src/utils/nlp/natural_language_utils.dart';
+import 'package:clean_architecture_lints/src/utils/nlp/language_analyzer.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:dictionaryx/dictionary_msa.dart';
 
@@ -50,57 +50,57 @@ class CleanArchitectureLintsPlugin extends PluginBase {
 
     // 2. Create shared instances of core utilities.
     // These are created once and passed to all lints to ensure consistency and performance.
-    final layerResolver = LayerResolver(config);
-    final nlpUtils = NaturalLanguageUtils(dictionary: DictionaryMSA());
+    final resolver = LayerResolver(config);
+    final analyzer = LanguageAnalyzer(dictionary: DictionaryMSA());
 
     // 3. Define the lint rules in logical groups for excellent readability and maintenance.
     final contractRules = [
-      EnforceCustomInheritance(config: config, layerResolver: layerResolver),
-      EnforceEntityContract(config: config, layerResolver: layerResolver),
-      EnforcePortContract(config: config, layerResolver: layerResolver),
-      EnforceRepositoryContract(config: config, layerResolver: layerResolver),
-      EnforceUsecaseContract(config: config, layerResolver: layerResolver),
+      EnforceCustomInheritance(config: config, layerResolver: resolver),
+      EnforceEntityContract(config: config, layerResolver: resolver),
+      EnforcePortContract(config: config, layerResolver: resolver),
+      EnforceRepositoryContract(config: config, layerResolver: resolver),
+      EnforceUsecaseContract(config: config, layerResolver: resolver),
     ];
 
     final dependencyRules = [
-      DisallowDependencyInstantiation(config: config, layerResolver: layerResolver),
-      DisallowRepositoryInPresentation(config: config, layerResolver: layerResolver),
-      DisallowServiceLocator(config: config, layerResolver: layerResolver),
-      DisallowUseCaseInWidget(config: config, layerResolver: layerResolver),
-      EnforceAbstractDataSourceDependency(config: config, layerResolver: layerResolver),
-      EnforceAbstractRepositoryDependency(config: config, layerResolver: layerResolver),
-      EnforceLayerIndependence(config: config, layerResolver: layerResolver),
+      DisallowDependencyInstantiation(config: config, layerResolver: resolver),
+      DisallowRepositoryInPresentation(config: config, layerResolver: resolver),
+      DisallowServiceLocator(config: config, layerResolver: resolver),
+      DisallowUseCaseInWidget(config: config, layerResolver: resolver),
+      EnforceAbstractDataSourceDependency(config: config, layerResolver: resolver),
+      EnforceAbstractRepositoryDependency(config: config, layerResolver: resolver),
+      EnforceLayerIndependence(config: config, layerResolver: resolver),
     ];
 
     final errorHandlingRules = [
-      DisallowThrowingFromRepository(config: config, layerResolver: layerResolver),
-      EnforceExceptionOnDataSource(config: config, layerResolver: layerResolver),
-      EnforceTryCatchInRepository(config: config, layerResolver: layerResolver),
+      DisallowThrowingFromRepository(config: config, layerResolver: resolver),
+      EnforceExceptionOnDataSource(config: config, layerResolver: resolver),
+      EnforceTryCatchInRepository(config: config, layerResolver: resolver),
     ];
 
     final locationRules = [
-      EnforceFileAndFolderLocation(config: config, layerResolver: layerResolver),
+      EnforceFileAndFolderLocation(config: config, layerResolver: resolver),
     ];
 
     final namingRules = [
-      EnforceNamingAntipattern(config: config, layerResolver: layerResolver),
-      EnforceNamingPattern(config: config, layerResolver: layerResolver),
-      EnforceSemanticNaming(config: config, layerResolver: layerResolver, nlpUtils: nlpUtils),
+      EnforceNamingAntipattern(config: config, layerResolver: resolver),
+      EnforceNamingPattern(config: config, layerResolver: resolver),
+      EnforceSemanticNaming(config: config, layerResolver: resolver, analyzer: analyzer),
     ];
 
     final purityRules = [
-      DisallowEntityInDataSource(config: config, layerResolver: layerResolver),
-      DisallowFlutterInDomain(config: config, layerResolver: layerResolver),
-      DisallowModelInDomain(config: config, layerResolver: layerResolver),
-      DisallowModelReturnFromRepository(config: config, layerResolver: layerResolver),
-      EnforceContractApi(config: config, layerResolver: layerResolver),
-      RequireToEntityMethod(config: config, layerResolver: layerResolver),
+      DisallowEntityInDataSource(config: config, layerResolver: resolver),
+      DisallowFlutterInDomain(config: config, layerResolver: resolver),
+      DisallowModelInDomain(config: config, layerResolver: resolver),
+      DisallowModelReturnFromRepository(config: config, layerResolver: resolver),
+      EnforceContractApi(config: config, layerResolver: resolver),
+      RequireToEntityMethod(config: config, layerResolver: resolver),
     ];
 
     final structureRules = [
-      EnforceAnnotations(config: config, layerResolver: layerResolver),
-      EnforceTypeSafety(config: config, layerResolver: layerResolver),
-      MissingUseCase(config: config, layerResolver: layerResolver),
+      EnforceAnnotations(config: config, layerResolver: resolver),
+      EnforceTypeSafety(config: config, layerResolver: resolver),
+      MissingUseCase(config: config, layerResolver: resolver),
     ];
 
     // 4. Combine all groups into a single list using the spread operator.

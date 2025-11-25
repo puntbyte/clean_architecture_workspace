@@ -1,3 +1,5 @@
+// lib/src/models/rules/inheritance_rule.dart
+
 part of '../inheritances_config.dart';
 
 class InheritanceRule {
@@ -28,18 +30,14 @@ class InheritanceRule {
   static List<InheritanceDetail> _parseDetails(Map<String, dynamic> map, String key) {
     final data = map[key];
 
-    // Case 1: Single Map (possibly with list of names)
-    // required: { name: ['A', 'B'], import: '...' }
     if (data is Map<String, dynamic>) {
       return InheritanceDetail.fromMapWithExpansion(data);
     }
 
-    // Case 2: List of Maps
-    // required: [ {name: 'A', import: '...'}, ... ]
     if (data is List) {
       return data
           .whereType<Map<String, dynamic>>()
-          .expand((item) => InheritanceDetail.fromMapWithExpansion(item))
+          .expand(InheritanceDetail.fromMapWithExpansion)
           .toList();
     }
 

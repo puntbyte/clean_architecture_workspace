@@ -1,3 +1,5 @@
+// lib/src/lints/contract/enforce_usecase_contract.dart
+
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
@@ -6,7 +8,6 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 class EnforceUsecaseContract extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_usecase_contract',
-    // FIX: ensure spelling is "use case" (two words) for readability
     problemMessage: 'UseCases must extend one of the base use case classes: {0}.',
     correctionMessage: 'Add `extends {0}` to the class definition.',
   );

@@ -2,11 +2,10 @@ import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/utils/naming_strategy_helper.dart';
+import 'package:clean_architecture_lints/src/utils/nlp/naming_strategy.dart';
 import 'package:clean_architecture_lints/src/utils/nlp/naming_utils.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-/// Enforces that classes do not use forbidden naming patterns (e.g., `{{name}}Entity`).
 class EnforceNamingAntipattern extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_naming_antipattern',
@@ -15,10 +14,12 @@ class EnforceNamingAntipattern extends ArchitectureLintRule {
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
-  final NamingStrategyHelper _namingHelper;
+  final NamingStrategy _namingHelper;
 
-  EnforceNamingAntipattern({required super.config, required super.layerResolver})
-      : _namingHelper = NamingStrategyHelper(config.namingConventions.rules),
+  EnforceNamingAntipattern({
+    required super.config,
+    required super.layerResolver,
+  }) : _namingHelper = NamingStrategy(config.namingConventions.rules),
         super(code: _code);
 
   @override
@@ -31,17 +32,10 @@ class EnforceNamingAntipattern extends ArchitectureLintRule {
       if (actualComponent == ArchComponent.unknown) return;
 
       final rule = config.namingConventions.getRuleFor(actualComponent);
-      if (rule == null) return;
+      if (rule == null || rule.antipattern == null || rule.antipattern!.isEmpty) return;
 
-      // If no antipattern is defined for this component, skip.
-      if (rule.antipattern == null || rule.antipattern!.isEmpty) return;
+      if (_namingHelper.shouldYieldToLocationLint(className, actualComponent)) return;
 
-      // 1. Pre-Check: Is this actually a Location Error?
-      if (_namingHelper.shouldYieldToLocationLint(className, actualComponent)) {
-        return;
-      }
-
-      // 2. Antipattern Check
       if (NamingUtils.validateName(name: className, template: rule.antipattern!)) {
         reporter.atToken(
           node.name,

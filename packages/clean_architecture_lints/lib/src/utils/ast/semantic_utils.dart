@@ -1,4 +1,4 @@
-// lib/src/utils/semantic_utils.dart
+// lib/src/utils/ast/semantic_utils.dart
 
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -55,10 +55,10 @@ class SemanticUtils {
   }
 
   static bool isComponent(
-      DartType? type,
-      LayerResolver layerResolver,
-      ArchComponent componentToFind,
-      ) {
+    DartType? type,
+    LayerResolver layerResolver,
+    ArchComponent componentToFind,
+  ) {
     if (type == null) return false;
     final path = _getSourcePath(type);
     if (path != null && layerResolver.getComponent(path) == componentToFind) return true;

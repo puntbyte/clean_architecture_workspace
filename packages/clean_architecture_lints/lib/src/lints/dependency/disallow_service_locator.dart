@@ -19,7 +19,7 @@ class DisallowServiceLocator extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'disallow_service_locator',
     problemMessage:
-    'Do not use a service locator. Dependencies should be explicit and injected via the '
+        'Do not use a service locator. Dependencies should be explicit and injected via the '
         'constructor.',
     correctionMessage: 'Add this dependency as a constructor parameter.',
     errorSeverity: DiagnosticSeverity.WARNING,

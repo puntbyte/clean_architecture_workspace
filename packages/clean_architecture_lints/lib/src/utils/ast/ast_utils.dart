@@ -1,4 +1,4 @@
-// lib/src/utils/ast_utils.dart
+// lib/src/utils/ast/ast_utils.dart
 
 import 'package:analyzer/dart/ast/ast.dart';
 

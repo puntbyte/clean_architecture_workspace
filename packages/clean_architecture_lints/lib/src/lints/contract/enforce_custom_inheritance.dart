@@ -26,22 +26,22 @@ class EnforceCustomInheritance extends ArchitectureLintRule {
     required super.config,
     required super.layerResolver,
   }) : _rules = {
-    for (final rule in config.inheritances.rules)
-    // FIX: Skip core components that have their own dedicated lints.
-    // This ensures 'enforce_entity_contract' etc. are reported specifically.
-      if (rule.on != ArchComponent.entity.id &&
-          rule.on != ArchComponent.port.id &&
-          rule.on != ArchComponent.usecase.id)
-        rule.on: rule,
-  },
-        super(code: _requiredCode);
+         for (final rule in config.inheritances.rules)
+           // FIX: Skip core components that have their own dedicated lints.
+           // This ensures 'enforce_entity_contract' etc. are reported specifically.
+           if (rule.on != ArchComponent.entity.id &&
+               rule.on != ArchComponent.port.id &&
+               rule.on != ArchComponent.usecase.id)
+             rule.on: rule,
+       },
+       super(code: _requiredCode);
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     if (_rules.isEmpty) return;
 
     context.registry.addClassDeclaration((node) {
@@ -63,7 +63,7 @@ class EnforceCustomInheritance extends ArchitectureLintRule {
       // 1. ALLOWED CHECK
       if (rule.allowed.isNotEmpty) {
         final isAllowed = rule.allowed.any(
-              (detail) => _satisfiesDetail(element, detail),
+          (detail) => _satisfiesDetail(element, detail),
         );
         if (isAllowed) return;
       }
@@ -71,7 +71,7 @@ class EnforceCustomInheritance extends ArchitectureLintRule {
       // 2. REQUIRED CHECK
       if (rule.required.isNotEmpty) {
         final hasRequired = rule.required.any(
-              (detail) => _satisfiesDetail(element, detail),
+          (detail) => _satisfiesDetail(element, detail),
         );
 
         if (!hasRequired) {

@@ -25,7 +25,7 @@ class EnforceTypeSafety extends ArchitectureLintRule {
   );
 
   const EnforceTypeSafety({required super.config, required super.layerResolver})
-      : super(code: _returnCode);
+    : super(code: _returnCode);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
@@ -50,10 +50,10 @@ class EnforceTypeSafety extends ArchitectureLintRule {
   }
 
   void _validateReturnType(
-      MethodDeclaration node,
-      List<TypeSafetyRule> rules,
-      DiagnosticReporter reporter,
-      ) {
+    MethodDeclaration node,
+    List<TypeSafetyRule> rules,
+    DiagnosticReporter reporter,
+  ) {
     final returnTypeNode = node.returnType;
     if (returnTypeNode == null) return;
 
@@ -82,10 +82,10 @@ class EnforceTypeSafety extends ArchitectureLintRule {
   }
 
   void _validateParameters(
-      MethodDeclaration node,
-      List<TypeSafetyRule> rules,
-      DiagnosticReporter reporter,
-      ) {
+    MethodDeclaration node,
+    List<TypeSafetyRule> rules,
+    DiagnosticReporter reporter,
+  ) {
     if (node.parameters == null) return;
 
     for (final parameter in node.parameters!.parameters) {
@@ -104,7 +104,7 @@ class EnforceTypeSafety extends ArchitectureLintRule {
           if (paramTypeName == detail.unsafeType) {
             final identifierMatches =
                 detail.identifier == null ||
-                    paramName.toLowerCase().contains(detail.identifier!.toLowerCase());
+                paramName.toLowerCase().contains(detail.identifier!.toLowerCase());
 
             if (identifierMatches) {
               reporter.atNode(

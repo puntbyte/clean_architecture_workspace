@@ -1,4 +1,4 @@
-// lib/src/utils/syntax_builder.dart
+// lib/src/utils/generation/syntax_builder.dart
 
 import 'package:code_builder/code_builder.dart' as cb;
 
@@ -16,7 +16,11 @@ class SyntaxBuilder {
   ///
   /// Example: `typedef MyParams = ({int id});`
   static cb.TypeDef typeDef({required String name, required cb.Expression definition}) {
-    return cb.TypeDef((b) => b..name = name..definition = definition);
+    return cb.TypeDef(
+      (b) => b
+        ..name = name
+        ..definition = definition,
+    );
   }
 
   /// Builds a [cb.RecordType] spec.
@@ -35,7 +39,7 @@ class SyntaxBuilder {
     bool isRequired = false,
   }) {
     return cb.Parameter(
-          (b) => b
+      (b) => b
         ..name = name
         ..type = type
         ..toThis = toThis
@@ -46,10 +50,10 @@ class SyntaxBuilder {
 
   /// Builds a method or function invocation expression [cb.InvokeExpression].
   static cb.Expression call(
-      cb.Expression callee, {
-        List<cb.Expression> positional = const [],
-        Map<String, cb.Expression> named = const {},
-      }) {
+    cb.Expression callee, {
+    List<cb.Expression> positional = const [],
+    Map<String, cb.Expression> named = const {},
+  }) {
     return callee.call(positional, named);
   }
 
@@ -82,7 +86,7 @@ class SyntaxBuilder {
     bool constant = false,
   }) {
     return cb.Constructor(
-          (b) => b
+      (b) => b
         ..requiredParameters.addAll(requiredParameters)
         ..optionalParameters.addAll(optionalParameters)
         ..initializers.addAll(initializers)
@@ -102,13 +106,13 @@ class SyntaxBuilder {
     List<cb.Expression> annotations = const [],
   }) {
     return cb.Method(
-          (b) => b
+      (b) => b
         ..name = name
         ..returns = returns ?? cb.refer('void')
         ..requiredParameters.addAll(requiredParameters)
         ..annotations.addAll(annotations)
         ..lambda = isLambda
-      // Provide an empty block as a safe default for non-lambda methods.
+        // Provide an empty block as a safe default for non-lambda methods.
         ..body = body ?? (isLambda ? null : cb.Block.of([])),
     );
   }
@@ -128,12 +132,12 @@ class SyntaxBuilder {
   }) {
     return [
       cb.Class(
-            (b) => b
+        (b) => b
           ..name = useCaseName
           ..modifier = cb.ClassModifier.final$
           ..implements.add(
             cb.TypeReference(
-                  (b) => b
+              (b) => b
                 ..symbol = baseClassName.symbol
                 ..url = baseClassName.url
                 ..types.addAll(genericTypes),

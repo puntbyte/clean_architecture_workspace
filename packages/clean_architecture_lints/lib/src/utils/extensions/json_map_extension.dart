@@ -1,4 +1,4 @@
-// lib/src/utils/json_map_extension.dart
+// lib/src/utils/extensions/json_map_extension.dart
 
 /// Type alias for JSON maps used throughout the configuration parsing.
 typedef JsonMap = Map<String, dynamic>;

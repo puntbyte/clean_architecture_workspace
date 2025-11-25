@@ -15,7 +15,7 @@ class EnforceContractApi extends ArchitectureLintRule {
     name: 'enforce_contract_api',
     problemMessage: 'The public member `{0}` is not defined in the interface contract.',
     correctionMessage:
-    'Make this member private (prefix with `_`) or add it to the interface contract.',
+        'Make this member private (prefix with `_`) or add it to the interface contract.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 

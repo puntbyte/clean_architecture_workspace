@@ -5,15 +5,15 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
-// import 'package:clean_architecture_lints/src/fixes/create_to_entity_method_fix.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:collection/collection.dart';
+import 'package:clean_architecture_lints/src/utils/extensions/iterable_extension.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class RequireToEntityMethod extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'require_to_entity_method',
-    problemMessage: 'The model `{0}` must have a `toEntity()` method that returns its corresponding Entity.',
+    problemMessage:
+        'The model `{0}` must have a `toEntity()` method that returns its corresponding Entity.',
     correctionMessage: 'Add or correct the `toEntity()` method.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
@@ -41,9 +41,9 @@ class RequireToEntityMethod extends ArchitectureLintRule {
       // If it doesn't extend an Entity, this rule doesn't apply (handled by another lint maybe)
       if (entitySupertypeElement == null) return;
 
-      final toEntityMethod = node.members
-          .whereType<MethodDeclaration>()
-          .firstWhereOrNull((member) => member.name.lexeme == 'toEntity');
+      final toEntityMethod = node.members.whereType<MethodDeclaration>().firstWhereOrNull(
+        (member) => member.name.lexeme == 'toEntity',
+      );
 
       // 2. Missing Method Check
       if (toEntityMethod == null) {

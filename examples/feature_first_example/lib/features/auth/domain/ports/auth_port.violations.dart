@@ -16,8 +16,8 @@ import 'package:example/features/auth/domain/entities/user.dart';
 // Reason: Name must end with 'Port' (configured pattern: `{{name}}Port`).
 // We use 'AuthContract' here. If we used 'AuthRepository', the linter would
 // flag it as a Location Error (misplaced data repository) instead of a Naming Error.
+// ignore: enforce_semantic_naming
 abstract interface class AuthContract implements Port { // <-- LINT WARNING HERE
-
   // 4. LINT: enforce_type_safety
   // Reason: Return type must be `FutureEither`, not raw `Future`.
   Future<User> login(String username); // <-- LINT WARNING HERE

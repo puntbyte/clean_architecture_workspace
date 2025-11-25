@@ -27,10 +27,10 @@ class MissingUseCase extends ArchitectureLintRule {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     final component = layerResolver.getComponent(resolver.source.fullName);
     if (component != ArchComponent.port) return;
 
@@ -49,7 +49,6 @@ class MissingUseCase extends ArchitectureLintRule {
             !member.isGetter &&
             !member.isSetter &&
             !member.name.lexeme.startsWith('_')) {
-
           _checkMethod(
             method: member,
             repoPath: resolver.source.fullName,

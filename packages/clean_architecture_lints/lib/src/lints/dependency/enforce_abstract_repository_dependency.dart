@@ -21,7 +21,7 @@ class EnforceAbstractRepositoryDependency extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_abstract_repository_dependency',
     problemMessage:
-    'UseCases must depend on repository abstractions (Ports), not concrete implementations.',
+        'UseCases must depend on repository abstractions (Ports), not concrete implementations.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
@@ -61,10 +61,9 @@ class EnforceAbstractRepositoryDependency extends ArchitectureLintRule {
       if (targetComponent == ArchComponent.repository &&
           element is ClassElement &&
           !element.isAbstract) {
-
         // 4. UX: Try to find the Port (Interface) it implements to suggest a fix
         final abstractSupertype = element.allSupertypes.firstWhereOrNull(
-              (supertype) {
+          (supertype) {
             final superElement = supertype.element;
             final superSource = superElement.library.firstFragment.source;
 

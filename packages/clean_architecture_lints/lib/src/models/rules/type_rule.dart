@@ -1,4 +1,6 @@
-part of 'package:clean_architecture_lints/src/models/type_config.dart';
+// lib/src/models/rules/type_rule.dart
+
+part of '../type_config.dart';
 
 /// Represents a single type definition (name and optional import).
 class TypeRule {

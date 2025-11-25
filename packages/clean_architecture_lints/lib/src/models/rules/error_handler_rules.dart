@@ -1,6 +1,6 @@
 // lib/src/models/error_handlers_config.dart
 
-part of 'package:clean_architecture_lints/src/models/error_handlers_config.dart';
+part of '../error_handlers_config.dart';
 
 /// Represents a specific operation rule (e.g., "try_return Object").
 class OperationRule {
@@ -19,7 +19,6 @@ class OperationRule {
     );
   }
 }
-
 
 /// Represents a conversion rule (e.g., Exception -> Failure).
 class ConversionRule {

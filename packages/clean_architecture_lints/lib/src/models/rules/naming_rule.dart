@@ -1,6 +1,6 @@
 // lib/src/models/rules/naming_rule.dart
 
-part of 'package:clean_architecture_lints/src/models/naming_conventions_config.dart';
+part of '../naming_conventions_config.dart';
 
 class NamingRule {
   final List<String> on;
@@ -18,9 +18,7 @@ class NamingRule {
     var pattern = map.asString(ConfigKey.rule.pattern);
     final grammar = map.asStringOrNull(ConfigKey.rule.grammar);
 
-    if (pattern.isEmpty && grammar != null && grammar.isNotEmpty) {
-      pattern = '{{name}}';
-    }
+    if (pattern.isEmpty && grammar != null && grammar.isNotEmpty) pattern = '{{name}}';
 
     // A rule must have a final, valid pattern.
     if (pattern.isEmpty) return null;

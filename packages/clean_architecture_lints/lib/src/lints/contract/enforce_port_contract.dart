@@ -10,7 +10,6 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 class EnforcePortContract extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_port_contract',
-    // FIX: Updated message to say "Port interfaces" instead of "Repository interfaces"
     problemMessage: 'Port interfaces must extend the base repository class `{0}`.',
     correctionMessage: 'Add `extends {0}` to the class definition.',
   );

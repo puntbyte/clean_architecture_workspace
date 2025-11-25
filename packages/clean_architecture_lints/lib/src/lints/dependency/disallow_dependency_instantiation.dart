@@ -21,7 +21,7 @@ class DisallowDependencyInstantiation extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'disallow_dependency_instantiation',
     problemMessage:
-    'Do not instantiate architectural dependencies directly. Inject them via the constructor.',
+        'Do not instantiate architectural dependencies directly. Inject them via the constructor.',
     correctionMessage: 'Add this class to the constructor parameters instead of creating it here.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
@@ -33,10 +33,10 @@ class DisallowDependencyInstantiation extends ArchitectureLintRule {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     // Only run on "Service-like" components that should be using DI.
     // (e.g. Don't run on Entities/Models, they don't usually do DI).
     final currentComponent = layerResolver.getComponent(resolver.source.fullName);

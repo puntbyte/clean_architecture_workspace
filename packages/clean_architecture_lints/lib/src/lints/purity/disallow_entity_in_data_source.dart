@@ -39,7 +39,8 @@ class DisallowEntityInDataSource extends ArchitectureLintRule {
 
     // OPTIMIZATION: Use `addNamedType` instead of `addTypeAnnotation`.
     // `addNamedType` is triggered for every named type usage (e.g., `User`, `List`, `Future`).
-    // It automatically handles nested generics (e.g., inside `Future<User>`, it triggers for `Future` AND `User`).
+    // It automatically handles nested generics (e.g., inside `Future<User>`, it triggers for
+    // `Future` AND `User`).
     context.registry.addNamedType((node) {
       final type = node.type;
       if (type == null) return;

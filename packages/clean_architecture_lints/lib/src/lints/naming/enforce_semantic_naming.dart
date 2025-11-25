@@ -1,9 +1,11 @@
+// lib/src/lints/naming/enforce_semantic_naming.dart
+
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/string_extension.dart';
-import 'package:clean_architecture_lints/src/utils/nlp/natural_language_utils.dart';
+import 'package:clean_architecture_lints/src/utils/nlp/language_analyzer.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class EnforceSemanticNaming extends ArchitectureLintRule {
@@ -13,12 +15,12 @@ class EnforceSemanticNaming extends ArchitectureLintRule {
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
-  final NaturalLanguageUtils nlpUtils;
+  final LanguageAnalyzer analyzer;
 
   const EnforceSemanticNaming({
     required super.config,
     required super.layerResolver,
-    required this.nlpUtils,
+    required this.analyzer,
   }) : super(code: _code);
 
   @override
@@ -33,7 +35,7 @@ class EnforceSemanticNaming extends ArchitectureLintRule {
       final grammar = rule?.grammar;
       if (grammar == null || grammar.isEmpty) return;
 
-      final validator = _GrammarValidator(grammar, nlpUtils, component.label);
+      final validator = _GrammarValidator(grammar, analyzer, component.label);
       final result = validator.validate(className);
 
       if (!result.isValid) {
@@ -43,7 +45,7 @@ class EnforceSemanticNaming extends ArchitectureLintRule {
           arguments: [
             className,
             result.message ?? 'Does not follow the required grammatical structure.',
-            component.label
+            component.label,
           ],
         );
       }
@@ -54,13 +56,15 @@ class EnforceSemanticNaming extends ArchitectureLintRule {
 class _ValidationResult {
   final bool isValid;
   final String? message;
+
   const _ValidationResult.valid() : isValid = true, message = null;
+
   const _ValidationResult.invalid(this.message) : isValid = false;
 }
 
 class _GrammarValidator {
   final String grammar;
-  final NaturalLanguageUtils nlp;
+  final LanguageAnalyzer nlp;
   final String componentLabel;
 
   _GrammarValidator(this.grammar, this.nlp, this.componentLabel);
@@ -72,13 +76,19 @@ class _GrammarValidator {
     // --- 1. UseCase: Verb + Noun ---
     if (grammar == '{{verb.present}}{{noun.phrase}}') {
       if (words.length < 2) {
-        return const _ValidationResult.invalid('Name is too short. Expected "ActionSubject" (e.g. GetUser).');
+        return const _ValidationResult.invalid(
+          'Name is too short. Expected "ActionSubject" (e.g. GetUser).',
+        );
       }
       if (!nlp.isVerb(words.first)) {
-        return _ValidationResult.invalid('Must start with an action (Verb). "${words.first}" is [${_identifyPOS(words.first)}].');
+        return _ValidationResult.invalid(
+          'Must start with an action (Verb). "${words.first}" is [${_identifyPOS(words.first)}].',
+        );
       }
       if (!nlp.isNoun(words.last)) {
-        return _ValidationResult.invalid('Must end with a subject (Noun). "${words.last}" is [${_identifyPOS(words.last)}].');
+        return _ValidationResult.invalid(
+          'Must end with a subject (Noun). "${words.last}" is [${_identifyPOS(words.last)}].',
+        );
       }
       return const _ValidationResult.valid();
     }
@@ -108,20 +118,23 @@ class _GrammarValidator {
       if (token == 'noun.plural') {
         if (!nlp.isNounPlural(lastWord)) {
           return _ValidationResult.invalid(
-              'The subject "$lastWord" must be a Plural Noun. Currently identified as [${_identifyPOS(lastWord)}].'
+            'The subject "$lastWord" must be a Plural Noun. Currently identified as '
+                '[${_identifyPOS(lastWord)}].',
           );
         }
       } else if (token == 'noun.singular') {
         if (!nlp.isNounSingular(lastWord)) {
           return _ValidationResult.invalid(
-              'The subject "$lastWord" must be a Singular Noun. Currently identified as [${_identifyPOS(lastWord)}].'
+            'The subject "$lastWord" must be a Singular Noun. Currently identified as '
+                '[${_identifyPOS(lastWord)}].',
           );
         }
       } else {
         // noun.phrase (Any Noun)
         if (!nlp.isNoun(lastWord)) {
           return _ValidationResult.invalid(
-              'The subject "$lastWord" must be a Noun. Currently identified as [${_identifyPOS(lastWord)}].'
+            'The subject "$lastWord" must be a Noun. Currently identified as '
+                '[${_identifyPOS(lastWord)}].',
           );
         }
       }
@@ -144,7 +157,11 @@ class _GrammarValidator {
     if (grammar.contains('{{adjective}}|{{verb.gerund}}|{{verb.past}}')) {
       if (words.length < 2) return const _ValidationResult.invalid('Name too short for a State.');
       final lastWord = words.last;
-      final isValid = nlp.isAdjective(lastWord) || nlp.isVerbGerund(lastWord) || nlp.isVerbPast(lastWord) || nlp.isNoun(lastWord);
+      final isValid =
+          nlp.isAdjective(lastWord) ||
+              nlp.isVerbGerund(lastWord) ||
+              nlp.isVerbPast(lastWord) ||
+              nlp.isNoun(lastWord);
 
       if (!isValid) {
         return _ValidationResult.invalid(
@@ -161,7 +178,7 @@ class _GrammarValidator {
     final types = <String>[];
     if (nlp.isNounSingular(word)) types.add('Singular Noun');
     if (nlp.isNounPlural(word)) types.add('Plural Noun');
-    // Fallback if neither specific check passed but isNoun did (e.g. mass nouns)
+    // Fallback if neither specific check passed but isNoun did
     if (types.isEmpty && nlp.isNoun(word)) types.add('Noun');
 
     if (nlp.isVerb(word) && !word.toLowerCase().endsWith('ed')) types.add('Verb');

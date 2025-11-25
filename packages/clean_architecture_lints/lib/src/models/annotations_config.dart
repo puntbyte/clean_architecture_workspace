@@ -5,6 +5,7 @@ import 'package:clean_architecture_lints/src/utils/extensions/iterable_extension
 import 'package:clean_architecture_lints/src/utils/extensions/json_map_extension.dart';
 
 part 'details/annotation_detail.dart';
+
 part 'rules/annotation_rule.dart';
 
 /// The parent configuration class for all annotation rules.
@@ -28,10 +29,7 @@ class AnnotationsConfig {
     final ruleList = map.asMapList(ConfigKey.root.annotations);
 
     return AnnotationsConfig(
-      rules: ruleList
-          .map(AnnotationRule.tryFromMap)
-          .whereType<AnnotationRule>()
-          .toList(),
+      rules: ruleList.map(AnnotationRule.tryFromMap).whereType<AnnotationRule>().toList(),
     );
   }
 }

@@ -1,4 +1,4 @@
-// lib/src/utils/naming_utils.dart
+// lib/src/utils/nlp/naming_utils.dart
 
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/models/architecture_config.dart';

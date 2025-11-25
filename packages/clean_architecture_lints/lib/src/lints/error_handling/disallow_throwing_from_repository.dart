@@ -19,7 +19,7 @@ class DisallowThrowingFromRepository extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'disallow_throwing_from_repository',
     problemMessage:
-    'Repositories should not throw or rethrow exceptions. Convert them to a Failure object.',
+        'Repositories should not throw or rethrow exceptions. Convert them to a Failure object.',
     correctionMessage: 'Wrap the operation in a try/catch block and return a Failure (Left).',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
@@ -31,10 +31,10 @@ class DisallowThrowingFromRepository extends ArchitectureLintRule {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     // 1. Scope: Only runs on Repository Implementations
     final component = layerResolver.getComponent(resolver.source.fullName);
     if (component != ArchComponent.repository) return;
@@ -43,8 +43,8 @@ class DisallowThrowingFromRepository extends ArchitectureLintRule {
     final rule = config.errorHandlers.ruleFor(ArchComponent.repository.id);
 
     // Default behaviors if no config is provided (Strict Boundary)
-    bool forbidThrow = true;
-    bool forbidRethrow = true;
+    var forbidThrow = true;
+    var forbidRethrow = true;
 
     if (rule != null) {
       // If config exists, we strictly follow the 'forbidden' operations list.
@@ -56,16 +56,12 @@ class DisallowThrowingFromRepository extends ArchitectureLintRule {
 
     // 3. Check 'throw'
     if (forbidThrow) {
-      context.registry.addThrowExpression((node) {
-        reporter.atNode(node, _code);
-      });
+      context.registry.addThrowExpression((node) => reporter.atNode(node, _code));
     }
 
     // 4. Check 'rethrow'
     if (forbidRethrow) {
-      context.registry.addRethrowExpression((node) {
-        reporter.atNode(node, _code);
-      });
+      context.registry.addRethrowExpression((node) => reporter.atNode(node, _code));
     }
   }
 }

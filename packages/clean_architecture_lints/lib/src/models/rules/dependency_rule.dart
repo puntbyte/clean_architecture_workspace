@@ -1,4 +1,6 @@
-part of 'package:clean_architecture_lints/src/models/dependencies_config.dart';
+// lib/src/models/rules/dependency_rule.dart
+
+part of '../dependencies_config.dart';
 
 class DependencyRule {
   final List<String> on;
@@ -13,7 +15,6 @@ class DependencyRule {
 
     return DependencyRule(
       on: on,
-      // Pass the raw value (Map or List) to the Detail parser
       allowed: DependencyDetail.fromMap(map[ConfigKey.dependency.allowed]),
       forbidden: DependencyDetail.fromMap(map[ConfigKey.dependency.forbidden]),
     );

@@ -1,4 +1,4 @@
-// lib/src/utils/config_keys.dart
+// lib/src/utils/config/config_keys.dart
 
 /// A centralized class holding all the string keys used for parsing the
 /// `clean_architecture` block in `analysis_options.yaml`.
@@ -29,11 +29,17 @@ class _CommonKeys {
   const _CommonKeys();
 
   String get on => 'on';
+
   String get name => 'name';
+
   String get import => 'import';
+
   String get allowed => 'allowed';
+
   String get forbidden => 'forbidden';
+
   String get required => 'required';
+
   String get message => 'message';
 }
 
@@ -42,14 +48,23 @@ class _RootKeys {
   const _RootKeys();
 
   String get modules => 'module_definitions';
+
   String get layers => 'layer_definitions';
+
   String get namings => 'naming_conventions';
+
   String get typeSafeties => 'type_safeties';
+
   String get inheritances => 'inheritances';
+
   String get dependencies => 'dependencies';
+
   String get annotations => 'annotations';
+
   String get services => 'services';
+
   String get typeDefinitions => 'type_definitions';
+
   String get errorHandlers => 'error_handlers';
 }
 
@@ -58,18 +73,27 @@ class _ModuleKeys {
   const _ModuleKeys();
 
   String get type => 'type';
+
   String get layers => 'layers';
 
   String get core => 'core';
+
   String get coreDir => core;
+
   String get features => 'features';
+
   String get featuresDir => features;
 
   String get domain => 'domain';
+
   String get domainDir => domain;
+
   String get data => 'data';
+
   String get dataDir => data;
+
   String get presentation => 'presentation';
+
   String get presentationDir => presentation;
 }
 
@@ -79,42 +103,65 @@ class _LayerKeys {
 
   // Domain Layer
   String get entity => 'entity';
+
   String get entityDir => 'entities';
+
   String get usecase => 'usecase';
+
   String get usecaseDir => 'usecases';
+
   String get port => 'port';
+
   String get portDir => 'ports';
 
   // Data Layer
   String get model => 'model';
+
   String get modelDir => 'models';
+
   String get source => 'source';
+
   String get sourceDir => 'sources';
+
   String get repository => 'repository';
+
   String get repositoryDir => 'repositories';
 
   // Presentation Layer
   String get manager => 'manager';
+
   String get managerDir => 'managers';
+
   String get page => 'page';
+
   String get pageDir => 'pages';
+
   String get widget => 'widget';
+
   String get widgetDir => 'widgets';
 }
 
 class _TypeKeys {
   const _TypeKeys();
+
   String get name => 'name';
+
   String get import => 'import';
 }
 
 class _ErrorKeys {
   const _ErrorKeys();
+
   String get role => 'role';
+
   String get operation => 'operation';
+
   String get targetType => 'target_type';
+
   String get conversions => 'conversions';
+
   String get fromType => 'from_type';
+
   String get toType => 'to_type';
 }
 
@@ -124,6 +171,7 @@ class _RuleKeys {
 
   // Annotations, Inheritances, & Type Safeties Keys
   String get on => 'on';
+
   String get import => 'import';
 
   // Annotations, Inheritances, & Services Keys
@@ -131,7 +179,9 @@ class _RuleKeys {
 
   // Annotations & Inheritances keys
   String get required => 'required';
+
   String get allowed => 'allowed';
+
   String get forbidden => 'forbidden';
 
   // Annotation & Type Safeties Key
@@ -139,24 +189,31 @@ class _RuleKeys {
 
   // Namings Keys
   String get pattern => 'pattern';
+
   String get antipattern => 'antipattern';
+
   String get grammar => 'grammar';
 
   // Type Safeties Keys
   String get identifier => 'identifier';
+
   String get unsafeType => 'unsafe_type';
+
   String get safeType => 'safe_type';
 
   String get parameters => 'parameters';
+
   String get returns => 'returns';
 
   // Annotations Keys
   String get message => 'message';
+
   String get component => 'component';
 }
 
 class _ServiceKeys {
   const _ServiceKeys();
+
   String get serviceLocator => 'service_locator'; // Fixed to match yaml
   String get locatorNames => 'name';
 }
@@ -165,15 +222,20 @@ class _ProxyKeys {
   const _ProxyKeys();
 
   String get package => 'package:';
+
   String get lib => 'lib/';
 }
 
 // New keys helper
 class _DependencyKeys {
   const _DependencyKeys();
+
   String get on => 'on';
+
   String get allowed => 'allowed';
+
   String get forbidden => 'forbidden';
+
   String get component => 'component'; // Used for both layers and components
   String get package => 'package';
 }

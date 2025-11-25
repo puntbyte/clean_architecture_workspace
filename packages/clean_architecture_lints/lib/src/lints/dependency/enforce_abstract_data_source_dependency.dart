@@ -16,7 +16,7 @@ class EnforceAbstractDataSourceDependency extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_abstract_data_source_dependency',
     problemMessage:
-    'Repositories must depend on DataSource abstractions, not concrete implementations.',
+        'Repositories must depend on DataSource abstractions, not concrete implementations.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
@@ -55,10 +55,9 @@ class EnforceAbstractDataSourceDependency extends ArchitectureLintRule {
       if (targetComponent == ArchComponent.sourceImplementation &&
           element is ClassElement &&
           !element.isAbstract) {
-
         // 4. UX: Try to find the interface it implements to suggest a fix
         final abstractSupertype = element.allSupertypes.firstWhereOrNull(
-              (supertype) {
+          (supertype) {
             final superElement = supertype.element;
             final superSource = superElement.library.firstFragment.source;
 

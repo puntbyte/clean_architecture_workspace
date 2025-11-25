@@ -1,3 +1,5 @@
+// lib/src/models/details/annotation_detail.dart
+
 part of '../annotations_config.dart';
 
 /// Represents the details of a single annotation.

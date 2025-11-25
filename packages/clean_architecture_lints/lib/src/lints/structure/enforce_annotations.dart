@@ -31,11 +31,11 @@ class EnforceAnnotations extends ArchitectureLintRule {
   final Map<String, AnnotationRule> _rules;
 
   EnforceAnnotations({required super.config, required super.layerResolver})
-      : _rules = {
-    for (final rule in config.annotations.rules)
-      for (final componentId in rule.on) componentId: rule,
-  },
-        super(code: _requiredCode);
+    : _rules = {
+        for (final rule in config.annotations.rules)
+          for (final componentId in rule.on) componentId: rule,
+      },
+      super(code: _requiredCode);
 
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
@@ -133,5 +133,6 @@ class EnforceAnnotations extends ArchitectureLintRule {
 class _ResolvedAnnotation {
   final String name;
   final String? sourceUri;
+
   _ResolvedAnnotation(this.name, this.sourceUri);
 }

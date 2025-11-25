@@ -1,5 +1,6 @@
+// lib/src/fixes/create_usecase_fix.dart
+
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
@@ -8,9 +9,9 @@ import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/models/architecture_config.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/iterable_extension.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/string_extension.dart';
-import 'package:clean_architecture_lints/src/utils/nlp/naming_utils.dart';
 import 'package:clean_architecture_lints/src/utils/file/path_utils.dart';
-import 'package:clean_architecture_lints/src/utils/codegen/syntax_builder.dart';
+import 'package:clean_architecture_lints/src/utils/generation/syntax_builder.dart';
+import 'package:clean_architecture_lints/src/utils/nlp/naming_utils.dart';
 import 'package:code_builder/code_builder.dart' as cb;
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:dart_style/dart_style.dart';
@@ -22,12 +23,12 @@ class CreateUseCaseFix extends DartFix {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      ChangeReporter reporter,
-      CustomLintContext context,
-      Diagnostic diagnostic,
-      List<Diagnostic> others,
-      ) {
+    CustomLintResolver resolver,
+    ChangeReporter reporter,
+    CustomLintContext context,
+    Diagnostic diagnostic,
+    List<Diagnostic> others,
+  ) {
     context.addPostRunCallback(() async {
       final resolvedUnit = await resolver.getResolvedUnitResult();
       final resourceProvider = resolvedUnit.session.resourceProvider;
@@ -49,35 +50,35 @@ class CreateUseCaseFix extends DartFix {
 
       reporter
           .createChangeBuilder(
-        message: 'Create UseCase for `${methodNode.name.lexeme}`',
-        priority: 90,
-      )
+            message: 'Create UseCase for `${methodNode.name.lexeme}`',
+            priority: 90,
+          )
           .addDartFileEdit(
             (DartFileEditBuilder builder) {
-          // 1. Collect Imports
-          final imports = _collectImports(method: methodNode, repoNode: repoNode);
+              // 1. Collect Imports (Config + Type Analysis)
+              final imports = _collectImports(method: methodNode, repoNode: repoNode);
 
-          // 2. Build Library
-          final library = _buildUseCaseLibrary(
-            method: methodNode,
-            repoNode: repoNode,
-            imports: imports,
-          );
+              // 2. Build Library
+              final library = _buildUseCaseLibrary(
+                method: methodNode,
+                repoNode: repoNode,
+                imports: imports,
+              );
 
-          final emitter = cb.DartEmitter(useNullSafetySyntax: true);
-          final raw = library.accept(emitter).toString();
+              final emitter = cb.DartEmitter(useNullSafetySyntax: true);
+              final raw = library.accept(emitter).toString();
 
-          final formattedCode = DartFormatter(
-            languageVersion: DartFormatter.latestLanguageVersion,
-          ).format(raw);
+              final formattedCode = DartFormatter(
+                languageVersion: DartFormatter.latestLanguageVersion,
+              ).format(raw);
 
-          builder.addInsertion(
-            0,
+              builder.addInsertion(
+                0,
                 (EditBuilder editBuilder) => editBuilder.write(formattedCode),
+              );
+            },
+            customPath: useCaseFilePath,
           );
-        },
-        customPath: useCaseFilePath,
-      );
     });
   }
 
@@ -86,9 +87,7 @@ class CreateUseCaseFix extends DartFix {
     required ClassDeclaration repoNode,
     required Set<String> imports,
   }) {
-    final directives = imports
-        .map((url) => cb.Directive.import(url))
-        .toList()
+    final directives = imports.map(cb.Directive.import).toList()
       ..sort((a, b) => a.url.compareTo(b.url));
 
     final bodyElements = <cb.Spec>[];
@@ -99,9 +98,7 @@ class CreateUseCaseFix extends DartFix {
 
     final rules = config.inheritances.ruleFor(ArchComponent.usecase.id)?.required ?? [];
 
-    final configuredUnary = rules
-        .firstWhereOrNull((d) => d.name?.contains('Unary') ?? false)
-        ?.name;
+    final configuredUnary = rules.firstWhereOrNull((d) => d.name?.contains('Unary') ?? false)?.name;
 
     final configuredNullary = rules
         .firstWhereOrNull((d) => d.name?.contains('Nullary') ?? false)
@@ -140,9 +137,11 @@ class CreateUseCaseFix extends DartFix {
       ),
     );
 
-    return cb.Library((b) => b
-      ..directives.addAll(directives)
-      ..body.addAll(bodyElements));
+    return cb.Library(
+      (b) => b
+        ..directives.addAll(directives)
+        ..body.addAll(bodyElements),
+    );
   }
 
   Set<String> _collectImports({
@@ -152,7 +151,7 @@ class CreateUseCaseFix extends DartFix {
     final importedUris = <String>{};
 
     void addImport(String? uri) {
-      if (uri != null && !uri.startsWith('dart:core')) {
+      if (uri != null && uri.isNotEmpty && !uri.startsWith('dart:core')) {
         importedUris.add(uri);
       }
     }
@@ -161,22 +160,23 @@ class CreateUseCaseFix extends DartFix {
     final repoLibrary = repoNode.declaredFragment?.element.library;
     addImport(repoLibrary?.firstFragment.source.uri.toString());
 
-    // 2. Inheritance Config Imports (NullaryUsecase, UnaryUsecase)
+    // 2. Inheritance Imports (e.g. 'package:example/core/usecase/usecase.dart')
     config.inheritances.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) {
       addImport(d.import);
     });
 
-    // 3. Annotation Imports (Injectable)
+    // 3. Annotation Imports (e.g. 'package:injectable/injectable.dart')
     config.annotations.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) {
       addImport(d.import);
     });
 
-    // 4. Type Safety Imports (FutureEither)
+    // 4. Type Safety Imports (e.g. 'package:example/core/utils/types.dart')
     for (final rule in config.typeSafeties.rules) {
-      for (final d in rule.returns) addImport(d.import);
+      for (final d in rule.returns) { addImport(d.import); }
+      for (final d in rule.parameters) { addImport(d.import); }
     }
 
-    // 5. Method Type Imports
+    // 5. Method Signature Imports (Deep Traversal)
     void collectFromType(DartType? type) {
       if (type == null) return;
       if (type is VoidType || type is DynamicType) return;
@@ -186,14 +186,14 @@ class CreateUseCaseFix extends DartFix {
         addImport(element.library?.firstFragment.source.uri.toString());
       }
 
-      if (type is InterfaceType) {
-        for (final arg in type.typeArguments) collectFromType(arg);
-      }
+      // Recurse into type arguments (e.g. Future<Either<Failure, User>>)
+      if (type is InterfaceType) type.typeArguments.forEach(collectFromType);
 
+      // Recurse into Type Aliases (e.g. typedef FutureEither<T> = Future<Either<Failure, T>>)
       if (type.alias != null) {
         final aliasElement = type.alias!.element;
         addImport(aliasElement.library.firstFragment.source.uri.toString());
-        for (final arg in type.alias!.typeArguments) collectFromType(arg);
+        type.alias!.typeArguments.forEach(collectFromType);
       }
     }
 
@@ -226,9 +226,9 @@ class CreateUseCaseFix extends DartFix {
 
       if (astInfo.name == null) {
         return UseCaseGenerationConfig(
-            baseClassName: cb.refer(nullaryName),
-            genericTypes: [outputType],
-            callParams: []
+          baseClassName: cb.refer(nullaryName),
+          genericTypes: [outputType],
+          callParams: [],
         );
       }
 

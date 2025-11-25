@@ -23,21 +23,21 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
     required super.config,
     required super.layerResolver,
   }) : _wrapperTypeNames = {
-    ...config.typeSafeties.rules
-        .expand((rule) => rule.returns)
-        .map((detail) => detail.safeType),
-    'Right',
-    'Left',
-    'Either',
-  },
-        super(code: _code);
+         ...config.typeSafeties.rules
+             .expand((rule) => rule.returns)
+             .map((detail) => detail.safeType),
+         'Right',
+         'Left',
+         'Either',
+       },
+       super(code: _code);
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     final component = layerResolver.getComponent(resolver.source.fullName);
     if (component != ArchComponent.repository) return;
 
@@ -52,10 +52,9 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
 
       // Only enforce this rule if the method is implementing a Repository Contract
       if (SemanticUtils.isArchitecturalOverride(methodElement, layerResolver)) {
-
         // STRATEGY 1: Inspect Wrappers (Right(model), Success(model))
         if (expression is InstanceCreationExpression) {
-          final typeName = expression.constructorName.type.name2.lexeme;
+          final typeName = expression.constructorName.type.name.lexeme;
           if (_isSuccessWrapper(typeName)) {
             final arg = expression.argumentList.arguments.firstOrNull;
             if (arg != null && _isModelType(arg.staticType)) {

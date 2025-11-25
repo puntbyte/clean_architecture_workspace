@@ -13,7 +13,7 @@ class EnforceRepositoryContract extends ArchitectureLintRule {
     name: 'enforce_repository_contract',
     // FIX: Updated message to match the test expectation ("Port interface")
     problemMessage:
-    'Repository implementations must implement a Port interface from the domain layer.',
+        'Repository implementations must implement a Port interface from the domain layer.',
     correctionMessage: 'Add `implements YourPortInterface` to the class definition.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
@@ -25,10 +25,10 @@ class EnforceRepositoryContract extends ArchitectureLintRule {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     if (layerResolver.getComponent(resolver.source.fullName) != ArchComponent.repository) return;
 
     context.registry.addClassDeclaration((node) {
@@ -42,9 +42,7 @@ class EnforceRepositoryContract extends ArchitectureLintRule {
         return layerResolver.getComponent(source.fullName) == ArchComponent.port;
       });
 
-      if (!hasPortSupertype) {
-        reporter.atToken(node.name, _code);
-      }
+      if (!hasPortSupertype) reporter.atToken(node.name, _code);
     });
   }
 }

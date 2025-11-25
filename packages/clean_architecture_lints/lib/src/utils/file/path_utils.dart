@@ -45,10 +45,10 @@ class PathUtils {
 
   /// Calculates the absolute path to the correct `usecases` directory.
   static String? getUseCasesDirectoryPath(
-      String repoPath,
-      ArchitectureConfig config,
-      ResourceProvider resourceProvider,
-      ) {
+    String repoPath,
+    ArchitectureConfig config,
+    ResourceProvider resourceProvider,
+  ) {
     final projectRoot = findProjectRoot(repoPath, resourceProvider);
     final segments = _getRelativePathSegments(repoPath);
 
@@ -65,7 +65,14 @@ class PathUtils {
         segments.length >= 2 &&
         segments.first == modules.features) {
       final featureName = segments[1];
-      return context.join(projectRoot, 'lib', modules.features, featureName, modules.domain, useCaseDirName);
+      return context.join(
+        projectRoot,
+        'lib',
+        modules.features,
+        featureName,
+        modules.domain,
+        useCaseDirName,
+      );
     }
 
     // Handle layer-first architecture

@@ -9,3 +9,4 @@ abstract interface class AuthPort implements Repository {
   FutureEither<User> login(String username, String password);
   FutureEither<void> logout();
 }
+

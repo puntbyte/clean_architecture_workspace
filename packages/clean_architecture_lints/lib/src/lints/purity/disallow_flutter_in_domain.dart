@@ -43,7 +43,8 @@ class DisallowFlutterInDomain extends ArchitectureLintRule {
     });
 
     // 2. Check for forbidden types in code (Implicit check).
-    // Catches cases where type is inferred or used without direct import (rare but possible with exports).
+    // Catches cases where type is inferred or used without direct import (rare but possible with
+    // exports).
     context.registry.addNamedType((node) {
       final element = node.element;
       if (element == null) return;

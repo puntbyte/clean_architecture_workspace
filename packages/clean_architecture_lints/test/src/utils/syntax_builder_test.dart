@@ -1,6 +1,6 @@
 // test/src/utils/syntax_builder_test.dart
 
-import 'package:clean_architecture_lints/src/utils/codegen/syntax_builder.dart';
+import 'package:clean_architecture_lints/src/utils/generation/syntax_builder.dart';
 import 'package:code_builder/code_builder.dart' as cb;
 import 'package:dart_style/dart_style.dart';
 import 'package:test/test.dart';

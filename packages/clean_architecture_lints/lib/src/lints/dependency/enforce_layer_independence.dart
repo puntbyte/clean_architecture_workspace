@@ -1,3 +1,5 @@
+// lib/src/lints/dependency/enforce_layer_independence.dart
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
@@ -5,7 +7,6 @@ import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
 import 'package:clean_architecture_lints/src/models/dependencies_config.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
-// Import path to handle normalization correctly
 import 'package:path/path.dart' as p;
 
 class EnforceLayerIndependence extends ArchitectureLintRule {
@@ -34,17 +35,17 @@ class EnforceLayerIndependence extends ArchitectureLintRule {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     final sourceComponent = layerResolver.getComponent(resolver.source.fullName);
     if (sourceComponent == ArchComponent.unknown) return;
 
     final componentRule = config.dependencies.ruleFor(sourceComponent.id);
     final layerRule = config.dependencies.ruleFor(sourceComponent.layer.id);
 
-    final rules = [if (componentRule != null) componentRule, if (layerRule != null) layerRule];
+    final rules = [?componentRule, ?layerRule];
     if (rules.isEmpty) return;
 
     context.registry.addImportDirective((node) {

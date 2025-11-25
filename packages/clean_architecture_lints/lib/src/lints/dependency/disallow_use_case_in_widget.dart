@@ -49,9 +49,7 @@ class DisallowUseCaseInWidget extends ArchitectureLintRule {
       // 3. Validate: Is the referenced type a UseCase?
       final targetComponent = layerResolver.getComponent(source.fullName);
 
-      if (targetComponent == ArchComponent.usecase) {
-        reporter.atNode(node, _code);
-      }
+      if (targetComponent == ArchComponent.usecase) reporter.atNode(node, _code);
     });
   }
 }

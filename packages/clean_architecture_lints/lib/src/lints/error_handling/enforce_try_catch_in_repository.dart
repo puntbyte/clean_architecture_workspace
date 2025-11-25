@@ -5,7 +5,6 @@ import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:clean_architecture_lints/src/models/error_handlers_config.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 /// A lint that ensures calls to a DataSource within a repository are wrapped in a try-catch block.
@@ -28,10 +27,10 @@ class EnforceTryCatchInRepository extends ArchitectureLintRule {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     final component = layerResolver.getComponent(resolver.source.fullName);
 
     // 1. Check Configuration
@@ -53,7 +52,8 @@ class EnforceTryCatchInRepository extends ArchitectureLintRule {
       // 3. Check Target Component
       // We specifically enforce this for interactions with DataSources.
       final targetComponent = layerResolver.getComponent(source.fullName);
-      final isDataSource = targetComponent == ArchComponent.sourceInterface ||
+      final isDataSource =
+          targetComponent == ArchComponent.sourceInterface ||
           targetComponent == ArchComponent.sourceImplementation ||
           targetComponent == ArchComponent.source;
 

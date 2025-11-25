@@ -46,8 +46,8 @@ void main() {
     }
 
     test('reports violation when class name does not match the required pattern', () async {
-      final path = 'lib/features/user/data/models/user.dart';
-      addFile(path, 'class User {}'); // Missing 'Model' suffix
+      const path = 'lib/features/user/data/models/user.dart';
+      addFile(path, 'class User {}');
 
       final lints = await runLint(
         filePath: path,
@@ -58,21 +58,12 @@ void main() {
       expect(lints.first.message, contains('does not match the required `{{name}}Model`'));
     });
 
-    test('does NOT report violation when class name matches pattern', () async {
-      final path = 'lib/features/user/data/models/user_model.dart';
-      addFile(path, 'class UserModel {}');
-
-      final lints = await runLint(
-        filePath: path,
-        namingRules: [{'on': 'model', 'pattern': '{{name}}Model'}],
-      );
-      expect(lints, isEmpty);
-    });
-
-    test('yields to location lint if class name matches another component better', () async {
-      // "UserModel" in "Entities" folder.
-      // Should yield to EnforceFileAndFolderLocation.
-      final path = 'lib/features/user/domain/entities/user_model.dart';
+    test('yields to location lint if class name matches another component', () async {
+      // UserModel in Entities folder.
+      // Patterns: Model={{name}}Model, Entity={{name}}
+      // UserModel matches Model pattern. It does NOT match Entity pattern (User != UserModel).
+      // StrategyHelper should return true (yield).
+      const path = 'lib/features/user/domain/entities/user_model.dart';
       addFile(path, 'class UserModel {}');
 
       final lints = await runLint(

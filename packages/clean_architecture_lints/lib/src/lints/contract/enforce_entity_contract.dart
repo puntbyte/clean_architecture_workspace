@@ -1,3 +1,5 @@
+// lib/src/lints/contract/enforce_entity_contract.dart
+
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/listener.dart';
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
@@ -24,10 +26,10 @@ class EnforceEntityContract extends ArchitectureLintRule {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     if (layerResolver.getComponent(resolver.source.fullName) != ArchComponent.entity) return;
 
     context.registry.addClassDeclaration((node) {
@@ -37,18 +39,18 @@ class EnforceEntityContract extends ArchitectureLintRule {
       if (element == null) return;
 
       final customRule = config.inheritances.ruleFor(ArchComponent.entity.id);
-      final requiredSupertypes = customRule?.required.isNotEmpty == true
+      final requiredSupertypes = customRule?.required.isNotEmpty ?? false
           ? customRule!.required
           : [
-        _defaultRule,
-        InheritanceDetail(
-          name: 'Entity',
-          import: 'package:${context.pubspec.name}/core/entity/entity.dart',
-        ),
-      ];
+              _defaultRule,
+              InheritanceDetail(
+                name: 'Entity',
+                import: 'package:${context.pubspec.name}/core/entity/entity.dart',
+              ),
+            ];
 
       final hasCorrectSupertype = requiredSupertypes.any(
-            (detail) => _hasSupertype(element, detail),
+        (detail) => _hasSupertype(element, detail),
       );
 
       if (!hasCorrectSupertype) {

@@ -16,9 +16,8 @@ class EnforceExceptionOnDataSource extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_exception_on_data_source',
     problemMessage:
-    'DataSources should throw exceptions on failure, not return wrapper types like `{0}`.',
-    correctionMessage:
-    'Change the return type to `{1}` and throw specific exceptions on failure.',
+        'DataSources should throw exceptions on failure, not return wrapper types like `{0}`.',
+    correctionMessage: 'Change the return type to `{1}` and throw specific exceptions on failure.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
@@ -29,14 +28,15 @@ class EnforceExceptionOnDataSource extends ArchitectureLintRule {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     final component = layerResolver.getComponent(resolver.source.fullName);
 
     // Check if this is a DataSource (Interface, Implementation, or generic).
-    final isDataSource = component == ArchComponent.source ||
+    final isDataSource =
+        component == ArchComponent.source ||
         component == ArchComponent.sourceInterface ||
         component == ArchComponent.sourceImplementation;
 
@@ -75,7 +75,8 @@ class EnforceExceptionOnDataSource extends ArchitectureLintRule {
   }
 
   /// Resolves a type name from the `type_definitions` config.
-  /// If the input matches a key (e.g., 'result.wrapper'), returns the defined name (e.g., 'FutureEither').
+  /// If the input matches a key (e.g., 'result.wrapper'), returns the defined name (e.g.,
+  /// 'FutureEither').
   /// Otherwise, returns the input as-is (assuming it's a raw class name).
   String _resolveTypeName(String key) {
     final definition = config.typeDefinitions.get(key);

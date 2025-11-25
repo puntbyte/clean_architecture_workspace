@@ -3,23 +3,6 @@
 import 'package:clean_architecture_lints/src/utils/config/config_keys.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/json_map_extension.dart';
 
-/// Defines the project structure strategy with type-safe parsing.
-enum ModuleType {
-  layerFirst('layer_first'),
-  featureFirst('feature_first'),
-  unknown('unknown');
-
-  final String name;
-
-  const ModuleType(this.name);
-
-  /// Parses a string into a ModuleType, defaulting to unknown if invalid.
-  static ModuleType fromString(String value) => ModuleType.values.firstWhere(
-    (type) => type.name == value,
-    orElse: () => ModuleType.unknown,
-  );
-}
-
 /// Strongly-typed representation of the `module_definitions` configuration block.
 class ModuleConfig {
   final ModuleType type;
@@ -60,4 +43,22 @@ class ModuleConfig {
     final typeText = map.asString(ConfigKey.module.type, orElse: ModuleType.featureFirst.name);
     return ModuleType.fromString(typeText);
   }
+}
+
+/// Defines the project structure strategy with type-safe parsing.
+enum ModuleType {
+  layerFirst('layer_first'),
+  featureFirst('feature_first'),
+  unknown('unknown')
+  ;
+
+  final String name;
+
+  const ModuleType(this.name);
+
+  /// Parses a string into a ModuleType, defaulting to unknown if invalid.
+  static ModuleType fromString(String value) => ModuleType.values.firstWhere(
+    (type) => type.name == value,
+    orElse: () => ModuleType.unknown,
+  );
 }

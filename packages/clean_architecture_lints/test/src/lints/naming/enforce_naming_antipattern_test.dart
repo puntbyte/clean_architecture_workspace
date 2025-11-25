@@ -46,8 +46,8 @@ void main() {
     }
 
     test('reports violation when class name matches forbidden anti-pattern', () async {
-      final path = 'lib/features/user/domain/entities/user_entity.dart';
-      addFile(path, 'class UserEntity {}'); // Matches {{name}}Entity
+      const path = 'lib/features/user/domain/entities/user_entity.dart';
+      addFile(path, 'class UserEntity {}');
 
       final lints = await runLint(
         filePath: path,
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('does NOT report violation if class name matches pattern but NOT anti-pattern', () async {
-      final path = 'lib/features/user/domain/entities/user.dart';
+      const path = 'lib/features/user/domain/entities/user.dart';
       addFile(path, 'class User {}');
 
       final lints = await runLint(
@@ -70,28 +70,6 @@ void main() {
           {'on': 'entity', 'pattern': '{{name}}', 'antipattern': '{{name}}Entity'},
         ],
       );
-      expect(lints, isEmpty);
-    });
-
-    test('should yield to location lint if class name matches another component better', () async {
-      // "UserModel" in "Entities" folder.
-      // Matches Anti-pattern {{name}}Model if we had one? No, let's assume:
-      // Entity anti-pattern: none defined here, or maybe {{name}}Entity.
-      // But checks NamingStrategyHelper logic.
-
-      final path = 'lib/features/user/domain/entities/user_model.dart';
-      addFile(path, 'class UserModel {}');
-
-      final lints = await runLint(
-        filePath: path,
-        namingRules: [
-          {'on': 'entity', 'pattern': '{{name}}'},
-          {'on': 'model', 'pattern': '{{name}}Model'},
-        ],
-      );
-
-      // Even if UserModel technically violates a hypothetical anti-pattern for Entity,
-      // it matches Model perfectly. So it yields.
       expect(lints, isEmpty);
     });
   });

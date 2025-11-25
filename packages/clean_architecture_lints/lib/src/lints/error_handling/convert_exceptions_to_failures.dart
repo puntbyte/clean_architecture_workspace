@@ -1,9 +1,10 @@
+// lib/src/lints/error_handling/convert_exceptions_to_failures.dart
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
-import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/lints/architecture_lint_rule.dart';
 import 'package:clean_architecture_lints/src/models/error_handlers_config.dart';
 import 'package:clean_architecture_lints/src/models/type_config.dart';
@@ -33,14 +34,15 @@ class ConvertExceptionsToFailures extends ArchitectureLintRule {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     final component = layerResolver.getComponent(resolver.source.fullName);
 
     // 1. Config Lookup
-    final rule = config.errorHandlers.ruleFor(component.id) ??
+    final rule =
+        config.errorHandlers.ruleFor(component.id) ??
         config.errorHandlers.ruleFor(component.layer.id);
 
     if (rule == null || rule.conversions.isEmpty) return;
@@ -59,24 +61,26 @@ class ConvertExceptionsToFailures extends ArchitectureLintRule {
       final caughtExceptionName = exceptionType?.element?.name ?? 'Exception';
 
       // 3. Inspect the Return Statement(s) in the Catch Block
-      bool hasValidReturn = false;
+      var hasValidReturn = false;
 
       // We traverse the catch block to find return statements.
       // Note: This simple traversal doesn't handle nested functions inside the catch block,
       // but is sufficient for standard repo patterns.
-      node.body.visitChildren(_ReturnStatementVisitor((returnNode) {
-        if (_isValidReturn(returnNode, conversion.toType)) {
-          hasValidReturn = true;
-        } else {
-          // Found a return, but it's wrong type. Report it specifically.
-          reporter.atNode(
-            returnNode,
-            _code,
-            arguments: [expectedFailureName, caughtExceptionName],
-          );
-          hasValidReturn = true; // Mark as visited/reported to avoid double reporting
-        }
-      }));
+      node.body.visitChildren(
+        _ReturnStatementVisitor((returnNode) {
+          if (_isValidReturn(returnNode, conversion.toType)) {
+            hasValidReturn = true;
+          } else {
+            // Found a return, but it's wrong type. Report it specifically.
+            reporter.atNode(
+              returnNode,
+              _code,
+              arguments: [expectedFailureName, caughtExceptionName],
+            );
+            hasValidReturn = true; // Mark as visited/reported to avoid double reporting
+          }
+        }),
+      );
 
       // If we didn't find ANY return statement (e.g. it rethrows or just logs),
       // other lints (disallow_throwing) might catch it, or it might be void.
@@ -122,8 +126,7 @@ class ConvertExceptionsToFailures extends ArchitectureLintRule {
       if (arg != null && _matchesType(arg.staticType, targetTypeDef)) {
         return true;
       }
-    }
-    else if (expression is MethodInvocation) {
+    } else if (expression is MethodInvocation) {
       // Check method args: left(ServerFailure())
       final arg = expression.argumentList.arguments.firstOrNull;
       if (arg != null && _matchesType(arg.staticType, targetTypeDef)) {
@@ -156,6 +159,7 @@ class ConvertExceptionsToFailures extends ArchitectureLintRule {
 /// A simple visitor to find ReturnStatements inside a block.
 class _ReturnStatementVisitor extends RecursiveAstVisitor<void> {
   final void Function(ReturnStatement) onReturn;
+
   _ReturnStatementVisitor(this.onReturn);
 
   @override
