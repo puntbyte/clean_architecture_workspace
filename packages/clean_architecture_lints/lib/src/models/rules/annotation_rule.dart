@@ -1,8 +1,6 @@
 // lib/src/models/rules/annotation_rule.dart
-
 part of '../configs/annotations_config.dart';
 
-/// Represents a complete annotation rule for architectural components.
 class AnnotationRule {
   final List<String> on;
   final List<AnnotationDetail> required;
@@ -16,66 +14,62 @@ class AnnotationRule {
     this.forbidden = const [],
   });
 
-  /// Creates an instance from a map, returning null if essential data is missing.
   static AnnotationRule? tryFromMap(Map<String, dynamic> map) {
     final on = map.asStringList(ConfigKey.rule.on);
     if (on.isEmpty) return null;
 
     return AnnotationRule(
       on: on,
-      required: _parseDetails(map, ConfigKey.rule.required),
-      forbidden: _parseDetails(map, ConfigKey.rule.forbidden),
-      allowed: _parseDetails(map, ConfigKey.rule.allowed),
+      required: _parseDetails(map[ConfigKey.rule.required]),
+      forbidden: _parseDetails(map[ConfigKey.rule.forbidden]),
+      allowed: _parseDetails(map[ConfigKey.rule.allowed]),
     );
   }
 
-  /// Parses details for a given key (required/forbidden/allowed).
-  static List<AnnotationDetail> _parseDetails(Map<String, dynamic> map, String key) {
-    final data = map[key];
+  /// Parses the 'required', 'allowed', or 'forbidden' block.
+  /// Can be a List of Maps OR a single Map with a list of names.
+  static List<AnnotationDetail> _parseDetails(dynamic data) {
+    if (data == null) return [];
 
-    if (data is Map<String, dynamic>) return _parseSingleDetailMap(data);
+    // Case 1: List of Maps (Old format or explicit details)
+    // forbidden: [ {name: 'A'}, {name: 'B'} ]
+    if (data is List) {
+      return data
+          .whereType<Map<String, dynamic>>()
+          .expand(_parseSingleMapEntry) // Handle expansion within list items too
+          .toList();
+    }
 
-    if (data is List) return _parseDetailList(data);
+    // Case 2: Single Map (New format with shared import)
+    // forbidden: { name: ['A', 'B'], import: 'pkg' }
+    if (data is Map) {
+      return _parseSingleMapEntry(data.cast<String, dynamic>());
+    }
 
     return [];
   }
 
-  /// Parses a single detail map, handling list name expansion.
-  static List<AnnotationDetail> _parseSingleDetailMap(Map<String, dynamic> data) {
-    final nameValue = data['name'];
-    if (nameValue is List) return _expandNameList(nameValue, data['import'] as String?);
+  /// Parses a single map entry, expanding if 'name' is a list.
+  static List<AnnotationDetail> _parseSingleMapEntry(Map<String, dynamic> map) {
+    final nameValue = map[ConfigKey.rule.name];
+    final importValue = map[ConfigKey.rule.import] as String?;
 
-    final detail = AnnotationDetail.tryFromMap(data);
-    return detail != null ? [detail] : [];
-  }
-
-  /// Creates multiple AnnotationDetail instances from a list of names.
-  static List<AnnotationDetail> _expandNameList(List<dynamic> nameValue, String? import) {
-    return nameValue
-        .whereType<String>()
-        .where((name) => name.isNotEmpty)
-        .map((name) => AnnotationDetail(name: name, import: import))
-        .toList();
-  }
-
-  /// Parses a list of detail maps, expanding any with list names.
-  static List<AnnotationDetail> _parseDetailList(List<dynamic> data) {
-    return data
-        .whereType<Map<String, dynamic>>()
-        .expand(_expandIfNameIsList)
-        .map(AnnotationDetail.tryFromMap)
-        .whereType<AnnotationDetail>()
-        .toList();
-  }
-
-  /// Expands a detail map with a list of names into multiple maps.
-  static List<Map<String, dynamic>> _expandIfNameIsList(Map<String, dynamic> item) {
-    final nameValue = item['name'];
+    // Expansion: name: ['A', 'B'] -> [Detail(A, import), Detail(B, import)]
     if (nameValue is List) {
-      return [
-        for (final name in nameValue) {'name': name, 'import': item['import']},
-      ];
+      return nameValue.map((n) {
+        var name = n.toString();
+        if (name.startsWith('@')) name = name.substring(1);
+        return AnnotationDetail(name: name, import: importValue);
+      }).toList();
     }
-    return [item];
+
+    // Single: name: 'A'
+    if (nameValue is String) {
+      var name = nameValue;
+      if (name.startsWith('@')) name = name.substring(1);
+      return [AnnotationDetail(name: name, import: importValue)];
+    }
+
+    return [];
   }
 }

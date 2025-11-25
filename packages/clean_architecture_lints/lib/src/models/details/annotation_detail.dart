@@ -14,10 +14,12 @@ class AnnotationDetail {
 
   static AnnotationDetail? tryFromMap(Map<String, dynamic> map) {
     var name = map.asString(ConfigKey.rule.name);
+
+    // If name is missing in the map, check if it was passed via parent expansion logic
+    // (This method usually takes a map representing ONE detail)
     if (name.isEmpty) return null;
 
-    // FIX: Automatically strip '@' if the user included it in the config.
-    // The Analyzer AST exposes the name without the '@', so we must match that.
+    // Strip '@' if present
     if (name.startsWith('@')) {
       name = name.substring(1);
     }

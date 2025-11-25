@@ -10,41 +10,27 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 /// Enforces that classes have required annotations or do not have forbidden annotations.
 class EnforceAnnotations extends ArchitectureLintRule {
-  static const _requiredCode = LintCode(
-    name: 'enforce_annotations_required',
-    problemMessage: 'This {0} is missing the required `@{1}` annotation.',
+  static const _code = LintCode(
+    name: 'enforce_annotations',
+    problemMessage: '{0}',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
-  static const _forbiddenCode = LintCode(
-    name: 'enforce_annotations_forbidden',
-    problemMessage: 'This {0} must not have the `@{1}` annotation.',
-    errorSeverity: DiagnosticSeverity.WARNING,
-  );
-
-  static const _forbiddenImportCode = LintCode(
-    name: 'enforce_annotations_forbidden_import',
-    problemMessage: 'The import `{0}` is forbidden because it contains the `@{1}` annotation.',
-    errorSeverity: DiagnosticSeverity.WARNING,
-  );
-
-  final Map<String, AnnotationRule> _rules;
-
-  EnforceAnnotations({required super.config, required super.layerResolver})
-    : _rules = {
-        for (final rule in config.annotations.rules)
-          for (final componentId in rule.on) componentId: rule,
-      },
-      super(code: _requiredCode);
+  const EnforceAnnotations({
+    required super.config,
+    required super.layerResolver,
+  }) : super(code: _code);
 
   @override
-  void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    if (_rules.isEmpty) return;
-
+  void run(
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     final component = layerResolver.getComponent(resolver.source.fullName);
     if (component == ArchComponent.unknown) return;
 
-    final rule = _rules[component.id];
+    final rule = config.annotations.ruleFor(component.id);
     if (rule == null) return;
 
     // 1. Check Imports (Flag forbidden packages)
@@ -56,53 +42,92 @@ class EnforceAnnotations extends ArchitectureLintRule {
         if (forbidden.import != null && _matchesImport(uriString, forbidden.import!)) {
           reporter.atNode(
             node,
-            _forbiddenImportCode,
-            arguments: [uriString, forbidden.name],
+            _code,
+            arguments: [
+              'The import `$uriString` is forbidden because it contains the `@${forbidden.name}` annotation.',
+            ],
           );
+
+          return;
         }
       }
     });
 
-    // 2. Check Class Declaration (Flag usage & missing)
-    context.registry.addClassDeclaration((node) {
-      final declaredAnnotations = _getDeclaredAnnotations(node);
+    // 2. Check Declarations (Forbidden & Required usage)
+    context.registry.addAnnotatedNode((node) {
+      // Filter: We only care about Type definitions (Class, Mixin, Enum)
+      if (node is! NamedCompilationUnitMember) return;
+      if (node is! ClassDeclaration && node is! MixinDeclaration && node is! EnumDeclaration) {
+        return;
+      }
 
-      // Check Forbidden
-      for (final forbidden in rule.forbidden) {
-        if (_hasAnnotation(declaredAnnotations, forbidden)) {
-          reporter.atToken(
-            node.name,
-            _forbiddenCode,
-            arguments: [component.label, forbidden.name],
-          );
+      // A. Check Forbidden (Iterate annotations)
+      final declaredAnnotations = <_ResolvedAnnotation>[];
+
+      for (final annotation in node.metadata) {
+        final resolved = _resolveAnnotation(annotation);
+        if (resolved == null) continue;
+        declaredAnnotations.add(resolved);
+
+        for (final forbidden in rule.forbidden) {
+          if (forbidden.name == resolved.name) {
+            // Check import if configured
+            if (forbidden.import != null && resolved.sourceUri != null) {
+              if (!_matchesImport(resolved.sourceUri!, forbidden.import!)) continue;
+            }
+
+            // Report on the annotation itself
+            reporter.atNode(
+              annotation,
+              _code,
+              arguments: [
+                'This ${component.label} must not have the `@${forbidden.name}` annotation.',
+              ],
+            );
+          }
         }
       }
 
-      // Check Required
+      // B. Check Required (Check list)
       for (final required in rule.required) {
         if (!_hasAnnotation(declaredAnnotations, required)) {
           reporter.atToken(
             node.name,
-            _requiredCode,
-            arguments: [component.label, required.name],
+            _code,
+            arguments: [
+              'This ${component.label} is missing the required `@${required.name}` annotation.',
+            ],
           );
         }
       }
     });
   }
 
-  /// Checks if the list of annotations on the class contains the target annotation.
+  _ResolvedAnnotation? _resolveAnnotation(Annotation node) {
+    // Handle Simple (@Injectable) vs Prefixed (@inject.Injectable)
+    String? name;
+    final id = node.name;
+    if (id is SimpleIdentifier) {
+      name = id.name;
+    } else if (id is PrefixedIdentifier) {
+      name = id.identifier.name;
+    }
+
+    if (name == null) return null;
+
+    // Resolve Source URI
+    final element = node.element ?? node.elementAnnotation?.element;
+    final sourceUri = element?.library?.firstFragment.source.uri.toString();
+
+    return _ResolvedAnnotation(name, sourceUri);
+  }
+
   bool _hasAnnotation(List<_ResolvedAnnotation> declared, AnnotationDetail target) {
     return declared.any((declaredAnnotation) {
-      // 1. Name Check
       if (declaredAnnotation.name != target.name) return false;
-
-      // 2. Import/Source Check (if configured)
       if (target.import != null && declaredAnnotation.sourceUri != null) {
         return _matchesImport(declaredAnnotation.sourceUri!, target.import!);
       }
-
-      // If config has no import, we match by name only (lax check)
       return true;
     });
   }
@@ -112,21 +137,6 @@ class EnforceAnnotations extends ArchitectureLintRule {
     if (actual.startsWith(expected)) return true;
     if (expected.startsWith('package:') && actual.endsWith(expected.split('/').last)) return true;
     return false;
-  }
-
-  /// Extracts annotation metadata from the AST node.
-  List<_ResolvedAnnotation> _getDeclaredAnnotations(ClassDeclaration node) {
-    return node.metadata.map((annotation) {
-      final name = annotation.name.name;
-
-      // Resolve the element to get the source URI
-      final element = annotation.element ?? annotation.elementAnnotation?.element;
-
-      // [Analyzer 8.0.0 Fix] Use firstFragment.source.uri
-      final sourceUri = element?.library?.firstFragment.source.uri.toString();
-
-      return _ResolvedAnnotation(name, sourceUri);
-    }).toList();
   }
 }
 

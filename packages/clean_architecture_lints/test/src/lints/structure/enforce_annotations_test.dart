@@ -1,5 +1,3 @@
-// test/src/lints/structure/enforce_annotations_test.dart
-
 import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
@@ -41,11 +39,16 @@ void main() {
       ''');
 
       // Define dummy annotations
-      addFile('lib/injectable.dart', 'class Injectable { const Injectable(); }');
+      addFile('lib/injectable.dart', '''
+        class Injectable { const Injectable(); }
+        class LazySingleton { const LazySingleton(); }
+      ''');
     });
 
     tearDown(() {
-      try { tempDir.deleteSync(recursive: true); } catch (_) {}
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
     });
 
     Future<List<Diagnostic>> runLint({
@@ -54,7 +57,9 @@ void main() {
     }) async {
       final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
       contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
-      final resolvedUnit = await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath) as ResolvedUnitResult;
+      final resolvedUnit =
+          await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath)
+              as ResolvedUnitResult;
 
       final config = makeConfig(annotations: annotations);
       final lint = EnforceAnnotations(config: config, layerResolver: LayerResolver(config));
@@ -67,25 +72,57 @@ void main() {
         final forbiddenRule = {
           'on': 'entity',
           'forbidden': {
-            'name': 'Injectable',
-            'import': 'package:injectable/injectable.dart'
+            'name': ['Injectable', 'LazySingleton'],
+            'import': 'package:injectable/injectable.dart',
           },
         };
 
-        final path = 'lib/features/user/domain/entities/user.dart';
+        const path = 'lib/features/user/domain/entities/user.dart';
         addFile(path, '''
-          import 'package:injectable/injectable.dart'; // LINT 1 (Import)
+          import 'package:injectable/injectable.dart'; 
           
-          @Injectable() // LINT 2 (Usage)
+          @Injectable()
+          @LazySingleton()
           class User {}
         ''');
 
         final lints = await runLint(filePath: path, annotations: [forbiddenRule]);
 
-        // Should have 2 errors: 1 for import, 1 for usage
-        expect(lints, hasLength(2));
-        expect(lints.any((l) => l.message.contains('import `package:injectable/injectable.dart` is forbidden')), isTrue);
-        expect(lints.any((l) => l.message.contains('must not have the `@Injectable` annotation')), isTrue);
+        expect(lints, hasLength(3));
+
+        expect(
+          lints.any(
+            (l) => l.message.contains('import `package:injectable/injectable.dart` is forbidden'),
+          ),
+          isTrue,
+        );
+        expect(
+          lints.any((l) => l.message.contains('must not have the `@Injectable` annotation')),
+          isTrue,
+        );
+        expect(
+          lints.any((l) => l.message.contains('must not have the `@LazySingleton` annotation')),
+          isTrue,
+        );
+      });
+
+      test('flags Usage ONLY when import is NOT defined in config', () async {
+        final forbiddenRule = {
+          'on': 'entity',
+          'forbidden': {'name': 'Injectable'},
+        };
+
+        const path = 'lib/features/user/domain/entities/user.dart';
+        addFile(path, '''
+          import 'package:injectable/injectable.dart';
+          @Injectable()
+          class User {}
+        ''');
+
+        final lints = await runLint(filePath: path, annotations: [forbiddenRule]);
+
+        expect(lints, hasLength(1));
+        expect(lints.first.message, contains('must not have the `@Injectable` annotation'));
       });
     });
 
@@ -96,13 +133,13 @@ void main() {
           'required': {'name': 'Injectable'},
         };
 
-        final path = 'lib/features/auth/domain/usecases/login.dart';
+        const path = 'lib/features/auth/domain/usecases/login.dart';
         addFile(path, 'class Login {}');
 
         final lints = await runLint(filePath: path, annotations: [requiredRule]);
 
         expect(lints, hasLength(1));
-        expect(lints.first.message, contains('missing the required `@Injectable`'));
+        expect(lints.first.message, contains('missing the required `@Injectable` annotation'));
       });
     });
   });
