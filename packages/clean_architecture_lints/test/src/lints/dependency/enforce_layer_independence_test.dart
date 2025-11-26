@@ -44,7 +44,9 @@ void main() {
     });
 
     tearDown(() {
-      try { tempDir.deleteSync(recursive: true); } catch (_) {}
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
     });
 
     Future<List<Diagnostic>> runLint({
@@ -53,7 +55,9 @@ void main() {
     }) async {
       final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
       contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
-      final resolvedUnit = await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath) as ResolvedUnitResult;
+      final resolvedUnit =
+          await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath)
+              as ResolvedUnitResult;
       final config = makeConfig(dependencies: dependencies);
       final lint = EnforceLayerIndependence(config: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
@@ -67,12 +71,15 @@ void main() {
       final lints = await runLint(
         filePath: path,
         dependencies: [
-          {'on': 'domain', 'forbidden': {'package': 'package:flutter/'}}
+          {
+            'on': 'domain',
+            'forbidden': {'package': 'package:flutter/'},
+          },
         ],
       );
 
       expect(lints, hasLength(1));
-      expect(lints.first.errorCode.name, 'enforce_layer_independence');
+      expect(lints.first.diagnosticCode.name, 'enforce_layer_independence');
       expect(lints.first.message, contains('must not import the package `package:flutter/`'));
     });
 
@@ -83,12 +90,17 @@ void main() {
       final lints = await runLint(
         filePath: path,
         dependencies: [
-          {'on': 'entity', 'allowed': {'component': ['entity']}},
+          {
+            'on': 'entity',
+            'allowed': {
+              'component': ['entity'],
+            },
+          },
         ],
       );
 
       expect(lints, hasLength(1));
-      expect(lints.first.errorCode.name, 'enforce_layer_independence');
+      expect(lints.first.diagnosticCode.name, 'enforce_layer_independence');
       expect(lints.first.message, contains('not allowed to import from a Model'));
     });
 
@@ -99,12 +111,15 @@ void main() {
       final lints = await runLint(
         filePath: path,
         dependencies: [
-          {'on': 'domain', 'forbidden': {'component': 'data'}},
+          {
+            'on': 'domain',
+            'forbidden': {'component': 'data'},
+          },
         ],
       );
 
       expect(lints, hasLength(1));
-      expect(lints.first.errorCode.name, 'enforce_layer_independence');
+      expect(lints.first.diagnosticCode.name, 'enforce_layer_independence');
       expect(lints.first.message, contains('must not import from a Model'));
     });
   });

@@ -1,5 +1,6 @@
-name: example
-description: A demonstration project for the clean_architecture_lints package.
+name: feature_first_example
+description: >-
+  A demonstration project for the clean_architecture_lints package using feature first architecture.
 
 publish_to: 'none'
 
@@ -10,19 +11,18 @@ resolution: workspace
 
 dependencies:
   bloc: any
+  cached: any
   clean_architecture_core:
     path: ../../packages/clean_architecture_core
+  dart_mappable: any
   flutter_bloc: any
-
   flutter:
     sdk: flutter
-
   fpdart: any
   injectable: any
 
 dev_dependencies:
   custom_lint: any
-
   clean_architecture_lints:
     path: ../../packages/clean_architecture_lints
 

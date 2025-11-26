@@ -1,60 +1,65 @@
 // example/lib/features/auth/domain/ports/auth_port.violations.dart
 
-// 1. LINT: enforce_layer_independence
-// Reason: Domain layer cannot import from the Data layer.
-import 'package:example/features/auth/data/models/user_model.dart'; // <-- LINT WARNING HERE
-
-// 2. LINT: disallow_flutter_in_domain
-// Reason: Domain must be platform agnostic (no UI types).
-import 'package:flutter/material.dart'; // <-- LINT WARNING HERE
-
 import 'package:example/core/port/port.dart';
 import 'package:example/core/utils/types.dart';
 import 'package:example/features/auth/domain/entities/user.dart';
 
-// 3. LINT: enforce_naming_conventions
-// Reason: Name must end with 'Port' (configured pattern: `{{name}}Port`).
-// We use 'AuthContract' here. If we used 'AuthRepository', the linter would
-// flag it as a Location Error (misplaced data repository) instead of a Naming Error.
-// ignore: enforce_semantic_naming
+// LINT: [1] enforce_layer_independence
+// REASON: Domain layer cannot import from the Data layer.
+import 'package:example/features/auth/data/models/user_model.dart'; // <-- LINT WARNING HERE
+
+// LINT: [2] disallow_flutter_in_domain
+// REASON: Domain must be platform agnostic (no UI types).
+import 'package:flutter/material.dart'; // <-- LINT WARNING HERE
+
+// LINT: [3] enforce_naming_pattern
+// REASON: Name must match the pattern `{{name}}Port` (e.g., AuthPort).
+// We use 'AuthContract'. Note: 'AuthRepository' might trigger a location lint instead.
 abstract interface class AuthContract implements Port { // <-- LINT WARNING HERE
-  // 4. LINT: enforce_type_safety
-  // Reason: Return type must be `FutureEither`, not raw `Future`.
+
+  // LINT: [4] enforce_type_safety
+  // REASON: Return type must be `FutureEither<T>`, not raw `Future<T>`.
   Future<User> login(String username); // <-- LINT WARNING HERE
 
-  // 5. LINT: disallow_model_in_domain
-  // Reason: Cannot return a Data Model from a Domain Port.
+  // LINT: [5] disallow_model_in_domain
+  // REASON: Cannot return a Data Model (DTO) from a Domain Port. Use Entities.
   FutureEither<UserModel> unsafeReturn(); // <-- LINT WARNING HERE
 
-  // 6. LINT: disallow_model_in_domain
-  // Reason: Cannot accept a Data Model as a parameter.
+  // LINT: [6] disallow_model_in_domain
+  // REASON: Cannot accept a Data Model as a parameter. Use Entities.
   FutureEither<void> unsafeParam(UserModel user); // <-- LINT WARNING HERE
 
-  // 7. LINT: missing_use_case
-  // Reason: No corresponding UseCase file exists for this method.
+  // LINT: [7] missing_use_case
+  // REASON: No corresponding UseCase file found for method `logout`.
   // (Expected: lib/features/auth/domain/usecases/logout.dart)
   FutureEither<void> logout(); // <-- LINT WARNING HERE (Quick Fix available)
 }
 
-// 8. LINT: enforce_port_contract
-// Reason: Ports must implement/extend the base `Port` interface.
+// LINT: [8] enforce_port_contract
+// REASON: Ports must implement/extend the base `Port` interface defined in Core.
 abstract interface class UncontractedAuthPort { // <-- LINT WARNING HERE
   void doSomething();
 }
 
 abstract interface class TypeSafetyViolationsPort implements Port {
-  // 9. LINT: enforce_type_safety
-  // Reason: Parameter named 'id' must be of type `IntId`, not `int`.
+  // LINT: [9] enforce_type_safety
+  // REASON: Parameter named 'id' must be of type `IntId`, not `int`.
   FutureEither<User> getUser(int id); // <-- LINT WARNING HERE
 
-  // 10. LINT: enforce_type_safety
-  // Reason: Parameter named 'id' must be of type `StringId`, not `String`.
+  // LINT: [10] enforce_type_safety
+  // REASON: Parameter named 'id' must be of type `StringId`, not `String`.
   FutureEither<void> deleteUser(String id); // <-- LINT WARNING HERE
 }
 
-// ignore: enforce_semantic_naming
 abstract interface class PurityViolationsPort implements Port {
-  // 11. LINT: disallow_flutter_in_domain
-  // Reason: Cannot use Flutter types (Color) in Domain.
+  // LINT: [11] disallow_flutter_in_domain
+  // REASON: Cannot use Flutter types (Color) in the Domain layer.
   Color getUserColor(); // <-- LINT WARNING HERE
+}
+
+// LINT: [12] enforce_semantic_naming
+// REASON: Grammar violation. Ports should be Noun Phrases (e.g., AuthPort).
+// 'FetchingUserPort' implies an action (Verb), which is reserved for UseCases.
+abstract interface class FetchingUserPort implements Port { // <-- LINT WARNING HERE
+  FutureEither<User> fetch();
 }

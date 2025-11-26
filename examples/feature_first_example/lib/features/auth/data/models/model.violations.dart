@@ -1,4 +1,4 @@
-// example/lib/features/auth/data/models/user_model.violations.dart
+// example/lib/features/auth/data/models/model.violations.dart
 import 'package:example/features/auth/domain/entities/user.dart';
 
 // LINT: enforce_model_inherits_entity
