@@ -3,7 +3,7 @@ import 'package:bloc/bloc.dart';
 import '../../../domain/usecases/get_current_user_usecase.dart';
 
 import 'package:bloc/bloc.dart';
-import 'package:example/features/auth/domain/usecases/login_user.dart';
+import 'package:feature_first_example/features/auth/domain/usecases/login_user.dart';
 
 class AuthBloc extends Cubit<void> {
   final LoginUser _loginUser;

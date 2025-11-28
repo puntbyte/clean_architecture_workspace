@@ -1,6 +1,6 @@
 // example/lib/features/auth/presentation/bloc/auth_bloc.violations.dart
 import 'package:bloc/bloc.dart';
-import 'package:example/features/auth/domain/contracts/auth_port.dart';
+import 'package:feature_first_example/features/auth/domain/contracts/auth_port.dart';
 import 'package:example/features/auth/presentation/managers/bloc/auth_bloc.dart';
 
 import 'package:bloc/bloc.dart';

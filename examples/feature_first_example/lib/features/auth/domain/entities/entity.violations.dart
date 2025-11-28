@@ -1,4 +1,4 @@
-// lib/features/auth/domain/entities/user.violations.dart
+// lib/features/auth/domain/entities/entity.violations.dart
 
 import 'package:feature_first_example/core/entity/entity.dart';
 
