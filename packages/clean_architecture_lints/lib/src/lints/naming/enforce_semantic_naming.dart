@@ -8,10 +8,14 @@ import 'package:clean_architecture_lints/src/utils/extensions/string_extension.d
 import 'package:clean_architecture_lints/src/utils/nlp/language_analyzer.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
+/// Enforces that classes follow the semantic naming conventions (grammar).
 class EnforceSemanticNaming extends ArchitectureLintRule {
   static const _code = LintCode(
     name: 'enforce_semantic_naming',
-    problemMessage: 'Invalid name `{0}` for a {2}: {1}',
+    problemMessage: 'The {2} name "{0}" is grammatically incorrect: {1}',
+    correctionMessage:
+        'Rename the class to satisfy the grammar rule (e.g., use Nouns for Entities, Verb-Noun for '
+        'UseCases).',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
@@ -43,9 +47,9 @@ class EnforceSemanticNaming extends ArchitectureLintRule {
           node.name,
           _code,
           arguments: [
-            className,
-            result.message ?? 'Does not follow the required grammatical structure.',
-            component.label,
+            className, // {0} FetchingUser
+            result.message ?? 'Structure check failed', // {1} Must be a Noun...
+            component.label, // {2} Entity
           ],
         );
       }
@@ -53,6 +57,7 @@ class EnforceSemanticNaming extends ArchitectureLintRule {
   }
 }
 
+// ... (Helper classes _ValidationResult and _GrammarValidator remain unchanged)
 class _ValidationResult {
   final bool isValid;
   final String? message;
@@ -98,7 +103,7 @@ class _GrammarValidator {
       final tokenEndIndex = grammar.indexOf('}}');
       if (tokenEndIndex == -1) return const _ValidationResult.valid();
 
-      final token = grammar.substring(2, tokenEndIndex); // noun.phrase, noun.singular, noun.plural
+      final token = grammar.substring(2, tokenEndIndex);
       final suffix = grammar.substring(tokenEndIndex + 2);
 
       if (suffix.isNotEmpty && !className.endsWith(suffix)) {
@@ -114,42 +119,35 @@ class _GrammarValidator {
 
       final lastWord = baseWords.last;
 
-      // Check based on specific tag
       if (token == 'noun.plural') {
         if (!nlp.isNounPlural(lastWord)) {
           return _ValidationResult.invalid(
-            'The subject "$lastWord" must be a Plural Noun. Currently identified as '
-                '[${_identifyPOS(lastWord)}].',
+            'The subject "$lastWord" must be a Plural Noun. Currently identified as [${_identifyPOS(lastWord)}].',
           );
         }
       } else if (token == 'noun.singular') {
         if (!nlp.isNounSingular(lastWord)) {
           return _ValidationResult.invalid(
-            'The subject "$lastWord" must be a Singular Noun. Currently identified as '
-                '[${_identifyPOS(lastWord)}].',
+            'The subject "$lastWord" must be a Singular Noun. Currently identified as [${_identifyPOS(lastWord)}].',
           );
         }
       } else {
-        // noun.phrase (Any Noun)
         if (!nlp.isNoun(lastWord)) {
           return _ValidationResult.invalid(
-            'The subject "$lastWord" must be a Noun. Currently identified as '
-                '[${_identifyPOS(lastWord)}].',
+            'The subject "$lastWord" must be a Noun. Currently identified as [${_identifyPOS(lastWord)}].',
           );
         }
       }
 
-      // No Verbs allowed in any noun phrase
       for (final word in baseWords) {
         final isStrictVerb = nlp.isVerb(word) && !nlp.isNoun(word);
         final isGerund = nlp.isVerbGerund(word);
         if (isStrictVerb || isGerund) {
           return _ValidationResult.invalid(
-            'It contains "$word" (identified as [${_identifyPOS(word)}]), which implies an action.',
+            'It contains "$word" (identified as [${_identifyPOS(word)}]), which implies an action/verb.',
           );
         }
       }
-
       return const _ValidationResult.valid();
     }
 
@@ -159,9 +157,9 @@ class _GrammarValidator {
       final lastWord = words.last;
       final isValid =
           nlp.isAdjective(lastWord) ||
-              nlp.isVerbGerund(lastWord) ||
-              nlp.isVerbPast(lastWord) ||
-              nlp.isNoun(lastWord);
+          nlp.isVerbGerund(lastWord) ||
+          nlp.isVerbPast(lastWord) ||
+          nlp.isNoun(lastWord);
 
       if (!isValid) {
         return _ValidationResult.invalid(
@@ -178,9 +176,7 @@ class _GrammarValidator {
     final types = <String>[];
     if (nlp.isNounSingular(word)) types.add('Singular Noun');
     if (nlp.isNounPlural(word)) types.add('Plural Noun');
-    // Fallback if neither specific check passed but isNoun did
     if (types.isEmpty && nlp.isNoun(word)) types.add('Noun');
-
     if (nlp.isVerb(word) && !word.toLowerCase().endsWith('ed')) types.add('Verb');
     if (nlp.isAdjective(word)) types.add('Adjective');
     if (nlp.isVerbGerund(word)) types.add('Gerund');

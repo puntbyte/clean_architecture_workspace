@@ -129,8 +129,7 @@ custom_lint:
         # Defining not required unless for overringing the values.
         - on: usecase
           required:
-            name: ['NullaryUsecase', 'UnaryUsecase']
-            import: 'package:example/core/usecase/usecase.dart'
+            type: ['usecase.unary', 'usecase.nullary']
 
         # --- Data Layer ---
         # The default rule used for [enforce_abstracting_model].
@@ -196,7 +195,7 @@ custom_lint:
         # Defining is not required unless for overringing the values.
         - on: entity
           pattern: '{{name}}'
-          antipattern: '{{name}}'
+          antipattern: '{{name}}Entity'
           grammar: '{{noun.phrase}}'
 
         # This is the default rule used for Port aka Repository Interface.

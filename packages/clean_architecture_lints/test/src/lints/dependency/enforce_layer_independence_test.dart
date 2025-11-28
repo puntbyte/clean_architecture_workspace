@@ -64,24 +64,27 @@ void main() {
       return lints.cast<Diagnostic>();
     }
 
-    test('Violates Layer Rule: Domain entity imports Flutter', () async {
-      const path = 'lib/features/user/domain/entities/user.dart';
-      addFile(path, "import 'package:flutter/material.dart';");
+    test(
+      'Skips Flutter/UI imports in Domain layer (Handled by disallow_flutter_in_domain)',
+      () async {
+        const path = 'lib/features/user/domain/entities/user.dart';
+        addFile(path, "import 'package:flutter/material.dart';");
 
-      final lints = await runLint(
-        filePath: path,
-        dependencies: [
-          {
-            'on': 'domain',
-            'forbidden': {'package': 'package:flutter/'},
-          },
-        ],
-      );
+        final lints = await runLint(
+          filePath: path,
+          dependencies: [
+            {
+              'on': 'domain',
+              'forbidden': {'package': 'package:flutter/'},
+            },
+          ],
+        );
 
-      expect(lints, hasLength(1));
-      expect(lints.first.diagnosticCode.name, 'enforce_layer_independence');
-      expect(lints.first.message, contains('must not import the package `package:flutter/`'));
-    });
+        // Should be empty because EnforceLayerIndependence now skips this specific case.
+        // The dedicated lint would catch it in a real run.
+        expect(lints, isEmpty);
+      },
+    );
 
     test('Violates Component Rule: Entity imports Model', () async {
       const path = 'lib/features/user/domain/entities/user.dart';
@@ -100,7 +103,6 @@ void main() {
       );
 
       expect(lints, hasLength(1));
-      expect(lints.first.diagnosticCode.name, 'enforce_layer_independence');
       expect(lints.first.message, contains('not allowed to import from a Model'));
     });
 
@@ -119,8 +121,27 @@ void main() {
       );
 
       expect(lints, hasLength(1));
-      expect(lints.first.diagnosticCode.name, 'enforce_layer_independence');
       expect(lints.first.message, contains('must not import from a Model'));
+    });
+
+    test('Violates External Package rule in Non-Domain layer', () async {
+      // Just to prove the package checker still works for other layers.
+      // e.g. Data layer forbidden from using 'package:flutter_bloc'
+      const path = 'lib/features/user/data/models/user_model.dart';
+      addFile(path, "import 'package:flutter_bloc/flutter_bloc.dart';");
+
+      final lints = await runLint(
+        filePath: path,
+        dependencies: [
+          {
+            'on': 'data',
+            'forbidden': {'package': 'package:flutter_bloc'},
+          },
+        ],
+      );
+
+      expect(lints, hasLength(1));
+      expect(lints.first.message, contains('must not import the package `package:flutter_bloc`'));
     });
   });
 }

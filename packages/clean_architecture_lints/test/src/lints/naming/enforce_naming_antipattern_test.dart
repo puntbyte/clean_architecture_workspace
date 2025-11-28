@@ -29,7 +29,9 @@ void main() {
     });
 
     tearDown(() {
-      try { tempDir.deleteSync(recursive: true); } catch (_) {}
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
     });
 
     Future<List<Diagnostic>> runLint({
@@ -38,7 +40,9 @@ void main() {
     }) async {
       final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
       contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
-      final resolvedUnit = await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath) as ResolvedUnitResult;
+      final resolvedUnit =
+      await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath)
+      as ResolvedUnitResult;
       final config = makeConfig(namingRules: namingRules);
       final lint = EnforceNamingAntipattern(config: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
@@ -47,7 +51,7 @@ void main() {
 
     test('reports violation when class name matches forbidden anti-pattern', () async {
       const path = 'lib/features/user/domain/entities/user_entity.dart';
-      addFile(path, 'class UserEntity {}');
+      addFile(path, 'class UserEntity {}'); // Matches {{name}}Entity
 
       final lints = await runLint(
         filePath: path,
@@ -63,6 +67,19 @@ void main() {
     test('does NOT report violation if class name matches pattern but NOT anti-pattern', () async {
       const path = 'lib/features/user/domain/entities/user.dart';
       addFile(path, 'class User {}');
+
+      final lints = await runLint(
+        filePath: path,
+        namingRules: [
+          {'on': 'entity', 'pattern': '{{name}}', 'antipattern': '{{name}}Entity'},
+        ],
+      );
+      expect(lints, isEmpty);
+    });
+
+    test('does NOT report violation for UncontractedUser (does not match anti-pattern)', () async {
+      const path = 'lib/features/user/domain/entities/uncontracted_user.dart';
+      addFile(path, 'class UncontractedUser {}');
 
       final lints = await runLint(
         filePath: path,
