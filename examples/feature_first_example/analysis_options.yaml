@@ -116,14 +116,14 @@ custom_lint:
         - on: entity
           required:
             name: 'Entity'
-            import: 'package:example/core/entity/entity.dart'
+            import: 'package:feature_first_example/core/entity/entity.dart'
 
         # The default rule used for [enforce_port_contract].
         # Defining not required unless for overringing the values.
         - on: port
           required:
             name: 'Port'
-            import: 'package:example/core/port/port.dart'
+            import: 'package:feature_first_example/core/port/port.dart'
 
         # The default rule used for [enforce_usecase_contract].
         # Defining not required unless for overringing the values.
@@ -143,7 +143,7 @@ custom_lint:
         - on: source.interface
           required:
             name: 'Source'
-            import: 'package:example/core/source/source.dart'
+            import: 'package:feature_first_example/core/source/source.dart'
 
         # The default rule used for [enforce_abstracting_source_implementation].
         # Defining not required unless for overringing the values.
@@ -342,7 +342,7 @@ custom_lint:
         usecase:
           - key: 'base'
             name: 'Usecase'
-            import: 'package:example/core/usecase/usecase.dart'
+            import: 'package:feature_first_example/core/usecase/usecase.dart'
           - key: 'nullary'
             name: 'NullaryUsecase'
           - key: 'unary'
@@ -351,7 +351,7 @@ custom_lint:
         failure:
           - key: 'base'
             name: 'Failure'
-            import: 'package:example/core/error/failures.dart'
+            import: 'package:feature_first_example/core/error/failures.dart'
           - key: 'server'
             name: 'ServerFailure'
           - key: 'cache'
@@ -363,7 +363,7 @@ custom_lint:
             name: 'Exception'
           - key: 'base'
             name: 'CustomException'
-            import: 'package:example/core/error/exceptions.dart'
+            import: 'package:feature_first_example/core/error/exceptions.dart'
           - key: 'server'
             name: 'ServerException'
           - key: 'cache'
@@ -373,10 +373,10 @@ custom_lint:
         result:
           - key: 'future'
             name: 'FutureEither'
-            import: 'package:example/core/utils/types.dart'
+            import: 'package:feature_first_example/core/utils/types.dart'
           - key: 'wrapper'
             name: 'FutureEither'
-            import: 'package:example/core/utils/types.dart'
+            import: 'package:feature_first_example/core/utils/types.dart'
           - key: 'success'
             name: 'Right'
             import: 'package:fpdart/fpdart.dart'
@@ -388,42 +388,48 @@ custom_lint:
         custom:
           - key: 'identity.integer'
             name: 'IntId'
-            import: 'package:example/core/utils/types.dart'
+            import: 'package:feature_first_example/core/utils/types.dart'
           - key: 'identity.string'
             name: 'StringId'
-            import: 'package:example/core/utils/types.dart'
+            import: 'package:feature_first_example/core/utils/types.dart'
 
-      # [type_safeties] configuration is primarily used in [enforce_custom_type_safety] lint.
-      # [on] parameter is used for targeting the architectural component/s.
       type_safeties:
-        # The default rule used for [domain_layer_type_safety].
-        # Defining is not required unless for overringing the values.
-        # Port and Usecase must return wrapper FutureEither.
         - on: [ port, usecase ]
-          returns:
-            unsafe_type: 'result.future'
-            safe_type: 'result.wrapper'
+          allowed:
+            kind: 'return'
+            type: 'result.wrapper'
+          forbidden:
+            kind: 'return'
+            type: 'result.future'
 
-        # The default rule used for [data_layer_type_safety].
-        # Defining is not required unless for overringing the values.
-        # Source Interface and Implementation must return raw Futures.
         - on: source
-          returns:
-            unsafe_type: 'result.wrapper'
-            safe_type: 'result.future'
+          allowed:
+            kind: 'return'
+            type: 'result.future'
+          forbidden:
+            kind: 'return'
+            type: 'result.wrapper'
 
-        # User defined rule used for [enforce_custom_type_safety].
-        # Defining is required in order the lint to work.
-        # Strong ID parameter enforcement.
+        - on: repository
+          forbidden:
+            kind: 'return'
+            component: 'model'
+
         - on: [ port, usecase, source, repository ]
-          parameters:
-            - unsafe_type: 'int'
+          allowed:
+            - kind: 'parameter'
+              type: 'identity.integer'
               identifier: 'id'
-              safe_type: 'identity.integer'
-
-            - unsafe_type: 'String'
+            - kind: 'parameter'
+              type: 'identity.string'
               identifier: 'id'
-              safe_type: 'identity.string'
+          forbidden:
+            - kind: 'parameter'
+              type: 'int'
+              identifier: 'id'
+            - kind: 'parameter'
+              type: 'String'
+              identifier: 'id'
 
       # [3] ERROR HANDLING: Control Flow & Logic Enforcement
       error_handlers:
@@ -529,4 +535,4 @@ custom_lint:
         # Defining is not required unless for overringing the values.
         service_locator:
           name: ['getIt', 'locator']
-          import: 'package:example/core/utils/service_locator.dart'
+          import: 'package:feature_first_example/core/utils/service_locator.dart'

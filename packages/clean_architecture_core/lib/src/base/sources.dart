@@ -4,7 +4,7 @@
 /// Data sources are responsible for retrieving data from a specific source,
 /// such as a remote API or a local database.
 /// {@endtemplate}
-abstract interface class DataSource {
+abstract interface class Source {
   /// {@macro data_source}
-  const DataSource();
+  const Source();
 }

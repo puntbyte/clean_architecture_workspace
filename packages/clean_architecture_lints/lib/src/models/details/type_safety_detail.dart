@@ -2,34 +2,26 @@
 
 part of '../configs/type_safeties_config.dart';
 
-/// Represents a single type safety check for either a return type or parameter.
+/// Represents a specific type safety requirement.
+/// Can target a specific type name, a type definition key, or an architectural component.
 class TypeSafetyDetail {
-  final String unsafeType;
-  final String safeType;
-  final String? import;
-  final String? identifier; // null for return type checks
+  final String? kind; // 'return' or 'parameter'
+  final String? type; // Raw type name ('int') or TypeDefinition key ('result.wrapper')
+  final String? component; // Architectural component ('model', 'entity')
+  final String? identifier; // Parameter name (only for kind: 'parameter')
 
   const TypeSafetyDetail({
-    required this.unsafeType,
-    required this.safeType,
-    this.import,
+    this.kind,
+    this.type,
+    this.component,
     this.identifier,
   });
 
-  /// Determines if this is a parameter check (has identifier) or return check.
-  bool get isParameterCheck => identifier != null && identifier!.isNotEmpty;
-
-  /// Creates an instance from a map, returning null if required fields are missing.
-  static TypeSafetyDetail? tryFromMap(Map<String, dynamic> map) {
-    final unsafeType = map.asString(ConfigKey.rule.unsafeType);
-    final safeType = map.asString(ConfigKey.rule.safeType);
-
-    if (unsafeType.isEmpty || safeType.isEmpty) return null;
-
+  factory TypeSafetyDetail.fromMap(Map<String, dynamic> map) {
     return TypeSafetyDetail(
-      unsafeType: unsafeType,
-      safeType: safeType,
-      import: map.asStringOrNull(ConfigKey.rule.import),
+      kind: map.asStringOrNull(ConfigKey.rule.kind),
+      type: map.asStringOrNull(ConfigKey.rule.type), // Unified 'type' key
+      component: map.asStringOrNull(ConfigKey.rule.component),
       identifier: map.asStringOrNull(ConfigKey.rule.identifier),
     );
   }

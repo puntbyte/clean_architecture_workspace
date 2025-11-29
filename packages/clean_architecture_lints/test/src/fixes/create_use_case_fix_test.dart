@@ -1,105 +1,103 @@
-// test/src/fixes/create_use_case_fix_test.dart
-
-import 'package:analyzer/dart/analysis/utilities.dart';
-import 'package:analyzer/dart/ast/ast.dart';
-import 'package:clean_architecture_lints/src/fixes/create_use_case_fix.dart';
-import 'package:clean_architecture_lints/src/models/configs/architecture_config.dart';
-import 'package:code_builder/code_builder.dart' as cb;
+import 'dart:io';
+import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
+import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/diagnostic/diagnostic.dart';
+import 'package:clean_architecture_lints/src/analysis/layer_resolver.dart';
+import 'package:clean_architecture_lints/src/lints/type_safety/enforce_type_safety.dart';
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-void main() {
-  group('CreateUseCaseFix', () {
-    // Dummy reference
-    final dummyOutput = cb.refer('int');
+import '../../helpers/test_data.dart';
 
-    // Helper to create a full config with imports
-    ArchitectureConfig createConfigWithImports() {
-      return ArchitectureConfig.fromMap({
-        'inheritances': [
-          {
-            'on': 'usecase',
-            'required': {
-              'name': ['UnaryUsecase', 'NullaryUsecase'],
-              'import': 'package:example/core/usecase/usecase.dart'
-            }
-          }
-        ],
-        'annotations': [
-          {
-            'on': 'usecase',
-            'required': {'name': 'Injectable', 'import': 'package:injectable/injectable.dart'}
-          }
-        ],
-        'type_safeties': [
-          {
-            'on': 'usecase',
-            'returns': {
-              'unsafe_type': 'Future',
-              'safe_type': 'FutureEither',
-              'import': 'package:example/core/types.dart'
-            }
-          }
-        ]
-      });
+void main() {
+  group('EnforceTypeSafety Lint', () {
+    late AnalysisContextCollection contextCollection;
+    late Directory tempDir;
+    late String testProjectPath;
+
+    void addFile(String relativePath, String content) {
+      final fullPath = p.join(testProjectPath, p.normalize(relativePath));
+      final file = File(fullPath);
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(content);
     }
 
-    test('buildParameterConfigFromParams: nullary', () {
-      final parsed = parseString(content: 'class A { void doSomething() {} }');
-      final method = parsed.unit.declarations.whereType<ClassDeclaration>().first.members.first as MethodDeclaration;
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('type_safety_test_');
+      testProjectPath = p.canonicalize(tempDir.path);
 
-      final config = CreateUseCaseFix.buildParameterConfigFromParams(
-        params: method.parameters?.parameters ?? [],
-        methodName: 'doSomething',
-        outputType: dummyOutput,
-        unaryName: 'UnaryUsecase',
-        nullaryName: 'NullaryUsecase',
-      );
-
-      expect(config.baseClassName.symbol, 'NullaryUsecase');
+      addFile('pubspec.yaml', 'name: example');
+      addFile('.dart_tool/package_config.json', '{"configVersion": 2, "packages": []}');
+      addFile('lib/core/types.dart', 'class IntId {} class FutureEither<T> {}');
+      addFile('lib/features/user/data/models/user_model.dart', 'class UserModel {}');
     });
 
-    test('buildParameterConfigFromParams: multi-param', () {
-      final parsed = parseString(content: 'class A { void f(int id, String name) {} }');
-      final method = parsed.unit.declarations.whereType<ClassDeclaration>().first.members.first as MethodDeclaration;
-
-      final config = CreateUseCaseFix.buildParameterConfigFromParams(
-        params: method.parameters?.parameters ?? [],
-        methodName: 'f',
-        outputType: dummyOutput,
-        unaryName: 'UnaryUsecase',
-        nullaryName: 'NullaryUsecase',
-      );
-
-      expect(config.baseClassName.symbol, 'UnaryUsecase');
-      expect(config.recordTypeDef, isNotNull);
+    tearDown(() {
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
     });
 
-    // NOTE: We cannot easily unit test `_collectImports` because it depends on resolving
-    // types from an analysis session (which requires the file system state).
-    // However, we CAN verify that if `_collectImports` works, `_buildUseCaseLibrary`
-    // generates the import directives correctly.
+    Future<List<Diagnostic>> runLint({
+      required String filePath,
+      required List<Map<String, dynamic>> typeSafeties,
+    }) async {
+      final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
+      contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
+      final resolvedUnit =
+          await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath)
+              as ResolvedUnitResult;
 
-    test('_buildUseCaseLibrary includes gathered imports', () {
-      final fix = CreateUseCaseFix(config: createConfigWithImports());
+      final config = makeConfig(typeSafeties: typeSafeties);
+      final lint = EnforceTypeSafety(config: config, layerResolver: LayerResolver(config));
+      final lints = await lint.testRun(resolvedUnit);
+      return lints.cast<Diagnostic>();
+    }
 
-      final parsed = parseString(content: 'class Repo { void m() {} }');
-      final method = parsed.unit.declarations.whereType<ClassDeclaration>().first.members.first as MethodDeclaration;
-      final repoNode = parsed.unit.declarations.whereType<ClassDeclaration>().first;
+    test('Parameter Violation: int parameter named "id" should be IntId', () async {
+      const path = 'lib/features/user/domain/ports/auth_port.dart';
+      addFile(path, '''
+        abstract interface class AuthPort {
+          void getUser(int id); // VIOLATION
+        }
+      ''');
 
-      // Mock the set of imports that _collectImports WOULD return
-      final mockImports = {
-        'package:example/core/usecase/usecase.dart',
-        'package:injectable/injectable.dart',
-        'package:example/core/types.dart'
-      };
+      final lints = await runLint(
+        filePath: path,
+        typeSafeties: [
+          {
+            'on': ['port'],
+            'parameters': [
+              {'unsafe_type': 'int', 'identifier': 'id', 'safe_type': 'IntId'},
+            ],
+          },
+        ],
+      );
 
-      // We use a reflection hack or expose _buildUseCaseLibrary for testing.
-      // Here we assume _buildUseCaseLibrary is NOT private or we modify it to public for test.
-      // Since it is private `_`, we cannot call it directly in this test snippet unless we make it public.
-      // Assuming you make `buildUseCaseLibrary` public or test via `CreateUseCaseFix` methods:
+      expect(lints, hasLength(1));
+      expect(lints.first.message, contains('parameter `id` should be of type `IntId`, not `int`'));
+    });
 
-      // For demonstration, we trust the `run` logic connects these parts.
-      // The critical fix provided above ensures `_collectImports` actually iterates the config.
+    test('Return Violation: Future should be FutureEither', () async {
+      const path = 'lib/features/user/domain/ports/auth_port.dart';
+      addFile(path, '''
+        abstract interface class AuthPort {
+          Future<void> logout(); // VIOLATION
+        }
+      ''');
+
+      final lints = await runLint(
+        filePath: path,
+        typeSafeties: [
+          {
+            'on': ['port'],
+            'returns': {'unsafe_type': 'Future', 'safe_type': 'FutureEither'},
+          },
+        ],
+      );
+
+      expect(lints, hasLength(1));
+      expect(lints.first.message, contains('return type should be `FutureEither`, not `Future`'));
     });
   });
 }

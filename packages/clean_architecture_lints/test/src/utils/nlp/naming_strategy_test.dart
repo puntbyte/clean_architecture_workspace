@@ -13,25 +13,13 @@ void main() {
       // specific rules vs generic rules
       final rules = [
         // Specific: Length 13 ({{name}}Model)
-        const NamingRule(
-          on: ['model'],
-          pattern: '{{name}}Model',
-        ),
+        const NamingRule(on: ['model'], pattern: '{{name}}Model'),
         // Specific: Length 12 ({{name}}Port)
-        const NamingRule(
-          on: ['port'],
-          pattern: '{{name}}Port',
-        ),
+        const NamingRule(on: ['port'], pattern: '{{name}}Port'),
         // Generic: Length 8 ({{name}})
-        const NamingRule(
-          on: ['entity'],
-          pattern: '{{name}}',
-        ),
+        const NamingRule(on: ['entity'], pattern: '{{name}}'),
         // Another Generic: Length 8 ({{name}})
-        const NamingRule(
-          on: ['usecase'],
-          pattern: '{{name}}',
-        ),
+        const NamingRule(on: ['usecase'], pattern: '{{name}}'),
       ];
 
       strategy = NamingStrategy(rules);
@@ -41,11 +29,7 @@ void main() {
       // Scenario: 'UserModel' inside 'models' directory.
       // It matches the Model pattern perfectly.
       expect(
-        strategy.shouldYieldToLocationLint(
-          'UserModel',
-          ArchComponent.model,
-          null,
-        ),
+        strategy.shouldYieldToLocationLint('UserModel', ArchComponent.model, null),
         isFalse,
         reason: 'Name is syntactically correct for the location.',
       );
@@ -56,11 +40,7 @@ void main() {
       // It doesn't match Model, Entity, or Port patterns (PascalCase required).
       // The Naming Lint should handle this (by reporting an error), not the Location Lint.
       expect(
-        strategy.shouldYieldToLocationLint(
-          'user_model',
-          ArchComponent.model,
-          null,
-        ),
+        strategy.shouldYieldToLocationLint('user_model', ArchComponent.model, null),
         isFalse,
         reason: 'Garbage name should be flagged by naming lint, not yielded.',
       );
@@ -72,11 +52,7 @@ void main() {
       // - Other (Port): Expects {{name}}Port. 'UserPort' MATCHES.
       // Result: This file likely belongs in the Port directory. Yield to Location Lint.
       expect(
-        strategy.shouldYieldToLocationLint(
-          'UserPort',
-          ArchComponent.model,
-          null,
-        ),
+        strategy.shouldYieldToLocationLint('UserPort', ArchComponent.model, null),
         isTrue,
         reason: 'Class name strongly indicates it belongs to another component.',
       );
@@ -88,11 +64,7 @@ void main() {
       // - Other (Entity): Expects {{name}}. 'User' MATCHES.
       // Result: Likely an Entity placed in the Model folder.
       expect(
-        strategy.shouldYieldToLocationLint(
-          'User',
-          ArchComponent.model,
-          null,
-        ),
+        strategy.shouldYieldToLocationLint('User', ArchComponent.model, null),
         isTrue,
       );
     });
@@ -103,11 +75,7 @@ void main() {
       // - Other (Entity): Expects {{name}}. 'Login' MATCHES.
       // Since it fits the current location, we assume it's correct.
       expect(
-        strategy.shouldYieldToLocationLint(
-          'Login',
-          ArchComponent.usecase,
-          null,
-        ),
+        strategy.shouldYieldToLocationLint('Login', ArchComponent.usecase, null),
         isFalse,
         reason: 'If valid for current location, do not yield even if it matches others.',
       );
@@ -124,11 +92,7 @@ void main() {
       // This allows the Naming Lint to report "Name should end in Port",
       // instead of the Location Lint reporting "Entity found in Port directory".
       expect(
-        strategy.shouldYieldToLocationLint(
-          'AuthContract',
-          ArchComponent.port,
-          ArchComponent.port, // structuralComponent
-        ),
+        strategy.shouldYieldToLocationLint('AuthContract', ArchComponent.port, ArchComponent.port),
         isFalse,
         reason: 'Inheritance overrides naming guess.',
       );

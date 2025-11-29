@@ -1,4 +1,4 @@
-// test/src/lints/type_safety/enforce_type_safety_test.dart
+// test/src/lints/structure/enforce_type_safety_test.dart
 
 import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
@@ -28,20 +28,26 @@ void main() {
       tempDir = Directory.systemTemp.createTempSync('type_safety_test_');
       testProjectPath = p.canonicalize(tempDir.path);
 
-      addFile('pubspec.yaml', 'name: test_project');
-      addFile(
-        '.dart_tool/package_config.json', '''
-          {
-            "configVersion": 2, 
-            "packages": [{"name": "test_project", "rootUri": "../", "packageUri": "lib/"}],
-          }
-        '''
-      );
+      addFile('pubspec.yaml', 'name: feature_first_example');
 
-      addFile('lib/core/types.dart', '''
-        class FutureEither<L, R> {}
-        class UserId {}
+      final libUri = p.toUri(p.join(testProjectPath, 'lib'));
+      addFile('.dart_tool/package_config.json', '''
+      {
+        "configVersion": 2,
+        "packages": [
+          {"name": "feature_first_example", "rootUri": "$libUri", "packageUri": "."}
+        ]
+      }
       ''');
+
+      // Define types
+      addFile('lib/core/utils/types.dart', '''
+        class FutureEither<T> {} 
+        typedef IntId = int;
+        typedef StringId = String;
+      ''');
+
+      addFile('lib/features/auth/domain/entities/user.dart', 'class User {}');
     });
 
     tearDown(() {
@@ -52,118 +58,175 @@ void main() {
 
     Future<List<Diagnostic>> runLint({
       required String filePath,
-      required List<Map<String, dynamic>> typeSafeties,
+      List<Map<String, dynamic>>? typeSafeties,
+      Map<String, dynamic>? typeDefinitions,
     }) async {
       final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
-
       contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
-
       final resolvedUnit =
           await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath)
               as ResolvedUnitResult;
 
-      final config = makeConfig(typeSafeties: typeSafeties);
-      final lint = EnforceTypeSafety(config: config, layerResolver: LayerResolver(config));
+      final config = makeConfig(
+        typeDefinitions:
+            typeDefinitions ??
+            {
+              'result': [
+                {'key': 'future', 'name': 'Future'},
+                {
+                  'key': 'wrapper',
+                  'name': 'FutureEither',
+                  'import': 'package:feature_first_example/core/utils/types.dart',
+                },
+              ],
+              'identity': [
+                {
+                  'key': 'integer',
+                  'name': 'IntId',
+                  'import': 'package:feature_first_example/core/utils/types.dart',
+                },
+                {
+                  'key': 'string',
+                  'name': 'StringId',
+                  'import': 'package:feature_first_example/core/utils/types.dart',
+                },
+              ],
+            },
+        typeSafeties: typeSafeties,
+      );
 
+      final lint = EnforceTypeSafety(config: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }
 
-    group('Return Type Rules', () {
-      final returnRule = {
-        'on': 'usecase',
-        'returns': {
-          'unsafe_type': 'Future',
-          'safe_type': 'FutureEither',
-          'import': 'package:test_project/core/types.dart',
-        },
-      };
+    test('LINT [8]: Return type must be FutureEither, not raw Future', () async {
+      const path = 'lib/features/auth/domain/ports/auth_port.dart';
+      addFile(path, '''
+        import 'package:feature_first_example/features/auth/domain/entities/user.dart';
+        
+        abstract interface class AuthPort {
+          // Violation: Returns Future<User> instead of FutureEither
+          Future<User> login(String username); 
+        }
+      ''');
 
-      test('should report violation when a use case returns an unsafe Future', () async {
-        const path = 'lib/features/auth/domain/usecases/login.dart';
-        addFile(path, '''
-          import 'dart:async';
-          class Login {
-            Future<bool> call() async => true;
-          }
-        ''');
-
-        final lints = await runLint(filePath: path, typeSafeties: [returnRule]);
-
-        expect(lints, hasLength(1));
-        expect(lints.first.errorCode.name, 'enforce_type_safety');
-        expect(lints.first.message, contains('return type should be `FutureEither`'));
-      });
-
-      test('should not report violation when a use case returns a safe type', () async {
-        const path = 'lib/features/auth/domain/usecases/login.dart';
-        addFile(path, '''
-          import 'package:test_project/core/types.dart';
-          class Login {
-            FutureEither<Exception, bool> call() => throw UnimplementedError();
-          }
-        ''');
-
-        final lints = await runLint(filePath: path, typeSafeties: [returnRule]);
-        expect(lints, isEmpty);
-      });
-    });
-
-    group('Parameter Rules', () {
-      final parameterRule = {
-        'on': 'port',
-        'parameters': [
+      final lints = await runLint(
+        filePath: path,
+        typeSafeties: [
           {
-            'unsafe_type': 'int',
-            'identifier': 'id',
-            'safe_type': 'UserId',
-            'import': 'package:test_project/core/types.dart',
+            'on': ['port'],
+            'allowed': [
+              {'kind': 'return', 'type': 'result.wrapper'},
+            ],
+            'forbidden': [
+              {'kind': 'return', 'type': 'result.future'},
+            ],
           },
         ],
-      };
-
-      test(
-        'should report violation for an unsafe parameter type with matching identifier',
-        () async {
-          const path = 'lib/features/user/domain/ports/user_repo.dart';
-          addFile(path, '''
-          abstract class UserRepo {
-            void getUserById(int userId);
-          }
-        ''');
-
-          final lints = await runLint(filePath: path, typeSafeties: [parameterRule]);
-
-          expect(lints, hasLength(1));
-          expect(lints.first.errorCode.name, 'enforce_type_safety');
-          expect(lints.first.message, contains('parameter `userId` should be of type `UserId`'));
-        },
       );
 
-      test('should not report violation for an unsafe type if identifier does not match', () async {
-        const path = 'lib/features/user/domain/ports/user_repo.dart';
-        addFile(path, '''
-          abstract class UserRepo {
-            void updateUserAge(int age);
-          }
-        ''');
+      expect(lints, hasLength(1));
+      expect(lints.first.message, contains('Usage of `Future` is forbidden'));
+    });
 
-        final lints = await runLint(filePath: path, typeSafeties: [parameterRule]);
-        expect(lints, isEmpty);
-      });
+    test('LINT [9]: Parameter named "id" must be IntId, not int', () async {
+      const path = 'lib/features/auth/domain/ports/auth_port.dart';
+      addFile(path, '''
+        import 'package:feature_first_example/core/utils/types.dart';
+        import 'package:feature_first_example/features/auth/domain/entities/user.dart';
+        
+        abstract interface class AuthPort {
+          // Violation: int id
+          FutureEither<User> getUser(int id);
+        }
+      ''');
 
-      test('should not report violation when a parameter uses the safe type', () async {
-        const path = 'lib/features/user/domain/ports/user_repo.dart';
-        addFile(path, '''
-          import 'package:test_project/core/types.dart';
-          abstract class UserRepo {
-            void getUserById(UserId userId);
-          }
-        ''');
+      final lints = await runLint(
+        filePath: path,
+        typeSafeties: [
+          {
+            'on': ['port'],
+            'allowed': [
+              {'kind': 'parameter', 'identifier': 'id', 'type': 'identity.integer'},
+            ],
+            'forbidden': [
+              {'kind': 'parameter', 'identifier': 'id', 'type': 'int'},
+            ],
+          },
+        ],
+      );
 
-        final lints = await runLint(filePath: path, typeSafeties: [parameterRule]);
-        expect(lints, isEmpty);
-      });
+      expect(lints, hasLength(1));
+      expect(
+        lints.first.message.contains('Usage of `int` is forbidden') ||
+            lints.first.message.contains('Expected type `IntId`'),
+        isTrue,
+      );
+    });
+
+    test('LINT [10]: Parameter named "id" must be StringId, not String', () async {
+      const path = 'lib/features/auth/domain/ports/auth_port.dart';
+      addFile(path, '''
+        import 'package:feature_first_example/core/utils/types.dart';
+        
+        abstract interface class AuthPort {
+          // Violation: String id
+          FutureEither<void> deleteUser(String id);
+        }
+      ''');
+
+      final lints = await runLint(
+        filePath: path,
+        typeSafeties: [
+          {
+            'on': ['port'],
+            'allowed': [
+              {'kind': 'parameter', 'identifier': 'id', 'type': 'identity.string'},
+            ],
+            'forbidden': [
+              {'kind': 'parameter', 'identifier': 'id', 'type': 'String'},
+            ],
+          },
+        ],
+      );
+
+      expect(lints, hasLength(1));
+      expect(lints.first.message, contains('Usage of `String` is forbidden'));
+    });
+
+    test('Valid: Correct types used (Alias)', () async {
+      const path = 'lib/features/auth/domain/ports/auth_port.dart';
+      addFile(path, '''
+        import 'package:feature_first_example/core/utils/types.dart';
+        import 'package:feature_first_example/features/auth/domain/entities/user.dart';
+        
+        abstract interface class AuthPort {
+          FutureEither<User> getUser(IntId id); 
+          FutureEither<void> deleteUser(StringId id);
+        }
+      ''');
+
+      final lints = await runLint(
+        filePath: path,
+        typeSafeties: [
+          {
+            'on': ['port'],
+            'allowed': [
+              {'kind': 'return', 'type': 'result.wrapper'},
+              {'kind': 'parameter', 'identifier': 'id', 'type': 'identity.integer'},
+              {'kind': 'parameter', 'identifier': 'id', 'type': 'identity.string'},
+            ],
+            'forbidden': [
+              {'kind': 'return', 'type': 'result.future'},
+              {'kind': 'parameter', 'identifier': 'id', 'type': 'int'},
+              {'kind': 'parameter', 'identifier': 'id', 'type': 'String'},
+            ],
+          },
+        ],
+      );
+
+      expect(lints, isEmpty);
     });
   });
 }

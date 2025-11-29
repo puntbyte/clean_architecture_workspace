@@ -1,4 +1,4 @@
-// lib/src/fixes/create_usecase_fix.dart
+// lib/src/fixes/create_use_case_fix.dart
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -32,6 +32,8 @@ class CreateUseCaseFix extends DartFix {
     context.addPostRunCallback(() async {
       final resolvedUnit = await resolver.getResolvedUnitResult();
       final resourceProvider = resolvedUnit.session.resourceProvider;
+
+      // [Analyzer 8.0.0] Use nodeCovering
       final node = resolvedUnit.unit.nodeCovering(offset: diagnostic.offset);
 
       final methodNode = node?.thisOrAncestorOfType<MethodDeclaration>();
@@ -55,10 +57,8 @@ class CreateUseCaseFix extends DartFix {
           )
           .addDartFileEdit(
             (DartFileEditBuilder builder) {
-              // 1. Collect Imports (Config + Type Analysis)
               final imports = _collectImports(method: methodNode, repoNode: repoNode);
 
-              // 2. Build Library
               final library = _buildUseCaseLibrary(
                 method: methodNode,
                 repoNode: repoNode,
@@ -156,27 +156,35 @@ class CreateUseCaseFix extends DartFix {
       }
     }
 
+    // Resolves the import from type definitions config
+    void addImportFromType(String typeKey) {
+      final typeDef = config.typeDefinitions.get(typeKey);
+      addImport(typeDef?.import);
+    }
+
     // 1. Repository Import
     final repoLibrary = repoNode.declaredFragment?.element.library;
     addImport(repoLibrary?.firstFragment.source.uri.toString());
 
-    // 2. Inheritance Imports (e.g. 'package:example/core/usecase/usecase.dart')
+    // 2. Inheritance Imports
     config.inheritances.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) {
       addImport(d.import);
     });
 
-    // 3. Annotation Imports (e.g. 'package:injectable/injectable.dart')
+    // 3. Annotation Imports
     config.annotations.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) {
       addImport(d.import);
     });
 
-    // 4. Type Safety Imports (e.g. 'package:example/core/utils/types.dart')
+    // 4. Type Safety Imports
     for (final rule in config.typeSafeties.rules) {
-      for (final d in rule.returns) { addImport(d.import); }
-      for (final d in rule.parameters) { addImport(d.import); }
+      // Allowed types often require imports (e.g. Result, FutureEither)
+      for (final d in rule.allowed) {
+        if (d.type != null) addImportFromType(d.type!);
+      }
     }
 
-    // 5. Method Signature Imports (Deep Traversal)
+    // 5. Method Signature Imports
     void collectFromType(DartType? type) {
       if (type == null) return;
       if (type is VoidType || type is DynamicType) return;
@@ -186,10 +194,8 @@ class CreateUseCaseFix extends DartFix {
         addImport(element.library?.firstFragment.source.uri.toString());
       }
 
-      // Recurse into type arguments (e.g. Future<Either<Failure, User>>)
       if (type is InterfaceType) type.typeArguments.forEach(collectFromType);
 
-      // Recurse into Type Aliases (e.g. typedef FutureEither<T> = Future<Either<Failure, T>>)
       if (type.alias != null) {
         final aliasElement = type.alias!.element;
         addImport(aliasElement.library.firstFragment.source.uri.toString());

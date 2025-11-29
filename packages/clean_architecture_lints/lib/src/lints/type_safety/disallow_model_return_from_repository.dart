@@ -1,4 +1,4 @@
-// lib/src/lints/type_safety/disallow_model_return_from_repository.dart
+// lib/src/lints/purity/disallow_model_return_from_repository.dart
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -23,12 +23,23 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
     required super.config,
     required super.layerResolver,
   }) : _wrapperTypeNames = {
+         // 1. Collect all "Allowed Return Types" from config.
+         // These are typically wrappers like FutureEither, Result, etc.
          ...config.typeSafeties.rules
-             .expand((rule) => rule.returns)
-             .map((detail) => detail.safeType),
+             .expand((rule) => rule.allowed)
+             .where((detail) => detail.kind == 'return' && detail.type != null)
+             .map((detail) {
+               // Resolve 'result.wrapper' -> 'FutureEither'
+               final def = config.typeDefinitions.get(detail.type!);
+               return def?.name ?? detail.type!;
+             }),
+
+         // 2. Add standard/fallback wrappers
          'Right',
          'Left',
          'Either',
+         'Future',
+         'FutureOr',
        },
        super(code: _code);
 
@@ -50,10 +61,10 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
 
       if (methodElement == null || methodElement.isPrivate) return;
 
-      // Only enforce this rule if the method is implementing a Repository Contract
       if (SemanticUtils.isArchitecturalOverride(methodElement, layerResolver)) {
         // STRATEGY 1: Inspect Wrappers (Right(model), Success(model))
         if (expression is InstanceCreationExpression) {
+          // Analyzer 8.0+: name2 for NamedType
           final typeName = expression.constructorName.type.name.lexeme;
           if (_isSuccessWrapper(typeName)) {
             final arg = expression.argumentList.arguments.firstOrNull;
@@ -95,13 +106,13 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
 
     final name = type.element.name;
 
-    if (name == 'Future' || name == 'FutureOr') {
-      return type.typeArguments.isEmpty ? null : _extractSuccessType(type.typeArguments.single);
-    }
-
+    // Recursively unwrap known wrapper types
     if (_wrapperTypeNames.contains(name)) {
-      // Assumes Success type is the LAST type argument (Standard Either<L, R>)
-      return type.typeArguments.isEmpty ? null : _extractSuccessType(type.typeArguments.last);
+      if (type.typeArguments.isEmpty) return null;
+
+      // Heuristic: Success type is usually the LAST argument
+      // (Future<T>, Either<L, R>, Result<T>)
+      return _extractSuccessType(type.typeArguments.last);
     }
 
     return type;

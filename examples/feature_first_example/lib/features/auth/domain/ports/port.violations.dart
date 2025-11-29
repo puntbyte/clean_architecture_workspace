@@ -44,6 +44,10 @@ abstract interface class UncontractedAuthPort { // <-- LINT WARNING HERE
 }
 
 abstract interface class TypeSafetyViolationsPort implements Port {
+  // LINT: [8] enforce_type_safety
+  // REASON: Return type must be `FutureEither<T>`, not raw `Future<T>`.
+  Future<User> login(String username); // <-- LINT WARNING HERE
+
   // LINT: [9] enforce_type_safety
   // REASON: Parameter named 'id' must be of type `IntId`, not `int`.
   // ignore: missing_use_case

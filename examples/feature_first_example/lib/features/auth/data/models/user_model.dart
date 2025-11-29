@@ -1,4 +1,4 @@
-// example/lib/features/auth/data/models/user_model.dart
+// lib/features/auth/data/models/user_model.dart
 
 import 'package:feature_first_example/features/auth/domain/entities/user.dart';
 

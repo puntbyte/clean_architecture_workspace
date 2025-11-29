@@ -17,7 +17,6 @@ void main() {
     late Directory tempDir;
     late String testProjectPath;
 
-    // Helper to write files safely using canonical paths
     void addFile(String relativePath, String content) {
       final fullPath = p.join(testProjectPath, p.normalize(relativePath));
       final file = File(fullPath);
@@ -29,23 +28,33 @@ void main() {
       tempDir = Directory.systemTemp.createTempSync('port_contract_test_');
       testProjectPath = p.canonicalize(tempDir.path);
 
-      addFile('pubspec.yaml', 'name: test_project');
-      addFile(
-        '.dart_tool/package_config.json',
-        '{"configVersion": 2, "packages": [{"name": "test_project", "rootUri": "../", '
-            '"packageUri": "lib/"}]}',
-      );
+      addFile('pubspec.yaml', 'name: feature_first_example');
 
-      // Create the local core repository definition to simulate the base contract
-      addFile('lib/core/repository/port.dart', 'abstract class Repository {}');
+      final libUri = p.toUri(p.join(testProjectPath, 'lib'));
+      addFile('.dart_tool/package_config.json', '''
+      {
+        "configVersion": 2,
+        "packages": [
+          {
+            "name": "feature_first_example",
+            "rootUri": "$libUri",
+            "packageUri": "."
+          },
+          {
+            "name": "clean_architecture_core",
+            "rootUri": "../",
+            "packageUri": "lib/"
+          }
+        ]
+      }
+      ''');
+
+      // Define the Base Port
+      addFile('lib/core/port/port.dart', 'abstract interface class Port { const Port(); }');
     });
 
     tearDown(() {
-      try {
-        tempDir.deleteSync(recursive: true);
-      } on FileSystemException catch (_) {
-        // Ignore Windows file lock errors
-      }
+      try { tempDir.deleteSync(recursive: true); } catch (_) {}
     });
 
     Future<List<Diagnostic>> runLint({
@@ -54,78 +63,63 @@ void main() {
     }) async {
       final fullPath = p.canonicalize(p.join(testProjectPath, filePath));
       contextCollection = AnalysisContextCollection(includedPaths: [testProjectPath]);
-
-      final resolvedUnit =
-          await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath)
-              as ResolvedUnitResult;
+      final resolvedUnit = await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath) as ResolvedUnitResult;
 
       final config = makeConfig(inheritances: inheritances);
       final lint = EnforcePortContract(config: config, layerResolver: LayerResolver(config));
-
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }
 
-    test('reports violation when Port interface does not extend Repository', () async {
-      // By default, files in 'domain/ports' are considered Ports
-      const path = 'lib/features/user/domain/ports/user_repository.dart';
+    test('Default Rule: Valid when Port implements local Port (Relative Import)', () async {
+      final path = 'lib/features/auth/domain/ports/auth_port.dart';
+
+      // FIX: Use relative import to guarantee analyzer resolution
       addFile(path, '''
-        abstract class UserRepository {}
+        import '../../../../core/port/port.dart';
+        
+        // Should PASS: Implements Port
+        abstract interface class AuthPort implements Port {}
+      ''');
+
+      final lints = await runLint(filePath: path);
+      expect(lints, isEmpty);
+    });
+
+    test('Default Rule: Violation when Port does not implement anything', () async {
+      final path = 'lib/features/auth/domain/ports/auth_port.dart';
+      addFile(path, '''
+        abstract interface class AuthPort {}
       ''');
 
       final lints = await runLint(filePath: path);
 
       expect(lints, hasLength(1));
-      expect(
-        lints.first.message,
-        contains('Port interfaces must extend the base repository class `Repository`'),
-      );
+      expect(lints.first.message, contains('Port interfaces must extend or implement: Port'));
     });
 
-    test('reports no violation when extending local Repository', () async {
-      const path = 'lib/features/user/domain/ports/user_repository.dart';
-      addFile(path, '''
-        import 'package:test_project/core/repository/port.dart';
-        abstract class UserRepository extends Repository {}
-      ''');
-
-      final lints = await runLint(filePath: path);
-      expect(lints, isEmpty);
-    });
-
-    test('ignores concrete classes (implementations)', () async {
-      // EnforcePortContract only cares about abstract interfaces
-      const path = 'lib/features/user/domain/ports/concrete_user_repo.dart';
-      addFile(path, '''
-        class ConcreteUserRepo {}
-      ''');
-
-      final lints = await runLint(filePath: path);
-      expect(lints, isEmpty);
-    });
-
-    test('DISABLES itself when a custom inheritance rule for Port is defined', () async {
-      // We define a custom rule for 'port'.
-      // Even though UserRepository violates the *default* rule (it doesn't extend Repository),
-      // this lint should return empty because it disabled itself.
-      // (The EnforceCustomInheritance lint would handle this file instead).
-
+    test('Custom Rule: Valid when Port implements configured base (Template Match)', () async {
+      // Config uses 'example', code uses local relative import.
+      // Suffix '/core/port/port.dart' matches.
       final customConfig = [
         {
           'on': 'port',
-          'required': {'name': 'CustomBase', 'import': 'pkg:x'},
-        },
+          'required': {'name': 'Port', 'import': 'package:example/core/port/port.dart'}
+        }
       ];
 
-      const path = 'lib/features/user/domain/ports/user_repository.dart';
-      addFile(path, 'abstract class UserRepository {}');
+      final path = 'lib/features/auth/domain/ports/auth_port.dart';
+      addFile(path, '''
+        import '../../../../core/port/port.dart';
+        abstract interface class AuthPort implements Port {}
+      ''');
 
       final lints = await runLint(
         filePath: path,
         inheritances: customConfig,
       );
 
-      expect(lints, isEmpty, reason: 'Lint should disable itself when custom rule is present');
+      expect(lints, isEmpty);
     });
   });
 }

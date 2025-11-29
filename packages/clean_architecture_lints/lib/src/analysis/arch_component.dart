@@ -15,10 +15,10 @@ enum ArchComponent {
   // --- Data Components ---
   data('data', label: 'Data'),
   model('model', label: 'Model'),
-  repository('repository', label: 'Repository (Implementation)'),
   source('source', label: 'Source'),
   sourceInterface('source.interface', label: 'Source Interface'),
   sourceImplementation('source.implementation', label: 'Source Implementation'),
+  repository('repository', label: 'Repository (Implementation)'),
 
   // --- Presentation Components ---
   presentation('presentation', label: 'Presentation'),
@@ -29,8 +29,8 @@ enum ArchComponent {
   state('state', label: 'State'),
   stateInterface('state.interface', label: 'State Interface'),
   stateImplementation('state.implementation', label: 'State Implementation'),
-  page('page', label: 'Page'),
   widget('widget', label: 'Widget'),
+  page('page', label: 'Page'),
 
   // --- Unknown Component ---
   unknown('unknown', label: 'Unknown')
@@ -46,9 +46,6 @@ enum ArchComponent {
 
   /// A reverse lookup to find an enum value from its string [id].
   static ArchComponent fromId(String id) {
-    // FIX: Handle legacy 'contract' id by mapping it to 'port'
-    if (id == 'contract') return .port;
-
     return values.firstWhere((value) => value.id == id, orElse: () => .unknown);
   }
 
