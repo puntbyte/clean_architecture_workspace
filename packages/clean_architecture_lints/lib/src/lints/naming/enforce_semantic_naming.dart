@@ -33,7 +33,7 @@ class EnforceSemanticNaming extends ArchitectureLintRule {
       final component = layerResolver.getComponent(resolver.source.fullName, className: className);
       if (component == ArchComponent.unknown) return;
 
-      final rule = config.namingConventions.getRuleFor(component);
+      final rule = config.namingConventions.ruleFor(component);
       final grammar = rule?.grammar;
       if (grammar == null || grammar.isEmpty) return;
 

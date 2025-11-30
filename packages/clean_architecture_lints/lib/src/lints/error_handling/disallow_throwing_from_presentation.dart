@@ -37,8 +37,8 @@ class DisallowThrowingFromPresentation extends ArchitectureLintRule {
 
     // 2. Config Lookup: Find the error handler rule for this component/layer
     final rule =
-        config.errorHandlers.ruleFor(component.id) ??
-        config.errorHandlers.ruleFor(component.layer.id);
+        config.errorHandlers.ruleFor(component) ??
+        config.errorHandlers.ruleFor(component.layer);
 
     if (rule == null) return;
 

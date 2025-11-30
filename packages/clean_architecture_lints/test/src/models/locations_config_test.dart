@@ -49,7 +49,9 @@ void main() {
       });
 
       test('should return null when "on" key is missing', () {
-        final map = {'allowed': {'component': 'entity'}};
+        final map = {
+          'allowed': {'component': 'entity'},
+        };
         expect(DependencyRule.fromMap(map), isNull);
       });
 
@@ -68,48 +70,58 @@ void main() {
           ConfigKey.root.dependencies: [
             {
               'on': 'domain',
-              'forbidden': {'component': ['data', 'presentation']}
+              'forbidden': {
+                'component': ['data', 'presentation'],
+              },
             },
             {
-              'on': ['usecase', 'contract'],
-              'allowed': {'component': 'entity'}
+              'on': ['usecase', 'port'],
+              // FIX: Key must be 'component', not 'port'
+              'allowed': {'component': 'entity'},
             },
-          ]
+          ],
         };
 
         final config = DependenciesConfig.fromMap(configMap);
         expect(config.rules, hasLength(2));
 
-        final domainRule = config.ruleFor('domain');
+        final domainRule = config.ruleFor(.domain);
         expect(domainRule, isNotNull);
         expect(domainRule!.forbidden.components, ['data', 'presentation']);
 
-        final usecaseRule = config.ruleFor('usecase');
+        final usecaseRule = config.ruleFor(.usecase);
         expect(usecaseRule, isNotNull);
         expect(usecaseRule!.allowed.components, ['entity']);
 
         // Verify that the map correctly links both 'on' keys to the same rule.
-        expect(config.ruleFor('contract'), same(usecaseRule));
+        expect(config.ruleFor(.usecase), same(usecaseRule));
       });
 
       test('should ignore malformed rules in the list', () {
         final configMap = {
           ConfigKey.root.dependencies: [
-            {'on': 'domain', 'allowed': {'component': 'entity'}},
-            {'allowed': {'component': 'model'}}, // Invalid, missing 'on'
+            {
+              'on': 'domain',
+              'allowed': {'component': 'entity'},
+            },
+            {
+              'allowed': {'component': 'model'},
+            }, // Invalid, missing 'on'
             'not_a_map', // Invalid
-          ]
+          ],
         };
         final config = DependenciesConfig.fromMap(configMap);
         expect(config.rules, hasLength(1));
-        expect(config.ruleFor('domain'), isNotNull);
+        expect(config.ruleFor(.domain), isNotNull);
       });
 
       test('should create an empty config when the locations key is missing or empty', () {
         final config1 = DependenciesConfig.fromMap({});
         expect(config1.rules, isEmpty);
 
-        final config2 = DependenciesConfig.fromMap({ConfigKey.root.dependencies: <Map<String, dynamic>>[]});
+        final config2 = DependenciesConfig.fromMap({
+          ConfigKey.root.dependencies: <Map<String, dynamic>>[],
+        });
         expect(config2.rules, isEmpty);
       });
     });

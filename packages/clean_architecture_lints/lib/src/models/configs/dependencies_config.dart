@@ -1,5 +1,6 @@
 // lib/src/models/configs/dependencies_config.dart
 
+import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/utils/config/config_keys.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/json_map_extension.dart';
 
@@ -18,9 +19,6 @@ class DependenciesConfig {
           for (final id in rule.on) id: rule,
       };
 
-  /// Finds the specific rule for a given architectural component ID.
-  DependencyRule? ruleFor(String componentId) => _ruleMap[componentId];
-
   /// Factory that parses the `locations` block from YAML.
   factory DependenciesConfig.fromMap(Map<String, dynamic> map) {
     final ruleList = map.asMapList(ConfigKey.root.dependencies);
@@ -29,4 +27,7 @@ class DependenciesConfig {
       rules: ruleList.map(DependencyRule.fromMap).whereType<DependencyRule>().toList(),
     );
   }
+
+  /// Finds the specific rule for a given architectural component.
+  DependencyRule? ruleFor(ArchComponent component) => _ruleMap[component.id];
 }

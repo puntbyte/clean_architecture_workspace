@@ -27,7 +27,7 @@ class NamingConventionsConfig {
   ///
   /// It searches the list of rules to find one where the `on` property
   /// contains the component's string identifier.
-  NamingRule? getRuleFor(ArchComponent component) => rules.firstWhereOrNull(
+  NamingRule? ruleFor(ArchComponent component) => rules.firstWhereOrNull(
     (rule) => rule.on.contains(component.id),
   );
 }

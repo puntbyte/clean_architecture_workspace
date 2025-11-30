@@ -11,7 +11,7 @@ class NamingUtils {
 
   static String getExpectedUseCaseClassName(String methodName, ArchitectureConfig config) {
     final pascal = methodName.toPascalCase();
-    final rule = config.namingConventions.getRuleFor(ArchComponent.usecase);
+    final rule = config.namingConventions.ruleFor(ArchComponent.usecase);
     if (rule == null) return pascal;
     return rule.pattern.replaceAll('{{name}}', pascal);
   }

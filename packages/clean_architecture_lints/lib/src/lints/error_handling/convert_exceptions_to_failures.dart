@@ -42,8 +42,8 @@ class ConvertExceptionsToFailures extends ArchitectureLintRule {
 
     // 1. Config Lookup
     final rule =
-        config.errorHandlers.ruleFor(component.id) ??
-        config.errorHandlers.ruleFor(component.layer.id);
+        config.errorHandlers.ruleFor(component) ??
+        config.errorHandlers.ruleFor(component.layer);
 
     if (rule == null || rule.conversions.isEmpty) return;
 

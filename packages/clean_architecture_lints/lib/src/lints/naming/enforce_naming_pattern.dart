@@ -32,7 +32,7 @@ class EnforceNamingPattern extends ArchitectureLintRule {
       final actualComponent = layerResolver.getComponent(filePath, className: className);
       if (actualComponent == ArchComponent.unknown) return;
 
-      final rule = config.namingConventions.getRuleFor(actualComponent);
+      final rule = config.namingConventions.ruleFor(actualComponent);
       if (rule == null) return;
 
       // Determine Structural Identity (Inheritance)

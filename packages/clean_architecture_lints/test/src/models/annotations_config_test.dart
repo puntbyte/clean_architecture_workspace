@@ -357,27 +357,27 @@ void main() {
 
         expect(config.rules, hasLength(4));
 
-        final useCaseRule = config.ruleFor('usecase');
+        final useCaseRule = config.ruleFor(.usecase);
         expect(useCaseRule, isNotNull);
         expect(useCaseRule!.on, contains('usecase'));
         expect(useCaseRule.required, hasLength(1));
         expect(useCaseRule.required.first.name, 'Injectable');
         expect(useCaseRule.required.first.import, 'package:injectable/injectable.dart');
 
-        final repositoryRule = config.ruleFor('repository');
+        final repositoryRule = config.ruleFor(.repository);
         expect(repositoryRule, isNotNull);
         expect(repositoryRule!.required, hasLength(1));
         expect(repositoryRule.required.first.name, 'LazySingleton');
         expect(repositoryRule.allowed, hasLength(1));
         expect(repositoryRule.allowed.first.name, 'WithCache');
 
-        final entityRule = config.ruleFor('entity');
+        final entityRule = config.ruleFor(.entity);
         expect(entityRule, isNotNull);
         expect(entityRule!.forbidden, hasLength(2));
         expect(entityRule.forbidden.any((d) => d.name == 'Injectable'), isTrue);
         expect(entityRule.forbidden.any((d) => d.name == 'LazySingleton'), isTrue);
 
-        final modelRule = config.ruleFor('model');
+        final modelRule = config.ruleFor(.model);
         expect(modelRule, isNotNull);
         expect(modelRule!.allowed, hasLength(2));
         expect(modelRule.allowed.any((d) => d.name == 'freezed'), isTrue);
@@ -428,7 +428,7 @@ void main() {
           ],
         });
 
-        final rule = config.ruleFor('entity');
+        final rule = config.ruleFor(.entity);
         expect(rule, isNotNull);
         expect(rule!.on, contains('entity'));
       });
@@ -443,9 +443,9 @@ void main() {
           ],
         });
 
-        expect(config.ruleFor('usecase'), isNotNull);
-        expect(config.ruleFor('entity'), isNotNull);
-        expect(config.ruleFor('widget'), isNull);
+        expect(config.ruleFor(.usecase), isNotNull);
+        expect(config.ruleFor(.entity), isNotNull);
+        expect(config.ruleFor(.widget), isNull);
       });
 
       test('should return null when no rule matches component ID', () {
@@ -458,11 +458,11 @@ void main() {
           ],
         });
 
-        expect(config.ruleFor('widget'), isNull);
+        expect(config.ruleFor(.widget), isNull);
       });
 
       test('should return null for empty config', () {
-        expect(AnnotationsConfig.fromMap({}).ruleFor('entity'), isNull);
+        expect(AnnotationsConfig.fromMap({}).ruleFor(.entity), isNull);
       });
     });
 
@@ -480,7 +480,7 @@ void main() {
           ],
         });
 
-        final required = config.requiredFor('usecase');
+        final required = config.requiredFor(.usecase);
         expect(required, hasLength(2));
         expect(required.first.name, 'Injectable');
         expect(required.last.name, 'Singleton');
@@ -488,7 +488,7 @@ void main() {
 
       test('should return empty list when no rule exists', () {
         final config = AnnotationsConfig.fromMap({});
-        expect(config.requiredFor('usecase'), isEmpty);
+        expect(config.requiredFor(.usecase), isEmpty);
       });
 
       test('should return empty list when rule has no required annotations', () {
@@ -501,7 +501,7 @@ void main() {
           ],
         });
 
-        expect(config.requiredFor('usecase'), isEmpty);
+        expect(config.requiredFor(.usecase), isEmpty);
       });
     });
   });

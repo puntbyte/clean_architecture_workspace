@@ -6,6 +6,7 @@
       <list>
         <CustomTag>
           <option name="color" value="#FF2D00" />
+          <option name="italic" value="true" />
           <option name="type" value="!" />
         </CustomTag>
         <CustomTag>

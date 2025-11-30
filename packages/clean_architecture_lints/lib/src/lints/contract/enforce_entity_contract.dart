@@ -38,7 +38,7 @@ class EnforceEntityContract extends ArchitectureLintRule {
       final element = node.declaredFragment?.element;
       if (element == null) return;
 
-      final customRule = config.inheritances.ruleFor(ArchComponent.entity.id);
+      final customRule = config.inheritances.ruleFor(ArchComponent.entity);
       final requiredSupertypes = customRule?.required.isNotEmpty ?? false
           ? customRule!.required
           : [

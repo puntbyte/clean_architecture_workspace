@@ -38,7 +38,7 @@ class EnforceExceptionOnDataSource extends ArchitectureLintRule {
 
     if (!isDataSource) return;
 
-    final rules = config.typeSafeties.rulesFor(component.id);
+    final rules = config.typeSafeties.rulesFor(component);
     if (rules.isEmpty) return;
 
     context.registry.addMethodDeclaration((node) {

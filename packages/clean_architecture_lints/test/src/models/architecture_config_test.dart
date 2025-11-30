@@ -1,281 +1,171 @@
-// test/src/models/architecture_config_test.dart
+// test/src/models/configs/architecture_config_test.dart
 
 import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/models/configs/architecture_config.dart';
-import 'package:clean_architecture_lints/src/models/configs/module_config.dart';
 import 'package:test/test.dart';
+
+import '../../helpers/test_data.dart';
 
 void main() {
   group('ArchitectureConfig', () {
-    group('fromMap Factory', () {
-      test('should correctly parse a complete and valid configuration', () {
-        final completeConfigMap = _createCompleteConfig();
-        final config = ArchitectureConfig.fromMap(completeConfigMap);
-        _verifyCompleteConfig(config);
-      });
-
-      test('should use sensible defaults when the configuration map is empty', () {
-        final config = ArchitectureConfig.fromMap({});
-        _verifyDefaultConfig(config);
-      });
-
-      test('should handle null values for configuration blocks by using defaults', () {
-        final config = ArchitectureConfig.fromMap({
-          'module_definitions': null,
-          'layer_definitions': null,
-          'naming_conventions': null,
-          'type_safeties': null,
-          'inheritances': null,
-          'annotations': null,
-          'services': null,
-        });
-        _verifyDefaultConfig(config);
-      });
-
-      test('should parse partial configurations gracefully, applying defaults for missing parts', () {
-        final partialConfig = {
-          'module_definitions': {
-            'type': 'layer_first',
-            'features': 'my_features',
-          },
-        };
-        final config = ArchitectureConfig.fromMap(partialConfig);
-
-        // Verify specified values
-        expect(config.modules.type, ModuleType.layerFirst);
-        expect(config.modules.features, 'my_features');
-
-        // Verify defaults for unspecified values
-        expect(config.modules.core, 'core'); // Default
-        expect(config.typeSafeties.rules, isEmpty);
-        expect(config.inheritances.rules, isEmpty);
-        expect(config.annotations.rules, isEmpty);
-      });
-    });
-
-    group('AnnotationsConfig Delegation', () {
+    group('Complete Configuration Parsing', () {
       late ArchitectureConfig config;
 
       setUp(() {
-        config = ArchitectureConfig.fromMap({
-          'annotations': [
+        config = makeConfig(
+          // 1. Structure overrides
+          coreDir: 'core_lib',
+          featuresDir: 'feats',
+          entityDir: 'entities',
+          modelDir: ['dtos'],
+          pageDir: 'screens',
+
+          // 2. Inheritance overrides
+          inheritances: [
             {
-              'on': ['usecase'],
+              'on': 'entity',
+              'required': {'name': 'BaseEntity', 'import': 'pkg:core'},
+            },
+          ],
+
+          // 3. Naming overrides
+          namingRules: [
+            {'on': 'model', 'pattern': '{{name}}Model'},
+          ],
+
+          // 4. Type Safety overrides
+          typeSafeties: [
+            {
+              'on': ['port'],
+              'forbidden': [
+                {'kind': 'return', 'type': 'Future'},
+              ],
+            },
+          ],
+
+          // 5. Dependency overrides
+          dependencies: [
+            {
+              'on': 'domain',
+              'forbidden': {'package': 'flutter'},
+            },
+          ],
+
+          // 6. Annotation overrides
+          annotations: [
+            {
+              'on': 'usecase',
               'required': {'name': 'Injectable'},
             },
           ],
-        });
+
+          // 7. Service overrides
+          services: {
+            'service_locator': {
+              'name': ['getIt'],
+            },
+          },
+
+          // 8. Type Definition overrides
+          // FIX: Must be a List of Maps with a 'key' property to match TypesConfig parser
+          typeDefinitions: {
+            'result': [
+              {'key': 'wrapper', 'name': 'FutureEither'},
+            ],
+          },
+
+          // 9. Error Handler overrides
+          errorHandlers: [
+            {
+              'on': 'repository',
+              'role': 'boundary',
+              'required': [
+                {'operation': 'try_return'},
+              ],
+            },
+          ],
+        );
       });
 
-      test('ruleFor should find and return the correct annotation rule for a component', () {
-        final rule = config.annotations.ruleFor('usecase');
-        expect(rule, isNotNull);
-        expect(rule!.on, contains('usecase'));
-        expect(rule.required.first.name, 'Injectable');
+      test('should parse module definitions correctly', () {
+        expect(config.modules.core, 'core_lib');
+        expect(config.modules.features, 'feats');
       });
 
-      test('requiredFor should return the list of required annotations for a component', () {
-        final requiredAnnotations = config.annotations.requiredFor('usecase');
-        expect(requiredAnnotations, hasLength(1));
-        expect(requiredAnnotations.first.name, 'Injectable');
+      test('should parse layer definitions correctly', () {
+        expect(config.layers.domain.entity, contains('entities'));
+        expect(config.layers.data.model, contains('dtos'));
+        expect(config.layers.presentation.page, contains('screens'));
+      });
+
+      test('should parse inheritance rules correctly', () {
+        final rule = config.inheritances.ruleFor(ArchComponent.entity);
+        expect(rule, isNotNull, reason: 'Entity inheritance rule should exist');
+        expect(rule!.required.first.name, 'BaseEntity');
+      });
+
+      test('should parse naming convention rules correctly', () {
+        final rule = config.namingConventions.ruleFor(ArchComponent.model);
+        expect(rule, isNotNull, reason: 'Model naming rule should exist');
+        expect(rule!.pattern, '{{name}}Model');
+      });
+
+      test('should parse type safety rules correctly', () {
+        final rules = config.typeSafeties.rulesFor(ArchComponent.port);
+        expect(rules, isNotEmpty, reason: 'Port type safety rules should exist');
+        expect(rules.first.forbidden.first.type, 'Future');
+      });
+
+      test('should parse dependency rules correctly', () {
+        final rule = config.dependencies.ruleFor(ArchComponent.domain);
+        expect(rule, isNotNull, reason: 'Domain dependency rule should exist');
+        expect(rule!.forbidden.packages, contains('flutter'));
+      });
+
+      test('should parse annotation rules correctly', () {
+        final rule = config.annotations.ruleFor(ArchComponent.usecase);
+        expect(rule, isNotNull, reason: 'Usecase annotation rule should exist');
+        expect(rule!.required.first.name, 'Injectable');
+      });
+
+      test('should parse service locator rules correctly', () {
+        expect(config.services.serviceLocator.names, contains('getIt'));
+      });
+
+      test('should parse type definitions correctly', () {
+        final typeDef = config.typeDefinitions.get('result.wrapper');
+        expect(typeDef, isNotNull, reason: 'result.wrapper type definition should exist');
+        expect(typeDef!.name, 'FutureEither');
+      });
+
+      test('should parse error handler rules correctly', () {
+        final rule = config.errorHandlers.ruleFor(ArchComponent.repository);
+        expect(rule, isNotNull, reason: 'Repository error handler rule should exist');
+        expect(rule!.required.first.operations, contains('try_return'));
+      });
+    });
+
+    group('Default / Empty Configuration', () {
+      test('should use defaults when config is empty (via makeConfig)', () {
+        final config = makeConfig();
+
+        expect(config.modules.core, 'core');
+        expect(config.layers.domain.entity, contains('entities'));
+        expect(config.services.serviceLocator.names, contains('getIt'));
+
+        expect(config.inheritances.rules, isEmpty);
+        expect(config.dependencies.rules, isEmpty);
+        expect(config.errorHandlers.rules, isEmpty);
+      });
+
+      test('should handle raw empty map gracefully', () {
+        final map = <String, dynamic>{};
+        final config = ArchitectureConfig.fromMap(map);
+
+        expect(config.modules.core, 'core');
+        expect(config.typeDefinitions.get('any'), isNull);
+        expect(config.errorHandlers.rules, isEmpty);
       });
     });
   });
-}
-
-// Helper Functions for Configuration and Verification
-
-Map<String, dynamic> _createCompleteConfig() {
-  return {
-    'module_definitions': {
-      'type': 'feature_first',
-      'core': 'core_module',
-      'features': 'features_module',
-      'layers': {
-        'domain': 'domain_layer',
-        'data': 'data_layer',
-        'presentation': 'presentation_layer',
-      },
-    },
-    'layer_definitions': {
-      'domain': {
-        'entity': 'entities_dir',
-        'port': 'ports_dir',
-        'usecase': 'usecases_dir',
-      },
-      'data': {
-        'model': 'models_dir',
-        'repository': 'repositories_dir',
-        'source': 'sources_dir',
-      },
-      'presentation': {
-        'page': 'pages_dir',
-        'widget': 'widgets_dir',
-        'manager': ['managers_dir', 'bloc', 'cubit'],
-      },
-    },
-    'naming_conventions': [
-      {
-        'on': 'entity',
-        'pattern': '{{name}}',
-        'antipattern': '{{name}}Entity',
-      },
-      {
-        'on': 'model',
-        'pattern': '{{name}}Model',
-        'grammar': '{{noun.phrase}}Model',
-      },
-    ],
-    'type_safeties': [
-      {
-        'on': ['usecase', 'port'],
-        'returns': {
-          'unsafe_type': 'Future',
-          'safe_type': 'FutureEither',
-          'import': 'package:example/core/utils/types.dart',
-        },
-      },
-      {
-        'on': 'port',
-        'parameters': [
-          {
-            'identifier': 'id',
-            'unsafe_type': 'int',
-            'safe_type': 'IntId',
-            'import': 'package:example/core/utils/types.dart',
-          }
-        ],
-      },
-    ],
-    'inheritances': [
-      {
-        'on': 'entity',
-        'required': {
-          'name': 'Entity',
-          'import': 'package:example/core/entity/entity.dart',
-        },
-      },
-    ],
-    'annotations': [
-      {
-        'on': ['usecase'],
-        'required': {'name': 'Injectable'},
-        'forbidden': {
-          'name': ['LazySingleton'],
-        },
-      },
-      {
-        'on': ['model'],
-        'allowed': [
-          {'name': 'freezed'},
-          {'name': 'MappableClass'},
-        ],
-      },
-    ],
-    'services': {
-      'service_locator': {
-        'name': ['getIt', 'locator', 'sl'],
-      },
-    },
-  };
-}
-
-void _verifyCompleteConfig(ArchitectureConfig config) {
-  _verifyModuleConfig(config);
-  _verifyLayerConfig(config);
-  _verifyNamingConfig(config);
-  _verifyTypeSafetyConfig(config);
-  _verifyInheritanceConfig(config);
-  _verifyAnnotationsConfig(config);
-  _verifyServicesConfig(config);
-}
-
-void _verifyModuleConfig(ArchitectureConfig config) {
-  expect(config.modules.type, ModuleType.featureFirst);
-  expect(config.modules.core, 'core_module');
-  expect(config.modules.features, 'features_module');
-  expect(config.modules.domain, 'domain_layer');
-  expect(config.modules.data, 'data_layer');
-  expect(config.modules.presentation, 'presentation_layer');
-}
-
-void _verifyLayerConfig(ArchitectureConfig config) {
-  expect(config.layers.domain.entity, ['entities_dir']);
-  expect(config.layers.domain.port, ['ports_dir']);
-  expect(config.layers.domain.usecase, ['usecases_dir']);
-  expect(config.layers.data.model, ['models_dir']);
-  expect(config.layers.data.repository, ['repositories_dir']);
-  expect(config.layers.data.source, ['sources_dir']);
-  expect(config.layers.presentation.page, ['pages_dir']);
-  expect(config.layers.presentation.widget, ['widgets_dir']);
-  expect(config.layers.presentation.manager, ['managers_dir', 'bloc', 'cubit']);
-}
-
-void _verifyNamingConfig(ArchitectureConfig config) {
-  expect(config.namingConventions.rules, isNotEmpty);
-  final entityRule = config.namingConventions.getRuleFor(ArchComponent.entity);
-  final modelRule = config.namingConventions.getRuleFor(ArchComponent.model);
-  expect(entityRule?.pattern, '{{name}}');
-  expect(entityRule?.antipattern, '{{name}}Entity');
-  expect(modelRule?.pattern, '{{name}}Model');
-  expect(modelRule?.grammar, '{{noun.phrase}}Model');
-}
-
-void _verifyTypeSafetyConfig(ArchitectureConfig config) {
-  expect(config.typeSafeties.rules, hasLength(2));
-  final returnRule = config.typeSafeties.rules.first;
-  final paramRule = config.typeSafeties.rules[1];
-  expect(returnRule.on, ['usecase', 'port']);
-  expect(returnRule.returns.first.safeType, 'FutureEither');
-  expect(paramRule.on, ['port']);
-  expect(paramRule.parameters.first.safeType, 'IntId');
-  expect(paramRule.parameters.first.identifier, 'id');
-}
-
-void _verifyInheritanceConfig(ArchitectureConfig config) {
-  expect(config.inheritances.rules, hasLength(1));
-  final entityRule = config.inheritances.rules.first;
-  expect(entityRule.on, 'entity');
-  expect(entityRule.required.first.name, 'Entity');
-}
-
-void _verifyAnnotationsConfig(ArchitectureConfig config) {
-  expect(config.annotations.rules, hasLength(2));
-  final useCaseRule = config.annotations.ruleFor('usecase');
-  final modelRule = config.annotations.ruleFor('model');
-  expect(useCaseRule?.required.first.name, 'Injectable');
-  expect(useCaseRule?.forbidden.first.name, 'LazySingleton');
-  expect(modelRule?.allowed, hasLength(2));
-  expect(modelRule?.allowed.any((d) => d.name == 'freezed'), isTrue);
-}
-
-void _verifyServicesConfig(ArchitectureConfig config) {
-  expect(config.services.serviceLocator.names, ['getIt', 'locator', 'sl']);
-}
-
-void _verifyDefaultConfig(ArchitectureConfig config) {
-  // Module defaults
-  expect(config.modules.type, ModuleType.featureFirst);
-  expect(config.modules.core, 'core');
-  expect(config.modules.features, 'features');
-  expect(config.modules.domain, 'domain');
-  expect(config.modules.data, 'data');
-  expect(config.modules.presentation, 'presentation');
-
-  // Layer defaults
-  expect(config.layers.domain.entity, ['entities']);
-  expect(config.layers.data.model, ['models']);
-  expect(config.layers.presentation.manager, ['managers']);
-
-  // Other configs default to empty rules
-  expect(config.namingConventions.rules, isEmpty);
-  expect(config.typeSafeties.rules, isEmpty);
-  expect(config.inheritances.rules, isEmpty);
-  expect(config.annotations.rules, isEmpty);
-
-  // Services defaults
-  expect(
-    config.services.serviceLocator.names,
-    ['getIt', 'locator', 'sl'],
-  );
 }

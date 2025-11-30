@@ -1,5 +1,6 @@
 // lib/src/models/configs/inheritances_config.dart
 
+import 'package:clean_architecture_lints/src/analysis/arch_component.dart';
 import 'package:clean_architecture_lints/src/models/configs/type_config.dart';
 import 'package:clean_architecture_lints/src/utils/config/config_keys.dart';
 import 'package:clean_architecture_lints/src/utils/extensions/iterable_extension.dart';
@@ -14,10 +15,6 @@ class InheritancesConfig {
 
   const InheritancesConfig({required this.rules});
 
-  InheritanceRule? ruleFor(String componentId) {
-    return rules.firstWhereOrNull((rule) => rule.on == componentId);
-  }
-
   // Accept TypesConfig here
   factory InheritancesConfig.fromMap(Map<String, dynamic> map, TypesConfig typeDefinitions) {
     final ruleList = map.asMapList(ConfigKey.root.inheritances);
@@ -28,5 +25,10 @@ class InheritancesConfig {
           .whereType<InheritanceRule>()
           .toList(),
     );
+  }
+
+  /// Finds the specific rule for a given architectural component.
+  InheritanceRule? ruleFor(ArchComponent component) {
+    return rules.firstWhereOrNull((rule) => rule.on == component.id);
   }
 }

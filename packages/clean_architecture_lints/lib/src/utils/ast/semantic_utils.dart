@@ -55,6 +55,40 @@ class SemanticUtils {
   }
 
   static bool isComponent(
+      DartType? type,
+      LayerResolver layerResolver,
+      ArchComponent componentToFind,
+      ) {
+    if (type == null) return false;
+
+    // Check type alias first
+    if (type.alias case final alias?) {
+      final path = alias.element.library?.firstFragment.source.fullName;
+      if (path != null && layerResolver.getComponent(path) == componentToFind) {
+        return true;
+      }
+    }
+
+    // Check regular type
+    final path = _getSourcePath(type);
+    if (path != null && layerResolver.getComponent(path) == componentToFind) return true;
+
+    if (type is InterfaceType) {
+      return type.typeArguments.any((arg) => isComponent(arg, layerResolver, componentToFind));
+    }
+    return false;
+  }
+
+  static String? _getSourcePath(DartType? type) {
+    // Handle type aliases
+    if (type?.alias case final alias?) {
+      return alias.element.library.firstFragment.source.fullName;
+    }
+    // Handle regular types
+    return type?.element?.library?.firstFragment.source.fullName;
+  }
+
+  /*static bool isComponent(
     DartType? type,
     LayerResolver layerResolver,
     ArchComponent componentToFind,
@@ -71,4 +105,6 @@ class SemanticUtils {
   static String? _getSourcePath(DartType? type) {
     return type?.element?.library?.firstFragment.source.fullName;
   }
+
+  */
 }

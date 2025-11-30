@@ -4,7 +4,7 @@ part of '../configs/services_config.dart';
 
 class ServiceLocatorRule {
   final List<String> names;
-  final String? import; // Added support for 'import'
+  final String? import;
 
   const ServiceLocatorRule({
     required this.names,
@@ -13,7 +13,11 @@ class ServiceLocatorRule {
 
   factory ServiceLocatorRule.fromMap(Map<String, dynamic> map) {
     return ServiceLocatorRule(
-      names: map.asStringList(ConfigKey.service.locatorNames, orElse: ['getIt', 'locator', 'sl']),
+      // FIX: Added 'GetIt' (class) and 'Injector' to defaults
+      names: map.asStringList(
+        ConfigKey.service.locatorNames,
+        orElse: ['getIt', 'GetIt', 'locator', 'sl', 'Injector'],
+      ),
       import: map.asStringOrNull(ConfigKey.rule.import),
     );
   }

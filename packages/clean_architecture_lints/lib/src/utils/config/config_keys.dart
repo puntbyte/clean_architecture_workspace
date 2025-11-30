@@ -171,6 +171,8 @@ class _ErrorKeys {
 class _RuleKeys {
   const _RuleKeys();
 
+  String get definition => 'definition'; // NEW
+
   String get kind => 'kind'; // New
 
   // Annotations, Inheritances, & Type Safeties Keys

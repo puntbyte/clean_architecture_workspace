@@ -96,7 +96,7 @@ class CreateUseCaseFix extends DartFix {
     final returnTypeRef = cb.refer(returnType?.getDisplayString() ?? 'void');
     final outputType = extractOutputType(returnType);
 
-    final rules = config.inheritances.ruleFor(ArchComponent.usecase.id)?.required ?? [];
+    final rules = config.inheritances.ruleFor(ArchComponent.usecase)?.required ?? [];
 
     final configuredUnary = rules.firstWhereOrNull((d) => d.name?.contains('Unary') ?? false)?.name;
 
@@ -116,7 +116,7 @@ class CreateUseCaseFix extends DartFix {
       bodyElements.add(paramConfig.recordTypeDef!);
     }
 
-    final annotationRule = config.annotations.ruleFor(ArchComponent.usecase.id);
+    final annotationRule = config.annotations.ruleFor(ArchComponent.usecase);
     final annotations =
         annotationRule?.required.map((a) => cb.refer(a.name).call([])).toList() ?? [];
 
@@ -167,12 +167,12 @@ class CreateUseCaseFix extends DartFix {
     addImport(repoLibrary?.firstFragment.source.uri.toString());
 
     // 2. Inheritance Imports
-    config.inheritances.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) {
+    config.inheritances.ruleFor(ArchComponent.usecase)?.required.forEach((d) {
       addImport(d.import);
     });
 
     // 3. Annotation Imports
-    config.annotations.ruleFor(ArchComponent.usecase.id)?.required.forEach((d) {
+    config.annotations.ruleFor(ArchComponent.usecase)?.required.forEach((d) {
       addImport(d.import);
     });
 

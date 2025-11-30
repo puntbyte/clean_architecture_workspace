@@ -34,15 +34,21 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
     context.registry.addClassDeclaration((node) {
       final className = node.name.lexeme;
       final filePath = resolver.source.fullName;
-
-      // [Analyzer 8.0.0]
       final classElement = node.declaredFragment?.element;
 
       // 1. Actual Location
       final actualComponent = layerResolver.getComponent(filePath);
       if (actualComponent == ArchComponent.unknown) return;
 
-      // 2. Expected Location (Based on Name)
+      // 2. Check Inheritance (Structural Identity)
+      // If the class physically implements/extends the contract required by the ACTUAL location,
+      // we assume the location is correct and the name might just be weird.
+      // This prevents flagging "AuthContract" (implements Port) as a misplaced Entity.
+      if (classElement != null && _satisfiesInheritanceRule(classElement, actualComponent)) {
+        return;
+      }
+
+      // 3. Expected Location (Based on Name)
       final bestMatch = _getBestMatch(className);
       if (bestMatch == null) return;
 
@@ -62,13 +68,6 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
           if (actualPattern.pattern.length >= bestMatch.pattern.length) return;
         }
 
-        // Exception B: Inheritance Intent
-        // If the class physically implements/extends the contract required by the ACTUAL location,
-        // we assume the location is correct and the name might just be weird.
-        if (classElement != null && _satisfiesInheritanceRule(classElement, actualComponent)) {
-          return;
-        }
-
         reporter.atToken(
           node.name,
           _code,
@@ -83,14 +82,15 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
   }
 
   bool _satisfiesInheritanceRule(ClassElement element, ArchComponent targetComponent) {
-    final rule = config.inheritances.ruleFor(targetComponent.id);
+    final rule = config.inheritances.ruleFor(targetComponent);
+    // If no inheritance rule exists, we can't verify by inheritance.
     if (rule == null || rule.required.isEmpty) return false;
 
     return rule.required.any((detail) => _hasSupertype(element, detail));
   }
 
   bool _hasSupertype(ClassElement element, InheritanceDetail detail) {
-    // Case 1: Component-based check
+    // Case 1: Component-based check (e.g. required: component: 'entity')
     if (detail.component != null) {
       final requiredComponent = ArchComponent.fromId(detail.component!);
       if (requiredComponent == ArchComponent.unknown) return false;
@@ -114,7 +114,7 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
       // Exact Match
       if (libraryUri == configUri) return true;
 
-      // Robust Suffix Matching
+      // Robust Suffix Matching (Critical for templates/tests)
       final libSuffix = _extractPathSuffix(libraryUri);
       final configSuffix = _extractPathSuffix(configUri);
 
@@ -126,18 +126,15 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
     });
   }
 
-  /// Extracts the path relative to 'lib' or the package root.
   String? _extractPathSuffix(String uriString) {
     final uri = Uri.tryParse(uriString);
     if (uri == null) return null;
 
     if (uri.scheme == 'package') {
-      // package:example/core/port.dart -> core/port.dart
       if (uri.pathSegments.length > 1) {
         return uri.pathSegments.sublist(1).join('/');
       }
     } else if (uri.scheme == 'file') {
-      // file:///.../lib/core/port.dart -> core/port.dart
       final segments = uri.pathSegments;
       final libIndex = segments.lastIndexOf('lib');
       if (libIndex != -1 && libIndex < segments.length - 1) {

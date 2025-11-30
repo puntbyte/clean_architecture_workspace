@@ -40,7 +40,7 @@ class DisallowThrowingFromRepository extends ArchitectureLintRule {
     if (component != ArchComponent.repository) return;
 
     // 2. Config: Check Error Handler rules
-    final rule = config.errorHandlers.ruleFor(ArchComponent.repository.id);
+    final rule = config.errorHandlers.ruleFor(ArchComponent.repository);
 
     // Default behaviors if no config is provided (Strict Boundary)
     var forbidThrow = true;

@@ -41,7 +41,7 @@ class EnforcePortContract extends ArchitectureLintRule {
       if (element == null) return;
 
       // 1. Determine Rules (Custom > Default)
-      final customRule = config.inheritances.ruleFor(ArchComponent.port.id);
+      final customRule = config.inheritances.ruleFor(ArchComponent.port);
       final requiredSupertypes = customRule?.required.isNotEmpty ?? false
           ? customRule!.required
           : [

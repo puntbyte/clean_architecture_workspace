@@ -67,7 +67,7 @@ class EnforceTryCatchInRepository extends ArchitectureLintRule {
   }
 
   bool _requiresTryCatch(ArchComponent component) {
-    final rule = config.errorHandlers.ruleFor(component.id);
+    final rule = config.errorHandlers.ruleFor(component);
 
     // Case A: Explicit Config exists.
     if (rule != null) {

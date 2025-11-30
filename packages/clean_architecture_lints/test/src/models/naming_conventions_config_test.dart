@@ -63,26 +63,26 @@ void main() {
           final config = NamingConventionsConfig.fromMap(yamlData);
 
           // Test 1: Simple rule
-          final modelRule = config.getRuleFor(ArchComponent.model);
+          final modelRule = config.ruleFor(ArchComponent.model);
           expect(modelRule, isNotNull);
           expect(modelRule!.pattern, '{{name}}Dto');
           expect(modelRule.antipattern, isNull);
           expect(modelRule.grammar, isNull);
 
           // Test 2: Rule with antipattern
-          final entityRule = config.getRuleFor(ArchComponent.entity);
+          final entityRule = config.ruleFor(ArchComponent.entity);
           expect(entityRule, isNotNull);
           expect(entityRule!.pattern, '{{name}}Object');
           expect(entityRule.antipattern, '{{name}}Entity');
 
           // Test 3: Rule with grammar (and defaulted pattern) on multiple components
-          final useCaseRule = config.getRuleFor(ArchComponent.usecase);
+          final useCaseRule = config.ruleFor(ArchComponent.usecase);
           expect(useCaseRule, isNotNull);
           expect(useCaseRule!.pattern, '{{name}}'); // Verify pattern default
           expect(useCaseRule.grammar, '{{verb}}{{noun}}Action');
 
           // Verify the same rule instance is used for all its `on` keys
-          final useCaseParamRule = config.getRuleFor(ArchComponent.usecaseParameter);
+          final useCaseParamRule = config.ruleFor(ArchComponent.usecaseParameter);
           expect(useCaseParamRule, isNotNull);
           expect(useCaseParamRule, same(useCaseRule), reason: 'Should be the same rule object');
         });
@@ -111,7 +111,7 @@ void main() {
 
           final config = NamingConventionsConfig.fromMap(yamlData);
           expect(config.rules, hasLength(1));
-          expect(config.getRuleFor(ArchComponent.model), isNotNull);
+          expect(config.ruleFor(ArchComponent.model), isNotNull);
         });
       });
     });

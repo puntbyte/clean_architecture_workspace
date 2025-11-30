@@ -372,8 +372,7 @@ custom_lint:
         # --- Functional Results (Wrappers) ---
         result:
           - key: 'future'
-            name: 'FutureEither'
-            import: 'package:feature_first_example/core/utils/types.dart'
+            name: 'Future'
           - key: 'wrapper'
             name: 'FutureEither'
             import: 'package:feature_first_example/core/utils/types.dart'
@@ -397,18 +396,25 @@ custom_lint:
         - on: [ port, usecase ]
           allowed:
             kind: 'return'
-            type: 'result.wrapper'
+            #definition: 'result.wrapper' # optional way to defining type and import
+            type: 'FutureEither'
+            import: 'package:feature_first_example/core/utils/types.dart'
           forbidden:
             kind: 'return'
-            type: 'result.future'
+            #definition: 'result.future' # optional way to defining type and import
+            type: 'Future'
 
         - on: source
           allowed:
             kind: 'return'
-            type: 'result.future'
+            #definition: 'result.future' # optional way to defining type and import
+            type: 'Future'
+
           forbidden:
             kind: 'return'
-            type: 'result.wrapper'
+            #definition: 'result.wrapper' # optional way to defining type and import
+            type: 'FutureEither'
+            import: 'package:feature_first_example/core/utils/types.dart'
 
         - on: repository
           forbidden:
@@ -418,18 +424,22 @@ custom_lint:
         - on: [ port, usecase, source, repository ]
           allowed:
             - kind: 'parameter'
-              type: 'identity.integer'
               identifier: 'id'
+              type: 'IntId'
+              # definition: 'identity.integer' # optional way to defining type and import
+              import: 'package:feature_first_example/core/utils/types.dart'
             - kind: 'parameter'
-              type: 'identity.string'
               identifier: 'id'
+              # definition: 'identity.string' # optional way to defining type and import
+              type: 'StringId'
+              import: 'package:feature_first_example/core/utils/types.dart'
           forbidden:
             - kind: 'parameter'
+              identifier: 'id'
               type: 'int'
-              identifier: 'id'
             - kind: 'parameter'
-              type: 'String'
               identifier: 'id'
+              type: 'String'
 
       # [3] ERROR HANDLING: Control Flow & Logic Enforcement
       error_handlers:

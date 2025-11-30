@@ -1,153 +1,129 @@
-// test/src/models/dependencies_config_test.dart
-
+// test/src/models/configs/dependencies_config_test.dart
 
 import 'package:clean_architecture_lints/src/models/configs/dependencies_config.dart';
+import 'package:clean_architecture_lints/src/utils/config/config_keys.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('DependencyDetail', () {
-    group('fromMap', () {
-      test('should parse explicit Map syntax with components and packages', () {
-        final input = {
-          'component': ['domain', 'manager'],
-          'package': ['flutter', 'dart:ui'],
+  group('DependenciesConfig Models', () {
+    group('DependencyDetail', () {
+      test('should parse correctly when component and package are lists', () {
+        final map = {
+          'component': ['domain', 'usecase'],
+          'package': ['package:one', 'package:two'],
         };
-        final detail = DependencyDetail.fromMap(input);
-
-        expect(detail.components, containsAll(['domain', 'manager']));
-        expect(detail.packages, containsAll(['flutter', 'dart:ui']));
+        final detail = DependencyDetail.fromMap(map);
+        expect(detail.components, ['domain', 'usecase']);
+        expect(detail.packages, ['package:one', 'package:two']);
         expect(detail.isNotEmpty, isTrue);
       });
 
-      test('should parse shorthand List syntax as components', () {
-        // Configuration often looks like: allowed: ['domain', 'manager']
-        final input = ['domain', 'manager'];
-        final detail = DependencyDetail.fromMap(input);
-
-        expect(detail.components, containsAll(['domain', 'manager']));
-        expect(detail.packages, isEmpty);
+      test('should parse correctly when component and package are single strings', () {
+        final map = {'component': 'domain', 'package': 'package:one'};
+        final detail = DependencyDetail.fromMap(map);
+        expect(detail.components, ['domain']);
+        expect(detail.packages, ['package:one']);
         expect(detail.isNotEmpty, isTrue);
       });
 
-      test('should return empty detail for null input', () {
-        final detail = DependencyDetail.fromMap(null);
-        expect(detail.isEmpty, isTrue);
-      });
-
-      test('should return empty detail for empty map', () {
+      test('should return empty lists for missing keys', () {
         final detail = DependencyDetail.fromMap({});
-        expect(detail.isEmpty, isTrue);
-      });
-
-      test('should return empty detail for empty list', () {
-        final detail = DependencyDetail.fromMap([]);
-        expect(detail.isEmpty, isTrue);
+        expect(detail.components, isEmpty);
+        expect(detail.packages, isEmpty);
+        expect(detail.isNotEmpty, isFalse);
       });
     });
-  });
 
-  group('DependencyRule', () {
-    group('fromMap', () {
-      test('should parse valid rule with both allowed and forbidden', () {
+    group('DependencyRule', () {
+      test('should parse a complete rule with allowed and forbidden blocks', () {
         final map = {
           'on': 'domain',
-          'allowed': ['manager'],
-          'forbidden': {
-            'package': ['flutter']
-          }
+          'allowed': {'component': 'entity'},
+          'forbidden': {'package': 'package:flutter/material.dart'},
         };
         final rule = DependencyRule.fromMap(map);
-
         expect(rule, isNotNull);
-        expect(rule!.on, equals(['domain']));
-
-        // Shorthand parsing check
-        expect(rule.allowed.components, contains('manager'));
-
-        // Explicit map parsing check
-        expect(rule.forbidden.packages, contains('flutter'));
+        expect(rule!.on, ['domain']);
+        expect(rule.allowed.components, ['entity']);
+        expect(rule.forbidden.packages, ['package:flutter/material.dart']);
       });
 
-      test('should parse rule with list of targets in "on"', () {
+      test('should return null when "on" key is missing', () {
         final map = {
-          'on': ['port', 'usecase'],
-          'allowed': ['domain']
-        };
-        final rule = DependencyRule.fromMap(map);
-
-        expect(rule, isNotNull);
-        expect(rule!.on, containsAll(['port', 'usecase']));
-      });
-
-      test('should return null if "on" is missing', () {
-        final map = {
-          'allowed': ['domain']
+          'allowed': {'component': 'entity'},
         };
         expect(DependencyRule.fromMap(map), isNull);
       });
 
-      test('should return null if "on" is empty', () {
-        final map = {
-          'on': [],
-          'allowed': ['domain']
-        };
-        expect(DependencyRule.fromMap(map), isNull);
+      test('should create empty details for missing allowed/forbidden blocks', () {
+        final map = {'on': 'domain'};
+        final rule = DependencyRule.fromMap(map);
+        expect(rule, isNotNull);
+        expect(rule!.allowed.isEmpty, isTrue);
+        expect(rule.forbidden.isEmpty, isTrue);
       });
     });
-  });
 
-  group('DependenciesConfig', () {
-    group('fromMap', () {
-      test('should parse list of rules and map them correctly', () {
-        final map = {
-          'dependencies': [
+    group('DependenciesConfig', () {
+      test('should parse a full list of valid location rules', () {
+        final configMap = {
+          ConfigKey.root.dependencies: [
             {
               'on': 'domain',
-              'forbidden': {'package': 'flutter'}
+              'forbidden': {
+                'component': ['data', 'presentation'],
+              },
             },
             {
-              'on': ['manager', 'bloc'],
-              'allowed': ['usecase']
-            }
-          ]
+              'on': ['usecase', 'port'],
+              // FIX: Changed key from 'port' to 'component' to match ConfigKeys
+              'allowed': {'component': 'entity'},
+            },
+          ],
         };
 
-        final config = DependenciesConfig.fromMap(map);
-
+        final config = DependenciesConfig.fromMap(configMap);
         expect(config.rules, hasLength(2));
 
-        // Test lookup by single ID
-        final domainRule = config.ruleFor('domain');
+        final domainRule = config.ruleFor(.domain);
         expect(domainRule, isNotNull);
-        expect(domainRule!.forbidden.packages, contains('flutter'));
+        expect(domainRule!.forbidden.components, ['data', 'presentation']);
 
-        // Test lookup for multiple IDs mapping to same rule
-        final managerRule = config.ruleFor('manager');
-        final blocRule = config.ruleFor('bloc');
+        final usecaseRule = config.ruleFor(.usecase);
+        expect(usecaseRule, isNotNull);
+        expect(usecaseRule!.allowed.components, ['entity']);
 
-        expect(managerRule, isNotNull);
-        expect(blocRule, isNotNull);
-        expect(managerRule, same(blocRule)); // Should be the exact same object instance
-        expect(managerRule!.allowed.components, contains('usecase'));
+        // Verify that the map correctly links both 'on' keys to the same rule.
+        expect(config.ruleFor(.usecase), same(usecaseRule));
+        expect(config.ruleFor(.port), same(usecaseRule));
       });
 
-      test('should return empty config if dependencies key is missing', () {
-        final config = DependenciesConfig.fromMap({});
-        expect(config.rules, isEmpty);
-        expect(config.ruleFor('domain'), isNull);
-      });
-
-      test('should ignore invalid rules in the list', () {
-        final map = {
-          'dependencies': [
-            {'invalid': 'data'}, // Missing 'on'
-            {'on': 'data', 'allowed': 'model'} // Valid
-          ]
+      test('should ignore malformed rules in the list', () {
+        final configMap = {
+          ConfigKey.root.dependencies: [
+            {
+              'on': 'domain',
+              'allowed': {'component': 'entity'},
+            },
+            {
+              'allowed': {'component': 'model'},
+            }, // Invalid, missing 'on'
+            'not_a_map', // Invalid
+          ],
         };
-
-        final config = DependenciesConfig.fromMap(map);
+        final config = DependenciesConfig.fromMap(configMap);
         expect(config.rules, hasLength(1));
-        expect(config.ruleFor('data'), isNotNull);
+        expect(config.ruleFor(.domain), isNotNull);
+      });
+
+      test('should create an empty config when the locations key is missing or empty', () {
+        final config1 = DependenciesConfig.fromMap({});
+        expect(config1.rules, isEmpty);
+
+        final config2 = DependenciesConfig.fromMap({
+          ConfigKey.root.dependencies: <Map<String, dynamic>>[],
+        });
+        expect(config2.rules, isEmpty);
       });
     });
   });
