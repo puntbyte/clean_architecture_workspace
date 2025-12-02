@@ -1,7 +1,7 @@
 // lib/src/models/configs/module_config.dart
 
-import 'package:architecture_lints/src/utils/config/config_keys.dart';
-import 'package:architecture_lints/src/utils/extensions/json_map_extension.dart';
+import 'package:architecture_lints/src/utils_old/config/config_keys.dart';
+import 'package:architecture_lints/src/utils_old/extensions/json_map_extension.dart';
 
 /// Strongly-typed representation of the `module_definitions` configuration block.
 class ModuleConfig {

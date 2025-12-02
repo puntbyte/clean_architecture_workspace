@@ -1,8 +1,8 @@
 // lib/features/auth/domain/usecases/usecase.violations.dart
 
-import 'package:feature_first_example/core/usecase/usecase.dart';
-import 'package:feature_first_example/core/utils/types.dart';
-import 'package:feature_first_example/features/auth/data/sources/default_auth_source.dart';
+import 'package:clean_feature_first/core/usecase/usecase.dart';
+import 'package:clean_feature_first/core/utils/types.dart';
+import 'package:clean_feature_first/features/auth/data/sources/default_auth_source.dart';
 
 // LINT: [1] disallow_flutter_in_domain
 // REASON: Domain layer must be platform-agnostic (no UI types).
@@ -10,11 +10,11 @@ import 'package:flutter/material.dart'; //! <-- LINT WARNING
 
 // LINT: [2] enforce_layer_independence
 // REASON: Domain layer cannot import from the Data layer.
-import 'package:feature_first_example/features/auth/data/models/user_model.dart'; //! <-- LINT WARNING
+import 'package:clean_feature_first/features/auth/data/models/user_model.dart'; //! <-- LINT WARNING
 
 // LINT: [3] enforce_abstract_repository_dependency
 // REASON: Domain must depend on Interfaces (Ports), not Concrete Implementations.
-import 'package:feature_first_example/features/auth/data/repositories/auth_repository.dart'; //! <-- LINT WARNING
+import 'package:clean_feature_first/features/auth/data/repositories/auth_repository.dart'; //! <-- LINT WARNING
 
 // LINT: [4] disallow_service_locator
 // REASON: Service Locators hide dependencies; use Constructor Injection.

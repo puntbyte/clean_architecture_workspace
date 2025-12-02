@@ -1,12 +1,12 @@
 // example/lib/features/auth/data/sources/source.interface.violations.dart
 
-import 'package:feature_first_example/core/source/source.dart';
-import 'package:feature_first_example/core/utils/types.dart';
-import 'package:feature_first_example/features/auth/data/models/user_model.dart';
+import 'package:clean_feature_first/core/source/source.dart';
+import 'package:clean_feature_first/core/utils/types.dart';
+import 'package:clean_feature_first/features/auth/data/models/user_model.dart';
 
 // LINT: [1] disallow_entity_in_data_source
 // REASON: Data layer must deal with Models (DTOs), not pure Entities.
-import 'package:feature_first_example/features/auth/domain/entities/user.dart'; // <-- LINT WARNING HERE
+import 'package:clean_feature_first/features/auth/domain/entities/user.dart'; // <-- LINT WARNING HERE
 
 // LINT: [2] enforce_naming_pattern
 // REASON: Name must match `{{name}}Source` (e.g., AuthSource).

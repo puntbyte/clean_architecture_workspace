@@ -50,7 +50,7 @@ class EnforceNamingAntipattern extends ArchitectureLintRule {
         return;
       }
 
-      if (NamingUtils.validateName(name: className, template: rule.antipattern!)) {
+      if (NamingUtils.validate(name: className, template: rule.antipattern!)) {
         reporter.atToken(
           node.name,
           _code,

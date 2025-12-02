@@ -7,8 +7,8 @@ import 'package:architecture_lints/src/analysis/arch_component.dart';
 import 'package:architecture_lints/src/lints_old/architecture_lint_rule.dart';
 import 'package:architecture_lints/src/models/configs/inheritances_config.dart';
 import 'package:architecture_lints/src/models/configs/naming_conventions_config.dart';
-import 'package:architecture_lints/src/utils/extensions/iterable_extension.dart';
-import 'package:architecture_lints/src/utils/nlp/naming_utils.dart';
+import 'package:architecture_lints/src/utils_old/extensions/iterable_extension.dart';
+import 'package:architecture_lints/src/utils_old/nlp/naming_utils.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class EnforceFileAndFolderLocation extends ArchitectureLintRule {

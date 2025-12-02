@@ -34,7 +34,7 @@ class EnforceModelToEntityMapping extends DartLintRule {
 
     context.registry.addClassDeclaration((node) {
       final modelTemplate = config.naming.model;
-      if (!NamingUtils.validateName(name: node.name.lexeme, template: modelTemplate)) return;
+      if (!NamingUtils.validate(name: node.name.lexeme, template: modelTemplate)) return;
 
       var hasToEntityMethod = false;
       for (final member in node.members) {

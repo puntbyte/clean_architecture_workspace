@@ -1,4 +1,6 @@
+// lib/src/lints/structure/project_structure_lint.dart
 import 'package:analyzer/error/listener.dart';
+import 'package:architecture_lints/src/configuration/config_loader.dart';
 import 'package:architecture_lints/src/lints/architecture_lint.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:path/path.dart' as p;
@@ -14,30 +16,42 @@ class ProjectStructureLint extends ArchitectureLint {
 
   @override
   void run(
-    CustomLintResolver resolver,
-    DiagnosticReporter reporter,
-    CustomLintContext context,
-  ) {
+      CustomLintResolver resolver,
+      DiagnosticReporter reporter,
+      CustomLintContext context,
+      ) {
     context.registry.addCompilationUnit((node) {
       final config = getConfig();
 
-      // If config failed to parse, we can't enforce rules, so we return.
-      if (config == null) return;
+      // DEBUGGING: If config is null, show the specific error from loader
+      if (config == null) {
+        final errorMessage = ConfigLoader.loadError ?? 'Unknown error loading configuration.';
+
+        // Dynamically create a code with the specific error message
+        reporter.atNode(
+          node,
+          LintCode(
+            name: 'arch_config_error',
+            problemMessage: errorMessage,
+          ),
+        );
+        return;
+      }
 
       final path = resolver.path;
 
-      // 1. Filter exclusions
+      // Filter exclusions
       if (!path.contains('lib')) return;
       if (path.endsWith('.g.dart')) return;
       if (path.endsWith('.freezed.dart')) return;
       if (p.basename(path) == 'main.dart') return;
 
-      // 2. Check Architecture
+      // Check Architecture
       final component = getComponentFromFile(config, path);
 
-      // 3. Report Error if Orphan
+      // Report Error if Orphan
       if (component == null) {
-        reporter.atNode(node, code);
+        reporter.atNode(node, _code);
       }
     });
   }

@@ -1,104 +1,17 @@
-# feature_first_example/analysis_options.yaml
-
-formatter:
-  page_width: 100
+# examples/feature_first_example/analysis_options.yaml
 
 analyzer:
   plugins:
+    # This enables the custom_lint engine
     - custom_lint
-  language:
-    strict-casts: true
-    strict-inference: true
-    strict-raw-types: true
 
 custom_lint:
+  # This tells custom_lint to look for rules in your local package
+  # (Assuming architecture_lints is in your dev_dependencies)
+  debug: true
+
+  # If you wanted to DISABLE a specific rule, you would do this:
   rules:
+    - arch_orphan_file: true
+    - arch_class_naming: true
 
-    # --- CONFIGURATION FILE ---
-    - clean_architecture:
-      config_file: 'clean_architecture.yaml'
-
-    # --- ENABLE ALL LINT RULES ---
-    - enforce_contract: true
-    - enforce_abstracting: true
-
-    - pattern_matching: true
-    - antipattern_matching: true
-    - semantic_naming: true
-
-    - enforce_file_and_folder_location: true
-    - enforce_layer_independence: true
-
-    - enforce_component_dependency: true
-    - enforce_package_dependency: true
-    - enforce_location: true
-
-    - enforce_component_safety: true
-    - enforce_type_safety: true
-
-    - error_handling: true
-    - enforce_try_catch: true
-    - convert_exceptions_to_failures: true
-
-    - enforce_annotations: true
-    - disallow_service_locator: true
-
-    - require_model_to_entity_method: true
-    - missing_usecase: true
-
-
-
-
-    # --- Purity Rules ---
-
-    # --- Contract Rules ---
-    - enforce_entity_contract: true
-    - enforce_usecase_contract: true
-    - enforce_port_contract: true
-    - enforce_repository_contract: true
-    - enforce_custom_contract: true
-
-    # --- Dependency Rules ---
-    - disallow_model_in_domain: true
-    - disallow_flutter_in_domain: true
-
-    - disallow_entity_in_source: true
-    - disallow_public_members_in_implementation: true
-
-    - disallow_repository_in_presentation: true
-    - disallow_usecase_in_widget: true
-
-    - disallow_dependency_instantiation: true
-    - disallow_service_locator: true
-
-
-    # --- Inheritance Rules ---
-    - enforce_model_abstraction: true
-    - enforce_source_implementation_abstraction: true
-    - enforce_repository_abstraction: true
-
-    - require_model_to_entity_method: true
-
-    # --- Location Rules ---
-    - enforce_file_and_folder_location: true
-    - enforce_layer_independence: true
-
-    # --- Type Safety Rules ---
-    - disallow_model_return_from_repository: true
-    - enforce_type_safety: true
-
-    # --- Error Handling Rules ---
-    - enforce_try_catch_in_repository: true
-    - enforce_trowing_exception_on_source_implementation: true
-    - convert_exceptions_to_failures: true
-    - disallow_throwing_from_repository: true
-    - disallow_throwing_from_presentation: true
-
-    # --- Naming Convention Rules ---
-    - enforce_antipattern_matching: true
-    - enforce_pattern_matching: true
-    - enforce_semantic_naming: true
-
-    # --- Structure Rules ---
-    - enforce_annotations: true
-    - missing_use_case: true

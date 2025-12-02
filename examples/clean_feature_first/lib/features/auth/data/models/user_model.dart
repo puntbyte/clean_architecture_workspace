@@ -1,6 +1,6 @@
 // lib/features/auth/data/models/user_model.dart
 
-import 'package:feature_first_example/features/auth/domain/entities/user.dart';
+import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
 
 // CORRECT:
 // 1. Naming: Matches `{{name}}Model` (UserModel).

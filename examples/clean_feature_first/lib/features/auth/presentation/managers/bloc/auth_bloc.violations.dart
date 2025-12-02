@@ -4,8 +4,8 @@ import 'package:bloc/bloc.dart';
 import 'package:bloc/bloc.dart';
 // LINT: disallow_repository_in_presentation
 // Reason: Presentation cannot touch Repositories directly.
-import 'package:feature_first_example/features/auth/domain/ports/auth_port.dart';
-import 'package:feature_first_example/features/auth/presentation/managers/bloc/auth_bloc.dart';
+import 'package:clean_feature_first/features/auth/domain/ports/auth_port.dart';
+import 'package:clean_feature_first/features/auth/presentation/managers/bloc/auth_bloc.dart';
 // LINT: disallow_service_locator
 import 'package:get_it/get_it.dart';
 

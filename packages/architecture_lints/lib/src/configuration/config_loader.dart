@@ -1,4 +1,6 @@
+// lib/src/configuration/config_loader.dart
 import 'dart:io';
+
 import 'package:architecture_lints/src/configuration/component_config.dart';
 import 'package:architecture_lints/src/configuration/config_keys.dart';
 import 'package:architecture_lints/src/configuration/project_config.dart';
@@ -9,29 +11,63 @@ import 'package:yaml/yaml.dart';
 class ConfigLoader {
   static ProjectConfig? _cachedConfig;
 
+  // NEW: Store the last error message for debugging
+  static String? loadError;
+
   static ProjectConfig? getCachedConfig() => _cachedConfig;
 
   static Future<ProjectConfig?> load(String rootPath) async {
     if (_cachedConfig != null) return _cachedConfig;
 
-    final file = File(p.join(rootPath, 'architecture.yaml'));
+    // Reset error on new load attempt
+    loadError = null;
+
+    final filePath = p.join(rootPath, 'architecture.yaml');
+    final file = File(filePath);
 
     if (!file.existsSync()) {
-      final altFile = File(p.join(rootPath, 'architecture.yml'));
-      if (!altFile.existsSync()) return null;
+      // Try fallback
+      final altPath = p.join(rootPath, 'architecture.yml');
+      final altFile = File(altPath);
+      if (!altFile.existsSync()) {
+        // ERROR 1: File not found
+        loadError = 'Config file not found. \nChecked paths:\n1. $filePath\n2. $altPath';
+        return null;
+      }
+      return _parseFile(altFile);
     }
 
-    final content = await file.readAsString();
+    return _parseFile(file);
+  }
 
+  static Future<ProjectConfig?> _parseFile(File file) async {
     try {
-      final yaml = loadYaml(content);
-      if (yaml is! YamlMap) return null;
+      final content = await file.readAsString();
+      if (content.trim().isEmpty) {
+        loadError = 'Config file is empty: ${file.path}';
+        return null;
+      }
 
-      return _cachedConfig = parseYaml(yaml);
-    } catch (e, stack) {
-      print('Architecture Lints: Error parsing YAML: $e\n$stack');
+      final yaml = loadYaml(content);
+
+      if (yaml is! YamlMap) {
+        loadError = 'YAML format error: Root must be a Map (key-value pairs). File: ${file.path}';
+        return null;
+      }
+
+      _cachedConfig = parseYaml(yaml);
+      return _cachedConfig;
+    } catch (e) {
+      // ERROR 2: Parsing failed
+      loadError = 'YAML Syntax Error in ${file.path}:\n$e';
       return null;
     }
+  }
+
+  @visibleForTesting
+  static void reset() {
+    _cachedConfig = null;
+    loadError = null;
   }
 
   @visibleForTesting

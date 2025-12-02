@@ -65,7 +65,7 @@ class LayerResolver {
   }) {
     for (final component in potentialComponents) {
       final rule = _config.namingConventions.ruleFor(component);
-      if (rule != null && NamingUtils.validateName(name: className, template: rule.pattern)) {
+      if (rule != null && NamingUtils.validate(name: className, template: rule.pattern)) {
         return component;
       }
     }

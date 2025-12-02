@@ -1,6 +1,6 @@
 // lib/core/usecase/usecase.dart
 
-import 'package:feature_first_example/core/utils/types.dart';
+import 'package:clean_feature_first/core/utils/types.dart';
 
 /// Base interface for Use Cases.
 abstract interface class Usecase {}

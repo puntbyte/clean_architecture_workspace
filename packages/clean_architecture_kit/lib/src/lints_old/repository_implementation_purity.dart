@@ -56,7 +56,7 @@ class RepositoryImplementationPurity extends DartLintRule {
         successTypeName = successTypeName.substring(0, successTypeName.length - 1);
       }
 
-      if (NamingUtils.validateName(name: successTypeName, template: config.naming.model)) {
+      if (NamingUtils.validate(name: successTypeName, template: config.naming.model)) {
         reporter.reportError(
           Diagnostic.forValues(
             source: resolver.source,

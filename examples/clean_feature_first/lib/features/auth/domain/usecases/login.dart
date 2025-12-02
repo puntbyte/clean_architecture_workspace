@@ -1,10 +1,10 @@
 // lib/features/auth/domain/usecases/login.dart
 
 import 'dart:async';
-import 'package:feature_first_example/core/error/failures.dart';
-import 'package:feature_first_example/core/usecase/usecase.dart';
-import 'package:feature_first_example/features/auth/domain/entities/user.dart';
-import 'package:feature_first_example/features/auth/domain/ports/auth_port.dart';
+import 'package:clean_feature_first/core/error/failures.dart';
+import 'package:clean_feature_first/core/usecase/usecase.dart';
+import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
+import 'package:clean_feature_first/features/auth/domain/ports/auth_port.dart';
 import 'package:fpdart/src/either.dart';
 import 'package:injectable/injectable.dart';
 

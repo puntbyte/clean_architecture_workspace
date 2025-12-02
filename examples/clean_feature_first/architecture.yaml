@@ -1,0 +1,994 @@
+# feature_first_example/architecture.yaml
+
+# Include the company-wide standard configuration
+#include: ../../architecture_standards/clean_feature_first_recommended.yaml
+
+# ==================================================================================================
+# ARCHITECTURE CONFIGURATION
+# This file defines the architectural rules, boundaries, and standards for your project.
+# The linter uses this configuration to enforce consistency, type safety, and purity.
+# ==================================================================================================
+
+# ==================================================================================================
+# [1] ARCHITECTURE META
+# Defines high-level pattern info (useful for logging or specific preset behaviors).
+# ==================================================================================================
+
+# --------------------------------------------------------------------------------------------------
+# [1.1] architecture
+#
+# --------------------------------------------------------------------------------------------------
+architecture:
+  style: clean_architecture
+  pattern: feature_first
+
+# ==================================================================================================
+# [2] PROJECT STRUCTURE (The Map)
+# The linter cannot function without identifying where files are located.
+# ==================================================================================================
+
+# --------------------------------------------------------------------------------------------------
+# [2.1] modules
+# Defines the high-level containers for your code.
+#
+# [a] <module_key>
+# Unique ID for the module.
+# TYPE: String | Map
+# VALUE: Can be a String or a Map.
+# (1) String shorthand: The path of the module (e.g. `core: 'core'`)
+# (2) Map: The path and default settings of the module (e.g. `core: { path: 'core', default: ... }`)
+#
+# [a.1] path
+# The root directory for this module.
+# SUPPORTED WILDCARDS:
+# - `{{name}}`: Indicates this is a "Feature" module. The folder name at this position
+# becomes the feature name (e.g. 'features/auth' -> feature name is 'auth').
+# - `*`: Standard glob wildcard (less semantic than {{name}}).
+# TYPE: String
+#
+# [a.2] default
+# If true, components defined below will belong to this module unless specified otherwise.
+# TYPE: Boolean
+# --------------------------------------------------------------------------------------------------
+modules:
+  features: { path: 'features/{{name}}', default: true }
+  core: 'core'
+  config: 'config'
+  shared: 'shared'
+
+# --------------------------------------------------------------------------------------------------
+# [2.2] components
+# Maps the file system structure to architectural components and defines their naming identity.
+#
+# DEFINITION STYLE:
+# Uses flattened dot-notation keys (e.g., 'data.source.interface') to define the hierarchy.
+# Child components implicitly inherit the file path of their parents unless a new 'path' is provided.
+#
+# REFERENCES (Shorthand vs Full):
+# When referencing these components in other rules (like [dependencies] or [type_safety]),
+# you can use two styles:
+# 1. Full Reference: `presentation.manager.event.interface` (Explicit and safest).
+# 2. Shorthand: `event.interface` (Matches the suffix).
+# RESOLUTION LOGIC: The linter attempts to match the suffix against defined keys.
+#   - Unique Match: If `event.interface` matches only one definition, it is used.
+#   - Ambiguous Match: If multiple definitions match (e.g. `a.b.c` and `x.b.c`), it defaults to
+#     the **FIRST** definition found in this list.
+#
+# STRUCTURE:
+# [a] <component_key>
+# The unique dot-notated identifier (e.g., 'domain', 'data.source.interface').
+# TYPE: Map
+#
+# [a.1] name
+# The human-readable label used in linter error messages.
+# Example: 'Repository Interface'
+# TYPE: String
+#
+# [a.2] path
+# The directory name(s) relative to the parent segment.
+# If omitted, the component is considered "Co-located" (lives in the parent's directory).
+# TYPE: String | List<String>
+#
+# [a.3] pattern
+# Syntactic naming pattern (Regex-like).
+# TYPE: String | List<String>
+# PLACEHOLDERS:
+# - {{name}}: The core domain name in PascalCase (e.g. 'User').
+# - {{affix}}: Flexible prefixes or suffixes (e.g. 'Default', 'Impl').
+#
+# [a.4] antipattern
+# Forbidden naming pattern. Used to guide users away from bad naming habits.
+# TYPE: String | List<String>
+# PLACEHOLDERS: {{name}}, {{affix}}.
+#
+# [a.5] grammar
+# Semantic naming pattern (Parts of Speech).
+# TYPE: String | List<String>
+# TOKENS:
+# - noun: {{noun}}, {{noun.phrase}}, {{noun.singular}}, {{noun.plural}}
+# - verb: {{verb}}, {{verb.present}}, {{verb.past}}, {{verb.gerund}}
+# - other: {{adjective}}, {{adverb}}, {{pronoun}}, {{preposition}}, {{conjunction}}
+# --------------------------------------------------------------------------------------------------
+components:
+  # ---- Domain (Inner Circle) ---
+  domain:
+    name: 'Domain'
+    path: 'domain'
+
+  # Entities are objects. They must be Noun Phrases (e.g., "User", "PaymentMethod").
+  domain.entity:
+    name: 'Entity'
+    path: 'entities'
+    pattern: '{{name}}'
+    antipattern: '{{name}}Entity'
+    grammar: '{{noun.phrase}}'
+
+  # Ports are interfaces. They are Noun Phrases (e.g., "AuthPort").
+  domain.port:
+    name: 'Port'
+    path: 'ports'
+    pattern: '{{name}}Port'
+    antipattern: '{{name}}(Interface|Repository)'
+    grammar: '{{noun.phrase}}Port'
+
+  # UseCases are actions. They must start with a Verb and end with a Noun (e.g., "GetUser").
+  domain.usecase:
+    name: 'UseCase'
+    path: 'usecases'
+    pattern: '{{name}}'
+    antipattern: '{{name}}Use(C|c)ase'
+    grammar: '{{verb.present}}{{noun.phrase}}'
+
+  # Parameters are data. They must be Noun Phrases (e.g., "_userIdParam").
+  domain.usecase.parameter:
+    name: 'Usecase Parameter'
+    pattern: '_{{name}}Param'
+    grammar: '_{{noun.phrase}}Param'
+
+  # ---- Data (Adapter) ---
+  data:
+    name: 'Data'
+    path: 'data'
+
+  # Models are data objects. Noun Phrases (e.g., "UserModel").
+  data.model:
+    name: 'Model'
+    path: 'models'
+    pattern: '{{name}}Model'
+    grammar: '{{noun.phrase}}Model'
+
+  data.source:
+    name: 'Source'
+    path: 'sources'
+
+  # Source Interfaces are objects. Noun Phrases (e.g., "AuthSource").
+  data.source.interface:
+    name: 'Source Interface'
+    pattern: '{{name}}Source'
+    grammar: '{{noun.phrase}}Source'
+
+  # Source Implementations are concrete objects. Noun Phrases (e.g., "RemoteAuthSource").
+  data.source.implementation:
+    name: 'Source Implementation'
+    pattern: '{{affix}}{{name}}Source'
+    grammar: '{{noun.phrase}}Source'
+
+  # Repositories are objects. Noun Phrases (e.g., "AuthRepository").
+  data.repository:
+    name: 'Repository'
+    path: 'repositories'
+    pattern: '{{affix}}{{name}}Repository'
+    grammar: '{{noun.phrase}}Repository'
+
+  # --- Presentation (Outer Circle) ---
+  presentation:
+    name: 'Presentation'
+    path: 'presentation'
+
+  # Managers are objects. Noun Phrases (e.g., "AuthBloc", "UserCubit").
+  presentation.manager:
+    name: 'State Manager'
+    path: [ 'managers', 'bloc', 'cubit' ]
+    pattern: '{{name}}(Bloc|Cubit|Manager)'
+    grammar: '{{noun.phrase}}(Bloc|Cubit|Manager)'
+
+  # Event Interfaces are objects/categories. Noun Phrases (e.g., "AuthEvent").
+  presentation.manager.event.interface:
+    name: 'Event Interface'
+    pattern: '{{name}}Event'
+    grammar: '{{noun.phrase}}Event'
+
+  # Concrete Events represent something that HAPPENED.
+  # Grammar: Subject + Past Tense Verb (e.g., "UserLoggedIn", "DataLoaded", "ErrorOccurred").
+  presentation.manager.event.implementation:
+    name: 'Event Implementation'
+    pattern: '{{name}}'
+    grammar: '{{noun.phrase}}{{verb.past}}'
+
+  # State Interfaces are objects/categories. Noun Phrases (e.g., "AuthState").
+  presentation.manager.state.interface:
+    name: 'State Interface'
+    pattern: '{{name}}State'
+    grammar: '{{noun.singular}}State'
+
+  # Concrete States represent a STATUS.
+  # Grammar: Subject + Adjective OR Gerund (e.g., "AuthInitial", "AuthLoading", "AuthSuccess").
+  presentation.manager.state.implementation:
+    name: 'State Implementation'
+    pattern: '{{name}}'
+    grammar:
+      - '{{noun.phrase}}{{adjective}}'     # AuthInitial, AuthLoading
+      - '{{noun.phrase}}{{verb.gerund}}'   # AuthLoading (alternative)
+      - '{{noun.phrase}}{{verb.past}}'     # AuthLoaded
+
+  # Widgets are objects. Noun Phrases (e.g., "UserList").
+  presentation.widget:
+    name: 'Widget'
+    path: 'widgets'
+    pattern: '{{name}}(Panel|Section|Widget)'
+    grammar: '{{noun.phrase}}(Panel|Section|Widget)'
+
+  # Forms are objects. Noun Phrases (e.g., "LoginForm", "UserForm").
+  presentation.form:
+    name: 'Form'
+    path: 'forms'
+    pattern: '{{name}}Form'
+    grammar: '{{noun.phrase}}Form'
+
+  # Pages are objects. Noun Phrases (e.g., "LoginPage").
+  presentation.page:
+    name: 'Page'
+    path: 'pages'
+    pattern: '{{name}}Page'
+    antipattern: '{{name}}Screen'
+    grammar: '{{noun.phrase}}Page'
+
+  # --- CORE COMPONENTS (Explicitly assigned to 'core' module) ---
+  core.failure:
+    module: 'core'
+    name: 'Failure'
+    path: 'error'
+    pattern: '{{name}}Failure'
+
+  core.exception:
+    module: 'core'
+    name: 'Exception'
+    path: 'error'
+    pattern: '{{name}}Exception'
+
+  core.util:
+    module: 'core'
+    name: 'Utility'
+    path: 'utils'
+
+  # --- SHARED COMPONENTS (Explicitly assigned to 'shared' module) ---
+  shared.widget:
+    module: 'shared'
+    path: 'widgets'
+    pattern: '{{name}}' # Shared widgets might have looser naming rules
+
+# ==================================================================================================
+# [3] DEFINITIONS (The Dictionary)
+# Define reusable types and services here to be referenced by keys in rules below.
+# ==================================================================================================
+
+# --------------------------------------------------------------------------------------------------
+# [3.1] types
+# Defines aliases for class types to be used in type safety, error handling, and inheritance rules.
+#
+# INHERITANCE BEHAVIOR (Cascading):
+# Imports cascade down the list of keys within a group. If an entry does not specify an 'import',
+# it inherits the import from the most recently defined import above it in the group.
+#
+# STRUCTURE:
+# [a] <group_key>
+# A logical grouping (e.g., 'usecase', 'result').
+# TYPE: Map<String, String | Map>
+#
+# [a.1] <type_key>
+# The unique identifier (e.g., 'base', 'unary').
+# TYPE: String | Map
+# VALUE: Can be one of two formats:
+# 1. Shorthand (String): The raw class name. Inherits previous import.
+#    Example: `unary: 'UnaryUsecase'`
+# 2. Detailed (Map): Defines type and optionally overrides import.
+#    Example: `base: { type: 'Usecase', import: '...' }`
+#
+# [a.2] type
+# The raw Dart class name.
+# TYPE: String
+#
+# [a.3] import
+# The package URI. If omitted, inherits from the previous entry in the group.
+# TYPE: String
+#
+# [a.4] argument
+# List of types expected inside the generics <...>.
+# TYPE: List<Map> (Recursive structure, accepts type, import, definition, arguments)
+# --------------------------------------------------------------------------------------------------
+types:
+  # --- Domain Types ---
+  usecase:
+    # Sets the import context for subsequent items
+    base: { type: 'Usecase', import: 'package:feature_first_example/core/usecase/usecase.dart' }
+    # Inherits usecase.dart
+    nullary: 'NullaryUsecase'
+    # Inherits usecase.dart
+    unary: 'UnaryUsecase'
+
+  # --- Functional Wrappers ---
+  result:
+    # No import specified, starts fresh (or null)
+    future: 'Future'
+    stream: 'Stream'
+    # New import context
+    wrapper.future:
+      type: 'FutureEither'
+      import: 'package:feature_first_example/core/utils/types.dart'
+    # Inherits types.dart
+    wrapper.stream: 'StreamEither'
+    # Overrides context
+    success: { type: 'Right', import: 'package:fpdart/fpdart.dart' }
+    # Inherits fpdart
+    failure: 'Left'
+
+    # 2. Explicit Nested Generics (The strict way)
+    # Matches: Future<Either<Failure, T>>
+    # This ensures you aren't just returning Future<int> or Future<Either<String, int>>.
+    wrapper.strict:
+      name: 'Future'
+      argument:
+        name: 'Either'
+        import: 'package:fpdart/fpdart.dart'
+        argument:
+          # First arg must be a Failure
+          - definition: 'failure.base'
+          # Second arg can be anything (Wildcard)
+          - type: '*'
+
+  # --- Failure ---
+  failure:
+    base: { type: 'Failure', import: 'package:feature_first_example/core/error/failures.dart' }
+    server: 'ServerFailure'
+    cache: 'CacheFailure'
+
+  # --- Exceptions ---
+  exception:
+    raw: 'Exception'
+    base:
+      type: 'CustomException'
+      import: 'package:feature_first_example/core/error/exceptions.dart'
+    server: 'ServerException'
+    cache: 'CacheException'
+
+  # --- identity ---
+  identity:
+    integer: { type: 'IntId', import: 'package:feature_first_example/core/utils/types.dart' }
+    string: 'StringId'
+
+# --------------------------------------------------------------------------------------------------
+# [3.2] services
+# Defines global services, singletons, or static accessors to be tracked (e.g. for banning usage).
+#
+# STRUCTURE:
+# [a] <service_key>
+# Unique identifier for the service (e.g., 'locator', 'logging').
+# TYPE: Map
+#
+# [a.1] type
+# List of class names to match (e.g. 'GetIt', 'Logger').
+# TYPE: String | List<String>
+#
+# [a.2] identifier
+# List of variable, method, or property names to match (e.g. 'sl', 'locator', 'log').
+# TYPE: String | List<String>
+#
+# [a.3] import
+# The source package URI. Used to strictly identify the service and avoid false positives.
+# TYPE: String
+# --------------------------------------------------------------------------------------------------
+services:
+  locator:
+    type: [ 'Injector', 'GetIt' ]
+    identifier: [ 'getIt', 'locator', 'serviceLocator' ]
+    import: 'package:feature_first_example/core/utils/service_locator.dart'
+
+  logging:
+    type: 'Logger'
+    identifier: [ 'logger', 'log' ]
+    import: 'package:logger/logger.dart'
+
+  routing:
+    type: 'GoRouter'
+    identifier: [ 'router', 'goRouter' ]
+    import: 'package:go_router/go_router.dart'
+
+
+# ==================================================================================================
+# [4] IDENTITY (The ID Card)
+# How to identify a component. If a class doesn't match these, it's a violation.
+# ==================================================================================================
+
+# --------------------------------------------------------------------------------------------------
+# [4.1] inheritances
+# Enforces base class requirements (extends or implements) for architectural components.
+#
+# STRUCTURE:
+# [a] on
+# The architectural component target (e.g., 'entity', 'model').
+# TYPE: String | List<String>
+#
+# [b] required | allowed | forbidden
+# The rule type.
+# - required: The class MUST inherit from this.
+# - allowed: The class MAY inherit from this (whitelist / override).
+# - forbidden: The class MUST NOT inherit from this (blacklist).
+# TYPE: Map | List<Map>
+#
+# [b.1] type
+# The raw class name to match (e.g., 'Entity').
+# TYPE: String | List<String>
+#
+# [b.2] import
+# The package URI. Required if 'type' is used to ensure strict matching.
+# TYPE: String
+#
+# [b.3] definition
+# Reference to a key in the [types] config (e.g., 'usecase.unary').
+# TYPE: String | List<String>
+#
+# [b.4] component
+# Reference to another architectural component (e.g., 'port').
+# The rule matches if the class inherits from ANY class belonging to that component layer.
+# TYPE: String
+# --------------------------------------------------------------------------------------------------
+inheritances:
+  # --- Domain (Inner Circle) ---
+  # Entities must inherit from the base Entity class.
+  - on: entity
+    required: { type: 'Entity', import: 'package:feature_first_example/core/entity/entity.dart' }
+
+  # Ports (Repository Interfaces) must inherit from the base Port interface.
+  - on: port
+    required: { type: 'Port', import: 'package:feature_first_example/core/port/port.dart' }
+
+  # Usecases must implement either the UnaryUsecase or NullaryUsecase base class.
+  - on: usecase
+    required: { definition: [ 'usecase.unary', 'usecase.nullary' ] }
+
+  # --- Data (Adapter) ---
+  # Models must extend their corresponding Domain Entity.
+  - on: model
+    required: { component: 'entity' }
+
+  # Sources (Data Sources) contract must inherit from the base Source interface.
+  - on: source.interface
+    required: { type: 'Source', import: 'package:feature_first_example/core/source/source.dart' }
+
+  # Sources (Data Sources) concrete must implement their corresponding interface.
+  - on: source.implementation
+    required: { component: 'source.interface' }
+
+  # Repositories must implement the Domain Port.
+  - on: repository
+    required: { component: 'port' }
+
+  # --- Presentation (Outer Circle) ---
+  # State Managers cab be Bloc or Cubit.
+  - on: manager
+    allowed: { type: [ 'Bloc', 'Cubit' ], import: 'package:bloc/bloc.dart' }
+
+  # Widgets could use Hooks for cleaner UI logic.
+  - on: widget
+    allowed: { type: 'HookWidget', import: 'package:flutter_hooks/flutter_hooks.dart' }
+
+  # Pages should not be StatefulWidgets (state belongs in the Manager).
+  - on: page
+    forbidden: { type: 'StatefulWidget' }
+
+
+# ==================================================================================================
+# [5] BOUNDARIES (The Firewall)
+# The most important architectural rule. Who can import whom?
+# ==================================================================================================
+
+# --------------------------------------------------------------------------------------------------
+# [5.1] dependencies
+# Enforces layer isolation and the Dependency Rule (source code dependencies must point inwards).
+#
+# STRUCTURE:
+# [a] on
+# The component or layer target.
+# TYPE: String | List<String>
+#
+# [b] allowed | forbidden
+# The rules defining the dependency graph.
+# - allowed: Whitelist. If defined, the component may ONLY import from these sources.
+# - forbidden: Blacklist. The component must NOT import from these sources.
+# TYPE: Map
+#
+# [b.1] component
+# List of architectural components or layers to check against.
+# TYPE: String | List<String>
+#
+# [b.2] import
+# List of URI patterns. Supports glob `**` for wildcards.
+# TYPE: String | List<String>
+# --------------------------------------------------------------------------------------------------
+dependencies:
+  # --- Domain (Inner Circle) ---
+  # Domain is platform agnostic and pure.
+  - on: domain
+    forbidden:
+      import: [ 'package:flutter/**', 'dart:ui' ]
+      component: [ 'data', 'presentation', 'model' ]
+
+  # Entities are independent data structures.
+  - on: entity
+    allowed: 'domain'
+
+  # Ports define contracts for Repositories.
+  - on: port
+    allowed: 'entity'
+
+  # UseCases orchestrate Entities via Ports.
+  - on: usecase
+    allowed: [ 'entity', 'port' ]
+
+  # --- Data (Adapter) ---
+  # Models adapt raw data to Entities.
+  - on: model
+    allowed: [ 'entity', 'data' ]
+
+  # Sources return Models.
+  - on: source.interface
+    allowed: [ 'model' ]
+
+  # Concrete Sources implement Interfaces and return Models.
+  - on: source.implementation
+    allowed: [ 'source.interface', 'model' ]
+
+  # Repositories coordinate everything in Data to fulfill Domain Ports.
+  - on: repository
+    allowed: [ 'port', 'data', 'entity' ]
+
+  # --- Presentation (Outer Circle) ---
+  # State management consumes Domain logic.
+  - on: [ 'manager', 'event', 'state' ]
+    allowed: [ 'usecase', 'entity' ]
+
+  # Widgets display state.
+  - on: widget
+    allowed: [ 'widget', 'page', 'manager', 'entity' ]
+
+  # Pages are top-level widgets.
+  - on: page
+    allowed: [ 'page', 'widget', 'manager', 'entity' ]
+
+
+# ==================================================================================================
+# [6] SAFETY & LOGIC (The Quality Assurance)
+# Enforces strong types, valid signatures, and error handling flows.
+# ==================================================================================================
+
+# --------------------------------------------------------------------------------------------------
+# [6.1] type_safeties
+# Enforces strict typing rules on method signatures (return types and parameters). Used to migrate
+# away from primitives, enforce wrappers (e.g. Either), or prevent layer leakage via return types.
+#
+# STRUCTURE:
+# [a] on
+# The component target.
+# TYPE: String | List<String>
+#
+# [b] allowed | forbidden
+# The specific rules.
+# - allowed: Whitelist. If defined, types MUST match one of these.
+# - forbidden: Blacklist. Types MUST NOT match any of these.
+# TYPE: Map | List<Map>
+#
+# [b.1] kind
+# The context of the check.
+# TYPE: String
+# OPTIONS: 'return', 'parameter'.
+#
+# [b.2] identifier
+# (Only for kind: parameter) The parameter name to match.
+# TYPE: String
+#
+# [b.3] definition
+# Reference to a key in the [types] config (e.g. 'result.wrapper').
+# TYPE: String | List<String>
+#
+# [b.4] type
+# Raw class name string (e.g. 'int', 'Future').
+# TYPE: String | List<String>
+#
+# [b.5] component
+# Reference to an architectural component (e.g. 'model').
+# Checks if the type belongs to that architectural layer.
+# TYPE: String
+# --------------------------------------------------------------------------------------------------
+type_safeties:
+  # Domain layer must return Safe Wrappers (FutureEither).
+  - on: [ port, usecase ]
+    # Must return FutureEither<T>
+    allowed:
+      kind: 'return'
+      definition: 'result.wrapper'
+    # Must NOT return raw Future<T>
+    forbidden:
+      kind: 'return'
+      definition: 'result.future'
+
+  # Data Sources must return Raw Futures.
+  - on: source
+    # Must return Future<T>
+    allowed: { kind: 'return', definition: 'result.future' }
+    # Must NOT return FutureEither<T>
+    forbidden: { kind: 'return', definition: 'result.wrapper' }
+
+  # Repositories must return Entities, not Models.
+  - on: repository
+    forbidden: { kind: 'return', component: 'model' }
+
+  # Enforce Strong IDs everywhere.
+  - on: [ port, usecase, source, repository ]
+    # Use IntId or StringId typedefs instead of primitives.
+    allowed:
+      kind: 'parameter'
+      identifier: 'id'
+      definition: [ 'identity.integer', 'identity.string' ]
+    forbidden:
+      kind: 'parameter'
+      identifier: 'id'
+      type: [ 'int', 'String' ]
+
+
+# --------------------------------------------------------------------------------------------------
+# [6.2] exceptions
+# Enforces error handling logic (Try/Catch patterns, Throws, Returns) based on architectural roles.
+#
+# STRUCTURE:
+# [a] on
+# The component target.
+# TYPE: String | List<String>
+#
+# [b] role
+# The semantic role regarding errors.
+# TYPE: String
+# OPTIONS:
+# (1) 'producer': Originates errors (e.g. Data Source).
+# (2) 'boundary': Catches and converts errors (e.g. Repository).
+# (3) 'consumer': Handles errors for UI (e.g. Presentation).
+#
+# [c] required | forbidden
+# Rules defining control flow constraints.
+# TYPE: List<Map>
+#
+# [c.1] operation
+# The control flow action.
+# TYPE: String | List<String>
+# OPTIONS:
+# (1) 'try_return': Returning a value inside a `try` block.
+# (2) 'catch_return': Returning a value inside a `catch` block.
+# (3) 'catch_throw': Throwing an exception inside a `catch` block.
+# (4) 'throw': Using the `throw` keyword.
+# (5) 'rethrow': Using the `rethrow` keyword.
+#
+# [c.2] definition
+# Reference to a key in the [types] config (e.g. 'exception.base').
+# TYPE: String
+#
+# [c.3] type
+# Raw class name (e.g. 'Object'). Used if no definition key exists.
+# TYPE: String
+#
+# [d] conversions
+# Enforces mapping specific exceptions to specific failures (used in 'boundary' role).
+# TYPE: List<Map>
+#
+# [d.1] from_definition
+# The exception type caught (reference to [types]).
+# TYPE: String
+#
+# [d.2] to_definition
+# The failure type returned (reference to [types]).
+# TYPE: String
+# --------------------------------------------------------------------------------------------------
+exceptions:
+  # --- Sources: Throw Exceptions ---
+  - on: source.implementation
+    role: 'producer'
+    # Sources must try/catch but eventually THROW specific exceptions.
+    required:
+      # Must have a try block which returns
+      - operation: 'try_return'
+      # Must have a catch block which throws a subtype of CustomException
+      - operation: 'catch_throw'
+        definition: 'exception.base'
+    forbidden:
+      # Never throw a raw Dart Exception directly.
+      operation: 'throw'
+      definition: 'exception.raw'
+
+  # --- Repositories: Catch Exceptions -> Return Failures ---
+  - on: repository
+    role: 'boundary'
+    # Repositories must catch exceptions and RETURN Failures (Left).
+    required:
+      - operation: 'try_return'
+        definition: 'result.success'
+      - operation: 'catch_return'
+        definition: 'result.failure'
+    # Repositories must NEVER throw.
+    forbidden:
+      operation: [ 'throw', 'rethrow' ]
+
+    # Define strict mapping from Data Exception to Domain Failure.
+    conversions:
+      - from_definition: 'exception.server'
+        to_definition: 'failure.server'
+      - from_definition: 'exception.cache'
+        to_definition: 'failure.cache'
+      - from_definition: 'exception.base'
+        to_definition: 'failure.base'
+
+  # --- Presentation: Never Crash ---
+  - on: presentation
+    role: 'consumer'
+    # UI must never throw raw exceptions.
+    forbidden:
+      operation: [ 'throw', 'rethrow' ]
+      definition: 'exception.raw'
+
+
+# ==================================================================================================
+# [7] IMPLEMENTATION DETAILS (The Polish)
+# Internal class details, visibility, and metadata.
+# ==================================================================================================
+
+# --------------------------------------------------------------------------------------------------
+# [7.1] members
+# Enforces rules on class members (fields, methods, constructors, accessors).
+# Combines checks for existence (structure), visibility (access), and mutability (modifiers).
+#
+# STRUCTURE:
+# [a] on
+# The component target.
+# TYPE: String | List<String>
+#
+# [b] required | allowed | forbidden
+# The rule definitions.
+# TYPE: Map | List<Map>
+#
+# [b.1] kind
+# The member type target.
+# TYPE: String | List<String>
+# OPTIONS: 'method', 'field', 'getter', 'setter', 'constructor', 'override'.
+#
+# [b.2] identifier
+# Specific names or Regex patterns to match.
+# TYPE: String | List<String>
+#
+# [b.3] visibility
+# The access level.
+# TYPE: String
+# OPTIONS: 'public', 'private'.
+#
+# [b.4] modifier
+# Required or forbidden keywords.
+# TYPE: String
+# OPTIONS: 'final', 'const', 'static', 'late'.
+#
+# [b.5] action
+# Links to a specific Quick Fix if a 'required' member is missing.
+# TYPE: String
+# --------------------------------------------------------------------------------------------------
+members:
+  # --- Entities ---
+  - on: entity
+    required:
+      # Structure: Must have an ID.
+      - kind: 'field'
+        identifier: 'id'
+      # Structure: Must be immutable (final fields).
+      - kind: 'field'
+        modifier: 'final'
+    # Encapsulation: Must be immutable (final fields, no public setters).
+    forbidden:
+      kind: 'setter'
+      visibility: 'public'
+
+  # --- Models ---
+  - on: model
+    # Structure: Specific fields & mapping method.
+    required:
+      - kind: 'field'
+        identifier: [ 'createdAt', 'updatedAt' ]
+      - kind: 'method'
+        identifier: 'toEntity'
+        action: 'create_to_entity_for_model'
+
+    # Encapsulation: Whitelist public methods.
+    allowed:
+      - kind: 'method'
+        visibility: 'public'
+        identifier: [ 'toEntity', 'toJson', 'fromJson', 'copyWith', '^get.*' ]
+
+    # Blacklist all other public methods.
+    forbidden:
+      kind: 'method'
+      visibility: 'public'
+
+  # --- Repositories ---
+  - on: repository
+    # Encapsulation: Hide implementation details.
+    allowed:
+      - kind: 'method'
+        visibility: 'public'
+        identifier: 'dispose'
+      - kind: 'override'
+        visibility: 'public'
+    forbidden:
+      kind: [ 'method', 'field', 'getter' ]
+      visibility: 'public'
+      # Add action for Quick Fix to make private
+      action: 'make_private'
+
+# --------------------------------------------------------------------------------------------------
+# [7.2] usages
+# Enforces code patterns within methods, such as restricting specific service access or forbidding
+# direct instantiation of dependencies.
+#
+# STRUCTURE:
+# [a] on
+# The component target.
+# TYPE: String | List<String>
+#
+# [b] forbidden
+# List of disallowed usage patterns.
+# TYPE: List<Map>
+#
+# [b.1] kind
+# The type of usage to detect.
+# TYPE: String
+# VALUES: 'access' | 'instantiation'
+# (1) access: Usage of a global variable or static method (e.g. GetIt.I).
+# (2) instantiation: Creation of a class instance (e.g. new Repository()).
+#
+# [b.2] definition
+# Reference to a key in the [services] config (for 'access' checks).
+# TYPE: String
+#
+# [b.3] component
+# Reference to an architectural component (for 'instantiation' checks).
+# TYPE: String | List<String>
+# --------------------------------------------------------------------------------------------------
+usages:
+  # Global Service Locator Ban.
+  - on: [ domain, presentation, repository ]
+    # Prevents usage like `GetIt.I.get()` or `sl()`
+    forbidden: { kind: 'access', definition: 'locator' }
+
+  # Routing Logic Ban in Domain.
+  - on: domain
+    forbidden: { kind: 'access', definition: 'routing' }
+
+  # Instantiation Ban (Dependency Injection Enforcement).
+  # Don't create Repositories or Sources manually; inject them.
+  - on: [ usecase, repository, manager ]
+    forbidden: { kind: 'instantiation', component: [ 'repository', 'source', 'usecase' ] }
+
+# --------------------------------------------------------------------------------------------------
+# [7.3] annotations
+# Enforces metadata (Dart annotations) on classes based on their architectural role.
+#
+# STRUCTURE:
+# [a] on
+# The component target (e.g., 'entity').
+# TYPE: String
+#
+# [b] mode
+# Controls strictness regarding unlisted annotations.
+# - 'strict': ONLY annotations listed in `required` or `allowed` are permitted.
+# - 'implicit': (Default) Unlisted annotations are ignored; only `forbidden` ones trigger errors.
+# TYPE: String
+#
+# [c] required | forbidden | allowed
+# The rule definition.
+# TYPE: Map | List<Map>
+#
+# [c.1] type
+# The annotation class name (e.g., 'Injectable').
+# TYPE: String | List<String>
+#
+# [c.2] import
+# The source package URI. Required to distinguish annotations with the same name.
+# TYPE: String
+# --------------------------------------------------------------------------------------------------
+annotations:
+  # --- Domain Layer ---
+  - on: entity
+    # Entities should be POJOs, no framework annotations.
+    forbidden:
+      type: [ 'Injectable', 'LazySingleton' ]
+      import: 'package:injectable/injectable.dart'
+
+  # UseCases must be injectable.
+  - on: usecase
+    required:
+      type: 'Injectable'
+      import: 'package:injectable/injectable.dart'
+
+  # --- Data Layer ---
+  # Models often use code generation.
+  - on: model
+    allowed:
+      - type: 'Freezed'
+        import: 'package:freezed_annotation/freezed_annotation.dart'
+      - type: 'MappableClass'
+        import: 'package:dart_mappable/dart_mappable.dart'
+
+  - on: repository
+    mode: 'implicit'
+    # Repositories must be singletons.
+    required:
+      type: [ 'LazySingleton', 'Singleton' ]
+      import: 'package:injectable/injectable.dart'
+
+    # Repositories can optionally be cached.
+    allowed:
+      type: 'WithCache'
+      import: 'package:cached_annotation/cached_annotation.dart'
+
+# --------------------------------------------------------------------------------------------------
+# [7.4] relationships
+# Enforces file existence parity (e.g. 1-to-1 mappings) between components.
+#
+# NAMING BEHAVIOR:
+# The expected name of the required component is derived automatically using the [naming]
+# configuration for that component.
+# Example: If method is `login` and UseCase naming is `{{name}}UseCase`, it expects a file
+# defining `class LoginUseCase`.
+#
+# STRUCTURE:
+# [a] kind
+# The subject to iterate over.
+# TYPE: String
+# VALUES: 'class' | 'method'
+#
+# [b] visibility
+# Filter the subject by visibility.
+# TYPE: String
+# VALUES: 'public' | 'private'
+#
+# [c] required
+# The target component that must exist.
+# TYPE: Map
+#
+# [c.1] component
+# The architectural component to look for (e.g. 'usecase', 'model').
+# TYPE: String
+#
+# [c.2] action
+# Links to a code generation Quick Fix.
+# TYPE: String
+# --------------------------------------------------------------------------------------------------
+relationships:
+  # Every Entity must have a corresponding Data Model.
+  - on: entity
+    kind: 'class'
+    required:
+      component: 'model'
+      action: 'create_model_from_entity'
+
+  # For every public method in a Port, there must be a corresponding Usecase file.
+  - on: port
+    kind: 'method'
+    visibility: 'public'
+    operation: 'iteration'
+    required:
+      component: 'usecase'
+      # A builtin quick fix to create a Usecase file based on Port method.
+      action: 'create_usecase_from_port_method'

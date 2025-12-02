@@ -1,18 +1,18 @@
 // example/lib/features/auth/data/repositories/repository.violations.dart
 
-import 'package:feature_first_example/core/error/exceptions.dart';
-import 'package:feature_first_example/core/error/failures.dart';
-import 'package:feature_first_example/core/utils/types.dart';
-import 'package:feature_first_example/features/auth/data/models/user_model.dart';
-import 'package:feature_first_example/features/auth/data/sources/auth_source.dart';
-import 'package:feature_first_example/features/auth/data/sources/default_auth_source.dart';
-import 'package:feature_first_example/features/auth/domain/entities/user.dart';
-import 'package:feature_first_example/features/auth/domain/ports/auth_port.dart';
+import 'package:clean_feature_first/core/error/exceptions.dart';
+import 'package:clean_feature_first/core/error/failures.dart';
+import 'package:clean_feature_first/core/utils/types.dart';
+import 'package:clean_feature_first/features/auth/data/models/user_model.dart';
+import 'package:clean_feature_first/features/auth/data/sources/auth_source.dart';
+import 'package:clean_feature_first/features/auth/data/sources/default_auth_source.dart';
+import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
+import 'package:clean_feature_first/features/auth/domain/ports/auth_port.dart';
 import 'package:fpdart/fpdart.dart';
 
 // LINT: [1] enforce_layer_independence
 // REASON: Data layer should not import Presentation layer.
-import 'package:feature_first_example/features/auth/presentation/pages/home_page.dart'; // <-- LINT WARNING HERE
+import 'package:clean_feature_first/features/auth/presentation/pages/home_page.dart'; // <-- LINT WARNING HERE
 
 // LINT: [2] enforce_annotations (Required)
 // REASON: Repositories must be annotated with `@LazySingleton` or `@Singleton`.

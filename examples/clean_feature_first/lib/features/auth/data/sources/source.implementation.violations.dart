@@ -1,9 +1,9 @@
 // example/lib/features/auth/data/sources/source.implementation.violations.dart
 
-import 'package:feature_first_example/core/error/failures.dart';
-import 'package:feature_first_example/core/utils/types.dart';
-import 'package:feature_first_example/features/auth/data/models/user_model.dart';
-import 'package:feature_first_example/features/auth/data/sources/auth_source.dart';
+import 'package:clean_feature_first/core/error/failures.dart';
+import 'package:clean_feature_first/core/utils/types.dart';
+import 'package:clean_feature_first/features/auth/data/models/user_model.dart';
+import 'package:clean_feature_first/features/auth/data/sources/auth_source.dart';
 import 'package:fpdart/fpdart.dart';
 
 // LINT: [1] disallow_flutter_in_domain

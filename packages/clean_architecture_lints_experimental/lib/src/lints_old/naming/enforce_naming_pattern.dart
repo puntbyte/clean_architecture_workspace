@@ -51,7 +51,7 @@ class EnforceNamingPattern extends ArchitectureLintRule {
         return;
       }
 
-      if (!NamingUtils.validateName(name: className, template: rule.pattern)) {
+      if (!NamingUtils.validate(name: className, template: rule.pattern)) {
         reporter.atToken(
           node.name,
           _code,

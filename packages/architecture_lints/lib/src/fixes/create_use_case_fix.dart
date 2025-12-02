@@ -7,11 +7,11 @@ import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dar
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_dart.dart';
 import 'package:architecture_lints/src/analysis/arch_component.dart';
 import 'package:architecture_lints/src/models/configs/architecture_config.dart';
-import 'package:architecture_lints/src/utils/extensions/iterable_extension.dart';
-import 'package:architecture_lints/src/utils/extensions/string_extension.dart';
-import 'package:architecture_lints/src/utils/file/path_utils.dart';
-import 'package:architecture_lints/src/utils/generation/syntax_builder.dart';
-import 'package:architecture_lints/src/utils/nlp/naming_utils.dart';
+import 'package:architecture_lints/src/utils_old/extensions/iterable_extension.dart';
+import 'package:architecture_lints/src/utils_old/extensions/string_extension.dart';
+import 'package:architecture_lints/src/utils_old/file/path_utils.dart';
+import 'package:architecture_lints/src/utils_old/generation/syntax_builder.dart';
+import 'package:architecture_lints/src/utils_old/nlp/naming_utils.dart';
 import 'package:code_builder/code_builder.dart' as cb;
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:dart_style/dart_style.dart';

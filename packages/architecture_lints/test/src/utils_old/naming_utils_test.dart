@@ -30,35 +30,35 @@ void main() {
     group('validateName', () {
       // Test Case: {{name}}
       test('should return true for valid PascalCase names when template is {{name}}', () {
-        expect(NamingUtils.validateName(name: 'User', template: '{{name}}'), isTrue);
-        expect(NamingUtils.validateName(name: 'AuthService', template: '{{name}}'), isTrue);
+        expect(NamingUtils.validate(name: 'User', template: '{{name}}'), isTrue);
+        expect(NamingUtils.validate(name: 'AuthService', template: '{{name}}'), isTrue);
       });
 
       test('should return false for non-PascalCase names when template is {{name}}', () {
-        expect(NamingUtils.validateName(name: 'user', template: '{{name}}'), isFalse);
-        expect(NamingUtils.validateName(name: '_User', template: '{{name}}'), isFalse);
+        expect(NamingUtils.validate(name: 'user', template: '{{name}}'), isFalse);
+        expect(NamingUtils.validate(name: '_User', template: '{{name}}'), isFalse);
       });
 
       // Test Case: Suffixes
       test('should return true when name has the correct suffix', () {
-        expect(NamingUtils.validateName(name: 'UserModel', template: '{{name}}Model'), isTrue);
+        expect(NamingUtils.validate(name: 'UserModel', template: '{{name}}Model'), isTrue);
       });
 
       test('should return false when name is missing the required suffix', () {
-        expect(NamingUtils.validateName(name: 'User', template: '{{name}}Model'), isFalse);
+        expect(NamingUtils.validate(name: 'User', template: '{{name}}Model'), isFalse);
       });
 
       // Test Case: {{kind}}{{name}}
       test('should return true for a standard {{kind}}{{name}} pattern', () {
         expect(
-          NamingUtils.validateName(name: 'DefaultAuthRepository', template: '{{kind}}{{name}}Repository'),
+          NamingUtils.validate(name: 'DefaultAuthRepository', template: '{{kind}}{{name}}Repository'),
           isTrue,
         );
       });
 
       test('should return true for a multi-word kind in a {{kind}}{{name}} pattern', () {
         expect(
-          NamingUtils.validateName(name: 'FirebaseAuthRepository', template: '{{kind}}{{name}}Repository'),
+          NamingUtils.validate(name: 'FirebaseAuthRepository', template: '{{kind}}{{name}}Repository'),
           isTrue,
         );
       });
@@ -68,22 +68,22 @@ void main() {
         // The regex fails because the `name` token must match at least one character.
         // This is subtle, but correct behavior. A better test is to check if it's just one word.
         expect(
-          NamingUtils.validateName(name: 'AuthRepository', template: '{{kind}}{{name}}Repository'),
+          NamingUtils.validate(name: 'AuthRepository', template: '{{kind}}{{name}}Repository'),
           isFalse,
         );
       });
 
       // Test Case: Special Characters and Complex Templates
       test('should return true when template contains leading underscores', () {
-        expect(NamingUtils.validateName(name: '_GetUserParams', template: '_{{name}}Params'), isTrue);
+        expect(NamingUtils.validate(name: '_GetUserParams', template: '_{{name}}Params'), isTrue);
       });
 
       test('should return false when template literals do not match', () {
-        expect(NamingUtils.validateName(name: 'GetUserParams', template: '_{{name}}Params'), isFalse);
+        expect(NamingUtils.validate(name: 'GetUserParams', template: '_{{name}}Params'), isFalse);
       });
 
       test('should return true for templates with multiple placeholders', () {
-        expect(NamingUtils.validateName(name: 'Remote_AuthEvent', template: '{{kind}}_{{name}}Event'), isTrue);
+        expect(NamingUtils.validate(name: 'Remote_AuthEvent', template: '{{kind}}_{{name}}Event'), isTrue);
       });
     });
   });

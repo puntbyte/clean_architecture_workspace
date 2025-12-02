@@ -1,13 +1,13 @@
 // lib/features/auth/presentation/widgets/login_form.violations.dart
 
-import 'package:feature_first_example/features/auth/domain/usecases/usecase.violations.dart';
+import 'package:clean_feature_first/features/auth/domain/usecases/usecase.violations.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter/material.dart';
 
 // LINT: disallow_use_case_in_widget
 // Reason: Widgets shouldn't call UseCases. Logic belongs in Managers.
-import 'package:feature_first_example/features/auth/domain/usecases/login.dart';
+import 'package:clean_feature_first/features/auth/domain/usecases/login.dart';
 
 class LoginForm extends StatelessWidget {
   final Login loginUser; // <-- Violation

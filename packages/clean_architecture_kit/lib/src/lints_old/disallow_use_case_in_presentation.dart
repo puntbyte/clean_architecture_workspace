@@ -47,7 +47,7 @@ class DisallowUseCaseInPresentation extends DartLintRule {
 
       // Use the shared utility to check if the type's name matches the
       // configured naming convention for a UseCase.
-      if (NamingUtils.validateName(name: typeName, template: useCaseTemplate)) {
+      if (NamingUtils.validate(name: typeName, template: useCaseTemplate)) {
         // A violation was found. Report it.
         reporter.atNode(node, _code);
       }

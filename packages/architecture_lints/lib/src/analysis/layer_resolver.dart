@@ -4,7 +4,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:architecture_lints/src/analysis/arch_component.dart';
 import 'package:architecture_lints/src/models/configs/architecture_config.dart';
 import 'package:architecture_lints/src/models/configs/module_config.dart';
-import 'package:architecture_lints/src/utils/nlp/naming_utils.dart';
+import 'package:architecture_lints/src/utils_old/nlp/naming_utils.dart';
 import 'package:path/path.dart' as p;
 
 class LayerResolver {

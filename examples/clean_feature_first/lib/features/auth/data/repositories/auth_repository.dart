@@ -1,12 +1,12 @@
 // example/lib/features/auth/data/repositories/auth_repository.dart
 
-import 'package:feature_first_example/core/error/exceptions.dart';
-import 'package:feature_first_example/core/error/failures.dart';
-import 'package:feature_first_example/core/utils/types.dart';
-import 'package:feature_first_example/features/auth/data/sources/auth_source.dart';
-import 'package:feature_first_example/features/auth/data/sources/default_auth_source.dart';
-import 'package:feature_first_example/features/auth/domain/entities/user.dart';
-import 'package:feature_first_example/features/auth/domain/ports/auth_port.dart';
+import 'package:clean_feature_first/core/error/exceptions.dart';
+import 'package:clean_feature_first/core/error/failures.dart';
+import 'package:clean_feature_first/core/utils/types.dart';
+import 'package:clean_feature_first/features/auth/data/sources/auth_source.dart';
+import 'package:clean_feature_first/features/auth/data/sources/default_auth_source.dart';
+import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
+import 'package:clean_feature_first/features/auth/domain/ports/auth_port.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:injectable/injectable.dart';
 

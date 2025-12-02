@@ -1,8 +1,8 @@
 // lib/src/models/configs/dependencies_config.dart
 
 import 'package:architecture_lints/src/analysis/arch_component.dart';
-import 'package:architecture_lints/src/utils/config/config_keys.dart';
-import 'package:architecture_lints/src/utils/extensions/json_map_extension.dart';
+import 'package:architecture_lints/src/utils_old/config/config_keys.dart';
+import 'package:architecture_lints/src/utils_old/extensions/json_map_extension.dart';
 
 part '../rules/dependency_rule.dart';
 

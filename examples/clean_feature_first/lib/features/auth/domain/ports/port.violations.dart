@@ -1,12 +1,12 @@
 // lib/features/auth/domain/ports/auth_port.violations.dart
 
-import 'package:feature_first_example/core/port/port.dart';
-import 'package:feature_first_example/core/utils/types.dart';
-import 'package:feature_first_example/features/auth/domain/entities/user.dart';
+import 'package:clean_feature_first/core/port/port.dart';
+import 'package:clean_feature_first/core/utils/types.dart';
+import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
 
 // LINT: [1] enforce_layer_independence
 // REASON: Domain layer cannot import from the Data layer.
-import 'package:feature_first_example/features/auth/data/models/user_model.dart'; //! <-- LINT WARNING
+import 'package:clean_feature_first/features/auth/data/models/user_model.dart'; //! <-- LINT WARNING
 
 // LINT: [2] disallow_flutter_in_domain
 // REASON: Domain must be platform agnostic (no UI types).

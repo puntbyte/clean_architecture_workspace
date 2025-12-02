@@ -1,5 +1,5 @@
 // lib/core/utils/types.dart
-import 'package:feature_first_example/core/error/failures.dart';
+import 'package:clean_feature_first/core/error/failures.dart';
 import 'package:fpdart/fpdart.dart';
 
 /// Standard wrapper for async operations.
