@@ -1,27 +1,31 @@
-import 'component_config.dart';
+import 'package:architecture_lints/src/configuration/component_config.dart';
 
 class ProjectConfig {
-  /// Map of 'id' -> ComponentConfig
   final Map<String, ComponentConfig> components;
-
-  // We will add dependencies, type_safeties, etc., here later.
-  // final List<DependencyRule> dependencies;
 
   const ProjectConfig({
     required this.components,
   });
 
-  /// Finds which component a specific file belongs to.
-  /// Returns null if the file is an "Orphan" (doesn't fit architecture).
   ComponentConfig? findComponentForFile(String relativePath) {
-    // We iterate values.
-    // TODO: Implement priority logic (longest path match)
-    // For now, return the first match.
+    ComponentConfig? bestMatch;
+    int maxSpecificity = -1;
+
     for (final component in components.values) {
       if (component.matchesPath(relativePath)) {
-        return component;
+        // Calculate Specificity: Count the dots in the ID.
+        // "domain" = 0 dots
+        // "domain.entity" = 1 dot
+        // "presentation.manager.bloc" = 2 dots
+        final specificity = component.id.split('.').length;
+
+        if (specificity > maxSpecificity) {
+          maxSpecificity = specificity;
+          bestMatch = component;
+        }
       }
     }
-    return null;
+
+    return bestMatch;
   }
 }

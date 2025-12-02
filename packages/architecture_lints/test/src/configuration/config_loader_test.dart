@@ -1,4 +1,4 @@
-import 'package:architecture_lints/src/configuration/config_loader.dart';
+import 'package:architecture_lints/src/configuration/parsing/config_loader.dart';
 import 'package:architecture_lints/src/configuration/project_config.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';

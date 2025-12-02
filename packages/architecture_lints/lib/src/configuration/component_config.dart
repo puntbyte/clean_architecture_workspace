@@ -1,6 +1,6 @@
 // lib/src/configuration/component_config.dart
 
-import 'package:architecture_lints/src/configuration/config_keys.dart';
+import 'package:architecture_lints/src/configuration/parsing/config_keys.dart';
 import 'package:architecture_lints/src/utils/naming_utils.dart';
 import 'package:path/path.dart' as p;
 

@@ -1,6 +1,6 @@
 // lib/src/utils/naming_utils.dart
 
-import 'package:architecture_lints/src/configuration/config_keys.dart';
+import 'package:architecture_lints/src/configuration/parsing/config_keys.dart';
 
 class NamingUtils {
   const NamingUtils._();

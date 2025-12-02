@@ -1,6 +1,6 @@
 // lib/src/lints/structure/project_structure_lint.dart
 import 'package:analyzer/error/listener.dart';
-import 'package:architecture_lints/src/configuration/config_loader.dart';
+import 'package:architecture_lints/src/configuration/parsing/config_loader.dart';
 import 'package:architecture_lints/src/lints/architecture_lint.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:path/path.dart' as p;

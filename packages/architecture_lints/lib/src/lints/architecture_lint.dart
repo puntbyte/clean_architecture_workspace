@@ -1,7 +1,7 @@
 // lib/src/lints/architecture_lint.dart
 
 import 'package:architecture_lints/src/configuration/component_config.dart';
-import 'package:architecture_lints/src/configuration/config_loader.dart';
+import 'package:architecture_lints/src/configuration/parsing/config_loader.dart';
 import 'package:architecture_lints/src/configuration/project_config.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 

@@ -2,7 +2,7 @@
 import 'dart:io';
 
 import 'package:architecture_lints/src/configuration/component_config.dart';
-import 'package:architecture_lints/src/configuration/config_keys.dart';
+import 'package:architecture_lints/src/configuration/parsing/config_keys.dart';
 import 'package:architecture_lints/src/configuration/project_config.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
