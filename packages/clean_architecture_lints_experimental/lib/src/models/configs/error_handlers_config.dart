@@ -1,7 +1,7 @@
 // lib/src/models/configs/error_handlers_config.dart
 
 import 'package:architecture_lints/src/analysis/arch_component.dart';
-import 'package:architecture_lints/src/utils/config/config_keys.dart';
+import 'package:architecture_lints/src/utils/config/config_keys_old.dart';
 import 'package:architecture_lints/src/utils/extensions/iterable_extension.dart';
 import 'package:architecture_lints/src/utils/extensions/json_map_extension.dart';
 

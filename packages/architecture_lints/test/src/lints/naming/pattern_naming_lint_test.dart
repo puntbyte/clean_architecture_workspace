@@ -57,7 +57,7 @@ environment: sdk: '>=3.0.0 <4.0.0'
     }
 
     // 5. Force Config Load to ensure no setup errors
-    await ConfigLoader.load(result.session.analysisContext.contextRoot.root.path);
+    await ConfigLoader.loadX(result.session.analysisContext.contextRoot.root.path);
 
     // 6. Run Lint
     const lint = PatternNamingLint();

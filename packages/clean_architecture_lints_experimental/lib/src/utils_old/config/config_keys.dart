@@ -1,4 +1,4 @@
-// lib/src/utils/config/config_keys.dart
+// lib/src/utils/config/config_keys_old.dart
 
 /// A centralized class holding all the string keys used for parsing the
 /// `clean_architecture` block in `analysis_options.yaml`.

@@ -1,8 +1,8 @@
 // lib/src/lints/architecture_lint.dart
 
-import 'package:architecture_lints/src/configuration/component_config.dart';
-import 'package:architecture_lints/src/configuration/parsing/config_loader.dart';
-import 'package:architecture_lints/src/configuration/project_config.dart';
+/*import 'package:architecture_lints/src/config/parsing/config_loader.dart';
+import 'package:architecture_lints/src/config/schema/component_config.dart';
+import 'package:architecture_lints/src/config/schema/project_config.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 abstract class ArchitectureLint extends DartLintRule {
@@ -10,9 +10,9 @@ abstract class ArchitectureLint extends DartLintRule {
 
   @override
   Future<void> startUp(
-      CustomLintResolver resolver,
-      CustomLintContext context,
-      ) async {
+    CustomLintResolver resolver,
+    CustomLintContext context,
+  ) async {
     await super.startUp(resolver, context);
 
     // 1. Resolve the project root
@@ -20,7 +20,7 @@ abstract class ArchitectureLint extends DartLintRule {
     final rootPath = result.session.analysisContext.contextRoot.root.path;
 
     // 2. Load the config (ConfigLoader handles caching internally)
-    await ConfigLoader.load(rootPath);
+    await ConfigLoader.loadX(rootPath);
   }
 
   ProjectConfig? getConfig() {
@@ -30,4 +30,4 @@ abstract class ArchitectureLint extends DartLintRule {
   ComponentConfig? getComponentFromFile(ProjectConfig config, String path) {
     return config.findComponentForFile(path);
   }
-}
+}*/

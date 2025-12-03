@@ -1,9 +1,11 @@
+// lib/src/lints/naming/pattern_naming_lint.dart
+
 import 'package:analyzer/error/listener.dart';
-import 'package:architecture_lints/src/configuration/parsing/config_loader.dart';
+import 'package:architecture_lints/src/config/parsing/config_loader.dart';
 import 'package:architecture_lints/src/lints/architecture_lint.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-class PatternNamingLint extends ArchitectureLint {
+/*class PatternNamingLint extends ArchitectureLint {
   static const LintCode _code = LintCode(
     name: 'arch_pattern_naming',
     problemMessage: 'The name `{0}` does not match the required `{1}` pattern for a {2}.',
@@ -47,4 +49,4 @@ class PatternNamingLint extends ArchitectureLint {
       }
     });
   }
-}
+}*/

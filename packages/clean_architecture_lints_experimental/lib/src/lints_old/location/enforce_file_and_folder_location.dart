@@ -59,7 +59,7 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
         final actualPattern = _sortedPatterns.firstWhereOrNull(
               (p) =>
           p.component == actualComponent &&
-              NamingUtils.validate(name: className, template: p.pattern),
+              NamingUtils.validateName(name: className, template: p.pattern),
         );
 
         if (actualPattern != null) {
@@ -144,7 +144,7 @@ class EnforceFileAndFolderLocation extends ArchitectureLintRule {
 
   _ComponentPattern? _getBestMatch(String className) {
     return _sortedPatterns.firstWhereOrNull(
-          (p) => NamingUtils.validate(name: className, template: p.pattern),
+          (p) => NamingUtils.validateName(name: className, template: p.pattern),
     );
   }
 

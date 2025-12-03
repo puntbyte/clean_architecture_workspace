@@ -10,7 +10,7 @@ import 'package:architecture_lints/src/models/configs/naming_conventions_config.
 import 'package:architecture_lints/src/models/configs/services_config.dart';
 import 'package:architecture_lints/src/models/configs/type_config.dart';
 import 'package:architecture_lints/src/models/configs/type_safeties_config.dart';
-import 'package:architecture_lints/src/utils/config/config_keys.dart';
+import 'package:architecture_lints/src/utils/config/config_keys_old.dart';
 import 'package:architecture_lints/src/utils/extensions/json_map_extension.dart';
 
 /// The main configuration class that parses the entire configuration from

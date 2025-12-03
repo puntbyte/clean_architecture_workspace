@@ -52,7 +52,7 @@ environment: sdk: '>=3.0.0 <4.0.0'
       throw Exception('Failed to resolve file: $result');
     }
 
-    await ConfigLoader.load(result.session.analysisContext.contextRoot.root.path);
+    await ConfigLoader.loadX(result.session.analysisContext.contextRoot.root.path);
 
     // Run Antipattern Lint
     final lint = const AntipatternNamingLint();

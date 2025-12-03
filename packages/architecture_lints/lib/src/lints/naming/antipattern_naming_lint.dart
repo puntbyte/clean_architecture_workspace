@@ -1,4 +1,6 @@
-import 'package:analyzer/error/listener.dart';
+// lib/src/lints/naming/antipattern_naming_lint.dart
+
+/*import 'package:analyzer/error/listener.dart';
 import 'package:architecture_lints/src/lints/architecture_lint.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
@@ -38,4 +40,4 @@ class AntipatternNamingLint extends ArchitectureLint {
       }
     });
   }
-}
+}*/

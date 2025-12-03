@@ -1,7 +1,10 @@
-// lib/src/configuration/config_keys.dart
+// lib/src/constants/config_keys.dart
 
-/// Central repository for all string keys used in architecture.yaml
 abstract class ConfigKeys {
+  const ConfigKeys._();
+
+  static const String configFilename = 'architecture.yaml';
+
   static const root = _RootKeys();
   static const component = _ComponentKeys();
   static const placeholder = _PlaceholderKeys();
@@ -10,19 +13,11 @@ abstract class ConfigKeys {
 class _RootKeys {
   const _RootKeys();
 
-  String get architecture => 'architecture';
-  String get include => 'include';
   String get components => 'components';
-  String get modules => 'modules';
   String get dependencies => 'dependencies';
-  String get typeSafeties => 'type_safeties';
-  String get exceptions => 'exceptions';
-  String get members => 'members';
-  String get usages => 'usages';
-  String get annotations => 'annotations';
-  String get relationships => 'relationships';
 }
 
+/// There are common keys used redundantly in multiple places.
 abstract class _CommonKeys {
   static const name = 'name';
   static const path = 'path';
@@ -38,9 +33,7 @@ class _ComponentKeys {
   String get default$ => 'default';
   String get pattern => 'pattern';
   String get antipattern => 'antipattern';
-  String get grammar => 'grammar';
 }
-
 
 class _PlaceholderKeys {
   const _PlaceholderKeys();

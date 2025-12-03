@@ -19,18 +19,18 @@ dev_dependencies:
 melos:
   scripts:
     analyze:
+      name: Custom Lint Analysis
+      description: Runs custom_lint on the example project.
       packageFilters:
         scope:
-          - example
+          - clean_feature_first
       run: dart run custom_lint
 
-    generate:
-      run: dart run build_runner build --delete-conflicting-outputs
-      exec:
-        concurrency: 4
-          #packageFilters:
-          #scope:
-          #- app_example
-        #- console_example
-    test:
-      run: dart test
+    watch:
+      name: Custom Lint Watch
+      description: Runs custom_lint in watch mode on the example project to test plugin changes.
+      packageFilters:
+        scope:
+          - clean_feature_first
+      # The command to run inside the example folder
+      run: dart run custom_lint --watch

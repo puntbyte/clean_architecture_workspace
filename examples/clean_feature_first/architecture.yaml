@@ -1,4 +1,4 @@
-# feature_first_example/architecture.yaml
+# clean_feature_first/architecture.yaml
 
 # Include the company-wide standard configuration
 #include: ../../architecture_standards/clean_feature_first_recommended.yaml
@@ -16,11 +16,29 @@
 
 # --------------------------------------------------------------------------------------------------
 # [1.1] architecture
+
+# [a] style
+# The architectural pattern to enforce.
+# TYPE: String
+# OPTIONS:
+# - 'clean': Clean Architecture
+# - 'mvvm': Model-View-ViewModel
+# - 'mvc': Model-View-Controller
 #
+# [b] mode
+# The mode of the chosen architectural style. The available options depend on the style.
+# TYPE: String
+# OPTIONS:
+# - (clean) 'feature_first': Organize by feature first, then by layer.
+# - (clean) 'layer_first': Organize by layer first, then by feature.
+# - (mvvm) 'reactive': Use reactive programming patterns.
+# - (mvvm) 'data_driven': Use data-driven programming patterns.
+# - (mvc) 'traditional': Use traditional MVC patterns.
+# - (mvc) 'web': Use web-specific MVC patterns.
 # --------------------------------------------------------------------------------------------------
 architecture:
-  style: clean_architecture
-  pattern: feature_first
+  style: clean
+  mode: feature_first
 
 # ==================================================================================================
 # [2] PROJECT STRUCTURE (The Map)
@@ -51,7 +69,9 @@ architecture:
 # TYPE: Boolean
 # --------------------------------------------------------------------------------------------------
 modules:
-  features: { path: 'features/{{name}}', default: true }
+  features:
+    path: 'features/{{name}}'
+    default: true
   core: 'core'
   config: 'config'
   shared: 'shared'
@@ -70,9 +90,9 @@ modules:
 # 1. Full Reference: `presentation.manager.event.interface` (Explicit and safest).
 # 2. Shorthand: `event.interface` (Matches the suffix).
 # RESOLUTION LOGIC: The linter attempts to match the suffix against defined keys.
-#   - Unique Match: If `event.interface` matches only one definition, it is used.
-#   - Ambiguous Match: If multiple definitions match (e.g. `a.b.c` and `x.b.c`), it defaults to
-#     the **FIRST** definition found in this list.
+# - Unique Match: If `event.interface` matches only one definition, it is used.
+# - Ambiguous Match: If multiple definitions match (e.g. `a.b.c` and `x.b.c`), it defaults to
+#   the **FIRST** definition found in this list.
 #
 # STRUCTURE:
 # [a] <component_key>
@@ -266,6 +286,7 @@ components:
     module: 'shared'
     path: 'widgets'
     pattern: '{{name}}' # Shared widgets might have looser naming rules
+    grammar: '{{noun.phrase}}'
 
 # ==================================================================================================
 # [3] DEFINITIONS (The Dictionary)
@@ -348,7 +369,9 @@ types:
 
   # --- Failure ---
   failure:
-    base: { type: 'Failure', import: 'package:feature_first_example/core/error/failures.dart' }
+    base:
+      type: 'Failure'
+      import: 'package:feature_first_example/core/error/failures.dart'
     server: 'ServerFailure'
     cache: 'CacheFailure'
 
@@ -363,7 +386,9 @@ types:
 
   # --- identity ---
   identity:
-    integer: { type: 'IntId', import: 'package:feature_first_example/core/utils/types.dart' }
+    integer:
+      type: 'IntId'
+      import: 'package:feature_first_example/core/utils/types.dart'
     string: 'StringId'
 
 # --------------------------------------------------------------------------------------------------
@@ -446,45 +471,60 @@ inheritances:
   # --- Domain (Inner Circle) ---
   # Entities must inherit from the base Entity class.
   - on: entity
-    required: { type: 'Entity', import: 'package:feature_first_example/core/entity/entity.dart' }
+    required:
+      type: 'Entity'
+      import: 'package:feature_first_example/core/entity/entity.dart'
 
   # Ports (Repository Interfaces) must inherit from the base Port interface.
   - on: port
-    required: { type: 'Port', import: 'package:feature_first_example/core/port/port.dart' }
+    required:
+      type: 'Port'
+      import: 'package:feature_first_example/core/port/port.dart'
 
   # Usecases must implement either the UnaryUsecase or NullaryUsecase base class.
   - on: usecase
-    required: { definition: [ 'usecase.unary', 'usecase.nullary' ] }
+    required:
+      definition: [ 'usecase.unary', 'usecase.nullary' ]
 
   # --- Data (Adapter) ---
   # Models must extend their corresponding Domain Entity.
   - on: model
-    required: { component: 'entity' }
+    required:
+      component: 'entity'
 
   # Sources (Data Sources) contract must inherit from the base Source interface.
   - on: source.interface
-    required: { type: 'Source', import: 'package:feature_first_example/core/source/source.dart' }
+    required:
+      type: 'Source'
+      import: 'package:feature_first_example/core/source/source.dart'
 
   # Sources (Data Sources) concrete must implement their corresponding interface.
   - on: source.implementation
-    required: { component: 'source.interface' }
+    required:
+      component: 'source.interface'
 
   # Repositories must implement the Domain Port.
   - on: repository
-    required: { component: 'port' }
+    required:
+      component: 'port'
 
   # --- Presentation (Outer Circle) ---
   # State Managers cab be Bloc or Cubit.
   - on: manager
-    allowed: { type: [ 'Bloc', 'Cubit' ], import: 'package:bloc/bloc.dart' }
+    allowed:
+      type: [ 'Bloc', 'Cubit' ]
+      import: 'package:bloc/bloc.dart'
 
   # Widgets could use Hooks for cleaner UI logic.
   - on: widget
-    allowed: { type: 'HookWidget', import: 'package:flutter_hooks/flutter_hooks.dart' }
+    allowed:
+      type: 'HookWidget'
+      import: 'package:flutter_hooks/flutter_hooks.dart'
 
   # Pages should not be StatefulWidgets (state belongs in the Manager).
   - on: page
-    forbidden: { type: 'StatefulWidget' }
+    forbidden:
+      type: 'StatefulWidget'
 
 
 # ==================================================================================================
@@ -624,13 +664,19 @@ type_safeties:
   # Data Sources must return Raw Futures.
   - on: source
     # Must return Future<T>
-    allowed: { kind: 'return', definition: 'result.future' }
+    allowed:
+      kind: 'return'
+      definition: 'result.future'
     # Must NOT return FutureEither<T>
-    forbidden: { kind: 'return', definition: 'result.wrapper' }
+    forbidden:
+      kind: 'return'
+      definition: 'result.wrapper'
 
   # Repositories must return Entities, not Models.
   - on: repository
-    forbidden: { kind: 'return', component: 'model' }
+    forbidden:
+      kind: 'return'
+      component: 'model'
 
   # Enforce Strong IDs everywhere.
   - on: [ port, usecase, source, repository ]
@@ -869,16 +915,22 @@ usages:
   # Global Service Locator Ban.
   - on: [ domain, presentation, repository ]
     # Prevents usage like `GetIt.I.get()` or `sl()`
-    forbidden: { kind: 'access', definition: 'locator' }
+    forbidden:
+      kind: 'access'
+      definition: 'locator'
 
   # Routing Logic Ban in Domain.
   - on: domain
-    forbidden: { kind: 'access', definition: 'routing' }
+    forbidden:
+      kind: 'access'
+      definition: 'routing'
 
   # Instantiation Ban (Dependency Injection Enforcement).
   # Don't create Repositories or Sources manually; inject them.
   - on: [ usecase, repository, manager ]
-    forbidden: { kind: 'instantiation', component: [ 'repository', 'source', 'usecase' ] }
+    forbidden:
+      kind: 'instantiation'
+      component: [ 'repository', 'source', 'usecase' ]
 
 # --------------------------------------------------------------------------------------------------
 # [7.3] annotations

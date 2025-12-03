@@ -1,7 +1,7 @@
 // lib/src/utils/nlp/language_analyzer.dart
 
 import 'package:architecture_lints/src/utils/nlp/cache.dart';
-import 'package:architecture_lints/src/utils/nlp/constants.dart';
+import 'package:architecture_lints/src/utils/nlp/config_keys.dart';
 import 'package:dictionaryx/dictentry.dart';
 import 'package:dictionaryx/dictionary_msa.dart';
 

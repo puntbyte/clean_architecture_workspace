@@ -30,18 +30,18 @@ void main() {
     group('validateName', () {
       test('should return true for a valid suffix template match', () {
         expect(
-          NamingUtils.validate(name: 'GetUserUsecase', template: '{{name}}Usecase'),
+          NamingUtils.validateName(name: 'GetUserUsecase', template: '{{name}}Usecase'),
           isTrue,
         );
       });
 
       test('should return false for an invalid suffix template match', () {
-        expect(NamingUtils.validate(name: 'GetUser', template: '{{name}}Usecase'), isFalse);
+        expect(NamingUtils.validateName(name: 'GetUser', template: '{{name}}Usecase'), isFalse);
       });
 
       test('should return true for a valid regex template match', () {
         expect(
-          NamingUtils.validate(
+          NamingUtils.validateName(
             name: 'AuthRepositoryImpl',
             template: '{{name}}(Impl|RepositoryImpl)',
           ),
@@ -51,7 +51,7 @@ void main() {
 
       test('should return false for an invalid regex template match', () {
         expect(
-          NamingUtils.validate(
+          NamingUtils.validateName(
             name: 'AuthRepositoryImplementation',
             template: '{{name}}(Impl|RepositoryImpl)',
           ),

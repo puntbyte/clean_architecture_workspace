@@ -51,7 +51,7 @@ class PresentationLayerPurity extends DartLintRule {
 
         if (typeName.endsWith('?')) typeName = typeName.substring(0, typeName.length - 1);
 
-        if (NamingUtils.validate(name: typeName, template: config.naming.repositoryInterface)) {
+        if (NamingUtils.validateName(name: typeName, template: config.naming.repositoryInterface)) {
           final nameToken = parameter.name;
 
           if (nameToken != null) {

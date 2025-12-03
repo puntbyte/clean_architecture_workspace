@@ -13,6 +13,6 @@ custom_lint:
   # If you wanted to DISABLE a specific rule, you would do this:
   rules:
     - arch_orphan_file: true
-    - arch_antipattern_naming: true
-    - arch_pattern_naming: true
+    - arch_naming_pattern: true
+    - arch_naming_antipattern: true
 

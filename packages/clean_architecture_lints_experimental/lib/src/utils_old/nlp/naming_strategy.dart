@@ -38,14 +38,14 @@ class NamingStrategy {
 
   ArchComponent? _getBestGuessComponent(String className) {
     final bestMatch = _sortedPatterns.firstWhereOrNull(
-          (p) => NamingUtils.validate(name: className, template: p.pattern),
+          (p) => NamingUtils.validateName(name: className, template: p.pattern),
     );
     return bestMatch?.component;
   }
 
   bool _matchesComponentPattern(String className, ArchComponent component) {
     final rules = _sortedPatterns.where((p) => p.component == component);
-    return rules.any((p) => NamingUtils.validate(name: className, template: p.pattern));
+    return rules.any((p) => NamingUtils.validateName(name: className, template: p.pattern));
   }
 
   static List<_ComponentPattern> _createSortedPatterns(List<NamingRule> rules) {

@@ -1,35 +1,28 @@
-// lib/src/utils/naming_utils.dart
-
-import 'package:architecture_lints/src/configuration/parsing/config_keys.dart';
+import 'package:architecture_lints/src/config/constants/config_keys.dart';
 
 class NamingUtils {
   const NamingUtils._();
 
+  // Regex Patterns defined locally
+  static const String _regexPascalCaseGroup = '([A-Z][a-zA-Z0-9]*)';
+  static const String _regexWildcard = '.*';
+
   static final Map<String, RegExp> _expressionCache = {};
 
-  /// Checks if [name] matches the [template] (e.g. '{{name}}Repository').
-  static bool validate({required String name, required String template}) {
-    final regex = _expressionCache.putIfAbsent(
-      template,
-      () => _buildRegexForTemplate(template),
-    );
+  static bool validateName({required String name, required String template}) {
+    final regex = _expressionCache.putIfAbsent(template, () => _buildRegexForTemplate(template));
     return regex.hasMatch(name);
   }
 
   static RegExp _buildRegexForTemplate(String template) {
-    // {{name}} = Strict PascalCase (Must start with Uppercase, alphanumeric rest)
-    const pascalToken = '([A-Z][a-zA-Z0-9]*)';
+    var pattern = template;
 
-    // {{affix}} = Non-greedy anything (for prefixes/suffixes like 'Impl' or 'Default')
-    const affixToken = '(.*?)';
+    // Replace {{name}} with PascalCase capture
+    pattern = pattern.replaceAll(ConfigKeys.placeholder.name, _regexPascalCaseGroup);
 
-    // Escape special regex characters that might appear in the template (except our placeholders)
-    // We treat the template as a literal structure except for {{...}}
-    final pattern = template
-        .replaceAll(ConfigKeys.placeholder.name, pascalToken)
-        .replaceAll(ConfigKeys.placeholder.affix, affixToken);
+    // Replace {{affix}} with Wildcard
+    pattern = pattern.replaceAll(ConfigKeys.placeholder.affix, _regexWildcard);
 
-    // Anchor start and end to ensure exact match
     return RegExp('^$pattern\$');
   }
 }

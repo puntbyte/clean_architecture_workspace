@@ -1,6 +1,7 @@
 // lib/src/lints/structure/project_structure_lint.dart
-import 'package:analyzer/error/listener.dart';
-import 'package:architecture_lints/src/configuration/parsing/config_loader.dart';
+
+/*import 'package:analyzer/error/listener.dart';
+import 'package:architecture_lints/src/config/parsing/config_loader.dart';
 import 'package:architecture_lints/src/lints/architecture_lint.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:path/path.dart' as p;
@@ -16,10 +17,10 @@ class ProjectStructureLint extends ArchitectureLint {
 
   @override
   void run(
-      CustomLintResolver resolver,
-      DiagnosticReporter reporter,
-      CustomLintContext context,
-      ) {
+    CustomLintResolver resolver,
+    DiagnosticReporter reporter,
+    CustomLintContext context,
+  ) {
     context.registry.addCompilationUnit((node) {
       final config = getConfig();
 
@@ -50,9 +51,7 @@ class ProjectStructureLint extends ArchitectureLint {
       final component = getComponentFromFile(config, path);
 
       // Report Error if Orphan
-      if (component == null) {
-        reporter.atNode(node, _code);
-      }
+      if (component == null) reporter.atNode(node, _code);
     });
   }
-}
+}*/

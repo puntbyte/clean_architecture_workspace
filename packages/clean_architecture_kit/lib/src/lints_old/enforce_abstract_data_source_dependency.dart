@@ -53,7 +53,7 @@ class EnforceAbstractDataSourceDependency extends DartLintRule {
         final template = config.naming.dataSourceImplementation;
 
         // Use the shared utility to check if the type name matches the implementation template.
-        if (NamingUtils.validate(name: typeName, template: template)) {
+        if (NamingUtils.validateName(name: typeName, template: template)) {
           // If it matches, we have found a violation. Now, construct a helpful
           // correction message by figuring out what the abstract name should be.
           final pattern = template.replaceAll('{{name}}', '([A-Z][a-zA-Z0-9]+)');

@@ -1,4 +1,4 @@
-// lib/src/utils/nlp/constants.dart
+// lib/src/utils/nlp/config_keys.dart
 
 // Small, focused constants for NLP utilities.
 const Set<String> singularNounExceptions = {

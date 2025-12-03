@@ -33,7 +33,7 @@ class EnforceNamingConventions extends DartLintRule {
       if (template == null || template.isEmpty) return;
 
       final className = node.name.lexeme;
-      if (!NamingUtils.validate(name: className, template: template)) {
+      if (!NamingUtils.validateName(name: className, template: template)) {
         reporter.atToken(node.name, _code, arguments: [className, template]);
       }
     });
