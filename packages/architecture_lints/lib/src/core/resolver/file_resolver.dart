@@ -1,3 +1,5 @@
+// lib/src/core/resolver/file_resolver.dart
+
 import 'package:architecture_lints/src/config/schema/architecture_config.dart';
 import 'package:architecture_lints/src/config/schema/component_config.dart';
 import 'package:architecture_lints/src/core/resolver/module_resolver.dart';

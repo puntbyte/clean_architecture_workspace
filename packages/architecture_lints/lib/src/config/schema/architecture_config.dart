@@ -1,3 +1,5 @@
+// lib/src/config/schema/architecture_config.dart
+
 import 'package:architecture_lints/src/config/constants/config_keys.dart';
 import 'package:architecture_lints/src/config/schema/annotation_config.dart';
 import 'package:architecture_lints/src/config/schema/component_config.dart';

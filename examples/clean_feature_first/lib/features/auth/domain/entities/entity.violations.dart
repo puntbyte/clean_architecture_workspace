@@ -14,7 +14,7 @@ import 'package:clean_feature_first/features/auth/data/models/user_model.dart'; 
 // REASON: Entities should be POJOs; Dependency Injection imports are forbidden.
 import 'package:injectable/injectable.dart'; //! <-- LINT WARNING (the warning is visible)
 
-// LINT: [4*] enforce_annotations (Forbidden Annotation)
+// LINT: [4*] arch_annot_forbidden (Forbidden Annotation)
 // REASON: Entities should be POJOs; Dependency Injection annotations are forbidden.
 @Injectable() @lazySingleton //! <-- LINT WARNING
 // ignore: arch_member_missing

@@ -1,3 +1,5 @@
+// lib/src/config/schema/type_definition.dart
+
 import 'package:architecture_lints/src/config/constants/config_keys.dart';
 import 'package:architecture_lints/src/utils/map_extensions.dart';
 import 'package:meta/meta.dart';

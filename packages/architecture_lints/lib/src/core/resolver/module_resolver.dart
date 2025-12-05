@@ -1,3 +1,5 @@
+// lib/src/core/resolver/module_resolver.dart
+
 import 'package:architecture_lints/src/config/schema/module_config.dart';
 import 'package:architecture_lints/src/core/resolver/path_matcher.dart';
 import 'package:architecture_lints/src/domain/module_context.dart';

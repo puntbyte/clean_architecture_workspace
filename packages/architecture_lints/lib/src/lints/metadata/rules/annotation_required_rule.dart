@@ -1,3 +1,5 @@
+// lib/src/lints/metadata/annotation_required_rule.dart
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
@@ -25,13 +27,16 @@ class AnnotationRequiredRule extends AnnotationBaseRule {
     required DiagnosticReporter reporter,
     required ComponentContext component,
   }) {
-    final annotations = node.metadata;
+    final declaredAnnotations = node.metadata;
 
     for (final rule in rules) {
       for (final constraint in rule.required) {
-        final hasMatch = annotations.any((a) => matchesConstraint(a, constraint));
+        // Check if ANY declared annotation satisfies this requirement
+        final isSatisfied = declaredAnnotations.any(
+          (annotation) => matchesConstraint(annotation, constraint),
+        );
 
-        if (!hasMatch) {
+        if (!isSatisfied) {
           reporter.atToken(
             node.name,
             _code,

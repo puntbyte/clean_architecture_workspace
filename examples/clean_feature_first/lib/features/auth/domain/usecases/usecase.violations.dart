@@ -36,21 +36,22 @@ class GetProfileUseCase { //! <-- LINT WARNING
   const GetProfileUseCase();
 }
 
-// LINT: [7] enforce_annotations (Required)
+// LINT: [7] arch_annot_missing (Required)
 // REASON: UseCases must be annotated with `@Injectable`.
-// ignore: enforce_usecase_contract
+// ignore: arch_type_missing_base, arch_naming_grammar
 class LogoutUser { //! <-- LINT WARNING
   void call() {}
 }
 
 // LINT: [8] enforce_usecase_contract
 // REASON: UseCases must implement/extend `UnaryUsecase` or `NullaryUsecase`.
-// ignore: enforce_annotations
+@injectable
+// ignore: arch_naming_grammar, arch_type_missing_base
 class LoginUser { //! <-- LINT WARNING
   void call() {}
 }
 
-@injectable
+@Injectable()
 class GetUser implements UnaryUsecase<dynamic, int> {
   // LINT: [9] enforce_abstract_repository_dependency
   // REASON: Dependency is a concrete class `DefaultAuthRepository`. Use the interface.
@@ -75,7 +76,7 @@ class GetUser implements UnaryUsecase<dynamic, int> {
   FutureEither<dynamic> call(int id) async => throw UnimplementedError(); //! <-- LINT WARNING
 }
 
-// ignore: enforce_annotations
+// ignore: arch_annot_missing
 class BadTypes implements NullaryUsecase<void> {
   // LINT: [13] enforce_type_safety
   // REASON: Return type must be `FutureEither`, not raw `Future`.

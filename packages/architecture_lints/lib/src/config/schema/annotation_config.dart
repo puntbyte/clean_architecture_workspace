@@ -1,3 +1,5 @@
+// lin/src/config/schema/annotation_config.dart
+
 import 'package:architecture_lints/src/config/constants/config_keys.dart';
 import 'package:architecture_lints/src/config/enums/annotation_mode.dart';
 import 'package:architecture_lints/src/config/schema/annotation_constraint.dart';

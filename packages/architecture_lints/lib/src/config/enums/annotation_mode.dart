@@ -1,3 +1,5 @@
+// lib/src/common/annotation_mode.dart
+
 import 'package:collection/collection.dart';
 
 enum AnnotationMode {
