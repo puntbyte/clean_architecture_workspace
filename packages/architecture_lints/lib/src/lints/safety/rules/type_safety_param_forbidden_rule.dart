@@ -30,19 +30,14 @@ class TypeSafetyParamForbiddenRule extends TypeSafetyBaseRule {
   }) {
     for (final rule in rules) {
       // 1. Find Forbidden constraints for this param
-      final forbidden = rule.forbidden
-          .where((c) => shouldCheckParam(c, paramName))
-          .toList();
+      final forbidden = rule.forbidden.where((c) => shouldCheckParam(c, paramName)).toList();
 
       // 2. Find Allowed constraints to offer suggestions
-      final allowed = rule.allowed
-          .where((c) => shouldCheckParam(c, paramName))
-          .toList();
+      final allowed = rule.allowed.where((c) => shouldCheckParam(c, paramName)).toList();
 
       for (final c in forbidden) {
         if (matchesConstraint(type, c, fileResolver, config.typeDefinitions)) {
-
-          String suggestion = '';
+          var suggestion = '';
           if (allowed.isNotEmpty) {
             final allowedNames = allowed
                 .map((a) => "'${describeConstraint(a, config.typeDefinitions)}'")

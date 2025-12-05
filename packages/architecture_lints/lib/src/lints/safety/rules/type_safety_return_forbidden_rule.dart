@@ -35,9 +35,8 @@ class TypeSafetyReturnForbiddenRule extends TypeSafetyBaseRule {
 
       for (final c in forbidden) {
         if (matchesConstraint(type, c, fileResolver, config.typeDefinitions)) {
-
           // Generate Suggestion
-          String suggestion = '';
+          var suggestion = '';
           if (allowed.isNotEmpty) {
             final allowedNames = allowed
                 .map((a) => "'${describeConstraint(a, config.typeDefinitions)}'")

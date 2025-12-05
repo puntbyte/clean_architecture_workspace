@@ -29,14 +29,12 @@ class TypeSafetyParamAllowedRule extends TypeSafetyBaseRule {
     required DiagnosticReporter reporter,
   }) {
     for (final rule in rules) {
-      final allowed = rule.allowed
-          .where((c) => shouldCheckParam(c, paramName))
-          .toList();
+      final allowed = rule.allowed.where((c) => shouldCheckParam(c, paramName)).toList();
 
       if (allowed.isEmpty) continue;
 
       final matchesAny = allowed.any(
-            (c) => matchesConstraint(type, c, fileResolver, config.typeDefinitions),
+        (c) => matchesConstraint(type, c, fileResolver, config.typeDefinitions),
       );
 
       if (!matchesAny) {
