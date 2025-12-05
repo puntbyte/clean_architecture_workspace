@@ -1,13 +1,13 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:architecture_lints/src/config/schema/service_definition.dart';
+import 'package:architecture_lints/src/config/schema/symbol_definition.dart';
 
 mixin UsageLogic {
   /// Checks if an identifier expression matches a forbidden service definition.
   bool matchesService(
-      Identifier node,
-      ServiceDefinition service,
-      ) {
+    Identifier node,
+    SymbolDefinition service,
+  ) {
     // FIX: Use .element instead of .staticElement
     final element = node.element;
     if (element == null) return false;
@@ -39,7 +39,7 @@ mixin UsageLogic {
     return false;
   }
 
-  bool _checkImport(Element? element, ServiceDefinition service) {
+  bool _checkImport(Element? element, SymbolDefinition service) {
     if (service.import == null) return true; // No import restriction
     if (element == null) return false;
 

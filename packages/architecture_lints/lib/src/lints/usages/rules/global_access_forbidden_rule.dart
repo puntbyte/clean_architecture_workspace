@@ -1,15 +1,15 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
+import 'package:architecture_lints/src/config/enums/usage_kind.dart'; // Import Enum
 import 'package:architecture_lints/src/config/schema/architecture_config.dart';
-import 'package:architecture_lints/src/config/schema/component_config.dart';
+import 'package:architecture_lints/src/config/schema/usage_config.dart';
 import 'package:architecture_lints/src/core/resolver/file_resolver.dart';
-import 'package:architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:architecture_lints/src/lints/identity/logic/inheritance_logic.dart';
+import 'package:architecture_lints/src/lints/usages/base/usage_base_rule.dart'; // Import Base
 import 'package:architecture_lints/src/lints/usages/logic/usage_logic.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-class GlobalAccessForbiddenRule extends ArchitectureLintRule with InheritanceLogic, UsageLogic {
+class GlobalAccessForbiddenRule extends UsageBaseRule with UsageLogic {
   static const _code = LintCode(
     name: 'arch_usage_global_access',
     problemMessage: 'Global access to "{0}" is forbidden in this layer.',
@@ -20,40 +20,27 @@ class GlobalAccessForbiddenRule extends ArchitectureLintRule with InheritanceLog
   const GlobalAccessForbiddenRule() : super(code: _code);
 
   @override
-  void runWithConfig({
+  void registerListeners({
     required CustomLintContext context,
-    required DiagnosticReporter reporter,
-    required CustomLintResolver resolver,
+    required List<UsageConfig> rules,
     required ArchitectureConfig config,
     required FileResolver fileResolver,
-    ComponentConfig? component,
+    required DiagnosticReporter reporter,
   }) {
-    if (component == null) return;
-
-    final rules = config.usages.where((rule) {
-      return rule.onIds.any((id) => componentMatches(id, component.id));
-    }).toList();
-
-    if (rules.isEmpty) return;
-
-    // Filter relevant forbidden constraints
+    // 1. Pre-calculate relevant constraints
     final constraints = rules
         .expand((r) => r.forbidden)
-        .where((c) => c.kind == 'access' && c.definition != null)
+        .where((c) => c.kind == UsageKind.access && c.definition != null)
         .toList();
 
     if (constraints.isEmpty) return;
 
+    // 2. Register Identifier Listener
     context.registry.addIdentifier((node) {
       // Avoid reporting multiple times for PrefixedIdentifier (a.b)
-      // We only care about the root or the full identifier usage
       final parent = node.parent;
       if (parent is PropertyAccess) return;
-
-      // FIX: Safer checking without direct casting if possible, or explicit variable capture
-      if (parent is PrefixedIdentifier) {
-        if (parent.identifier == node) return;
-      }
+      if (parent is PrefixedIdentifier && parent.identifier == node) return;
 
       for (final constraint in constraints) {
         final serviceDef = config.services[constraint.definition];
@@ -65,7 +52,7 @@ class GlobalAccessForbiddenRule extends ArchitectureLintRule with InheritanceLog
             _code,
             arguments: [constraint.definition!],
           );
-          return; // Stop after first match
+          return;
         }
       }
     });

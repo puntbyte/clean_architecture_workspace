@@ -1,14 +1,14 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
+import 'package:architecture_lints/src/config/enums/usage_kind.dart'; // Import Enum
 import 'package:architecture_lints/src/config/schema/architecture_config.dart';
-import 'package:architecture_lints/src/config/schema/component_config.dart';
+import 'package:architecture_lints/src/config/schema/usage_config.dart';
 import 'package:architecture_lints/src/core/resolver/file_resolver.dart';
-import 'package:architecture_lints/src/lints/architecture_lint_rule.dart';
-import 'package:architecture_lints/src/lints/identity/logic/inheritance_logic.dart';
+import 'package:architecture_lints/src/lints/usages/base/usage_base_rule.dart'; // Import Base
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-class InstantiationForbiddenRule extends ArchitectureLintRule with InheritanceLogic {
+class InstantiationForbiddenRule extends UsageBaseRule {
   static const _code = LintCode(
     name: 'arch_usage_instantiation',
     problemMessage: 'Direct instantiation of "{0}" is forbidden.',
@@ -19,51 +19,47 @@ class InstantiationForbiddenRule extends ArchitectureLintRule with InheritanceLo
   const InstantiationForbiddenRule() : super(code: _code);
 
   @override
-  void runWithConfig({
+  void registerListeners({
     required CustomLintContext context,
-    required DiagnosticReporter reporter,
-    required CustomLintResolver resolver,
+    required List<UsageConfig> rules,
     required ArchitectureConfig config,
     required FileResolver fileResolver,
-    ComponentConfig? component,
+    required DiagnosticReporter reporter,
   }) {
-    if (component == null) return;
-
-    final rules = config.usages.where((rule) {
-      return rule.onIds.any((id) => componentMatches(id, component.id));
-    }).toList();
-
-    if (rules.isEmpty) return;
-
+    // 1. Pre-calculate forbidden target components
     final forbiddenComponents = rules
         .expand((r) => r.forbidden)
-        .where((c) => c.kind == 'instantiation')
+        .where((c) => c.kind == UsageKind.instantiation)
         .expand((c) => c.components)
         .toSet();
 
     if (forbiddenComponents.isEmpty) return;
 
+    // 2. Register Constructor Call Listener
     context.registry.addInstanceCreationExpression((node) {
       final type = node.constructorName.type.type;
       final element = type?.element;
 
-      if (element != null && element.library != null) {
-        // Resolve component of the class being instantiated
-        final sourcePath = element.library!.firstFragment.source.fullName;
-        final instantiatedComponent = fileResolver.resolve(sourcePath);
+      if (element != null) {
+        final library = element.library;
+        // Access source via fragment for analyzer 8.x compatibility
+        if (library != null) {
+          final sourcePath = library.firstFragment.source.fullName;
+          final instantiatedComponent = fileResolver.resolve(sourcePath);
 
-        if (instantiatedComponent != null) {
-          // Check if this component is in the forbidden list
-          final isForbidden = forbiddenComponents.any(
-                (id) => componentMatches(id, instantiatedComponent.id),
-          );
-
-          if (isForbidden) {
-            reporter.atNode(
-              node.constructorName,
-              _code,
-              arguments: [instantiatedComponent.name ?? instantiatedComponent.id],
+          if (instantiatedComponent != null) {
+            // Check matching (Suffix/Prefix logic handled by InheritanceLogic mixin)
+            final isForbidden = forbiddenComponents.any(
+              (id) => componentMatches(id, instantiatedComponent.id),
             );
+
+            if (isForbidden) {
+              reporter.atNode(
+                node.constructorName,
+                _code,
+                arguments: [instantiatedComponent.displayName],
+              );
+            }
           }
         }
       }

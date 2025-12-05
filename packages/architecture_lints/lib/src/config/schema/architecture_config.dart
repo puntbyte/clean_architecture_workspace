@@ -9,7 +9,7 @@ import 'package:architecture_lints/src/config/schema/inheritance_config.dart';
 import 'package:architecture_lints/src/config/schema/member_config.dart';
 import 'package:architecture_lints/src/config/schema/module_config.dart';
 import 'package:architecture_lints/src/config/schema/relationship_config.dart';
-import 'package:architecture_lints/src/config/schema/service_definition.dart';
+import 'package:architecture_lints/src/config/schema/symbol_definition.dart';
 import 'package:architecture_lints/src/config/schema/type_definition.dart';
 import 'package:architecture_lints/src/config/schema/type_safety_config.dart';
 import 'package:architecture_lints/src/config/schema/usage_config.dart';
@@ -23,7 +23,7 @@ class ArchitectureConfig {
   final List<TypeSafetyConfig> typeSafeties;
   final List<ExceptionConfig> exceptions;
   final List<MemberConfig> members; // New
-  final Map<String, ServiceDefinition> services; // New
+  final Map<String, SymbolDefinition> services; // New
   final List<UsageConfig> usages; // New
   final List<AnnotationConfig> annotations; // New
   final List<RelationshipConfig> relationships; // New
@@ -121,9 +121,9 @@ class ArchitectureConfig {
       MemberConfig.fromMap,
     );
 
-    final services = <String, ServiceDefinition>{};
+    final services = <String, SymbolDefinition>{};
     yaml.getMapMap(ConfigKeys.root.services).forEach((key, value) {
-      services[key] = ServiceDefinition.fromMap(value);
+      services[key] = SymbolDefinition.fromMap(value);
     });
 
     // 6. Parse Usages (List)

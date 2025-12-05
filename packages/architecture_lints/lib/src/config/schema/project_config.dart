@@ -1,7 +1,6 @@
 // lib/src/configuration/models/project_config.dart
 
 import 'package:architecture_lints/src/config/schema/component_config.dart';
-import 'package:architecture_lints/src/config/schema/layer_config.dart';
 
 /*class ProjectConfig {
   final Map<String, ComponentConfig> components;

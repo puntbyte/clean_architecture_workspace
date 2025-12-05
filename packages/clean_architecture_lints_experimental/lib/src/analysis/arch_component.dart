@@ -1,4 +1,4 @@
-// lib/src/analysis/arch_component.dart
+// lib/src/analysis/component_context.dart
 
 /// Represents the specific architectural component a file or class corresponds to.
 ///
