@@ -4,18 +4,18 @@ import 'package:clean_feature_first/core/port/port.dart';
 import 'package:clean_feature_first/core/utils/types.dart';
 import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
 
-// LINT: [1] enforce_layer_independence
+// LINT: [1] arch_dep_component
 // REASON: Domain layer cannot import from the Data layer.
 import 'package:clean_feature_first/features/auth/data/models/user_model.dart'; //! <-- LINT WARNING
 
-// LINT: [2] disallow_flutter_in_domain
+// LINT: [2] arch_dep_external
 // REASON: Domain must be platform agnostic (no UI types).
 import 'package:flutter/material.dart'; //! <-- LINT WARNING
 
-// LINT: [3] enforce_naming_pattern
+// LINT: [3] arch_naming_pattern
 // REASON: Name must match the pattern `{{name}}Port` (e.g., AuthPort).
 abstract interface class AuthContract implements Port { //! <-- LINT WARNING
-
+  //! all have problems
   // LINT: [4] enforce_type_safety
   // REASON: Return type must be `FutureEither<T>`, not raw `Future<T>`.
   Future<User> login(String username); //! <-- LINT WARNING
@@ -36,15 +36,15 @@ abstract interface class AuthContract implements Port { //! <-- LINT WARNING
   FutureEither<void> revokeToken(); //! <-- LINT WARNING (Quick Fix available)
 }
 
-// LINT: [8] enforce_port_contract
+// LINT: [8] arch_type_missing_base
 // REASON: Ports must implement/extend the base `Port` interface defined in Core.
 abstract interface class UncontractedAuthPort { //! <-- LINT WARNING
   void doSomething();
 }
 
 abstract interface class TypeSafetyViolationsPort implements Port {
-  // LINT: [8] enforce_type_safety
   // REASON: Return type must be `FutureEither<T>`, not raw `Future<T>`.
+  // ignore: arch_safety_return_strict
   Future<User> login(String username); //! <-- LINT WARNING
 
   // LINT: [9] enforce_type_safety
@@ -54,7 +54,7 @@ abstract interface class TypeSafetyViolationsPort implements Port {
 
   // LINT: [10] enforce_type_safety
   // REASON: Parameter named 'id' must be of type `StringId`, not `String`.
-  // ignore: missing_use_case
+  // ignore: missing_use_case, 
   FutureEither<void> deleteUser(String id); //! <-- LINT WARNING
 }
 

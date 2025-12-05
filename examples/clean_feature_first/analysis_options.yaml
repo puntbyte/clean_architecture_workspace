@@ -1,50 +1,150 @@
-# examples/feature_first_example/analysis_options.yaml
+# examples/clean_feature_first/analysis_options.yaml
 
 analyzer:
   plugins:
-    # This enables the custom_lint engine
+    # This enables the custom_lint engine to run the architecture rules
     - custom_lint
 
 custom_lint:
-  # This tells custom_lint to look for rules in your local package
-  # (Assuming architecture_lints is in your dev_dependencies)
+  # Enable debug mode to see verbose logs from the linter (useful for configuration issues)
   debug: true
 
-  # If you wanted to DISABLE a specific rule, you would do this:
   rules:
+    # ==============================================================================================
+    # FILE STRUCTURE & ORGANIZATION
+    # ==============================================================================================
+    
+    # Flags files that do not match any 'component' path defined in architecture.yaml.
+    # Helps keep the project structure clean and predictable.
     - arch_orphan_file: true
 
+    # ==============================================================================================
+    # NAMING CONVENTIONS
+    # ==============================================================================================
+
+    # Enforces regex naming patterns (e.g., classes in 'usecases' must end with 'UseCase').
     - arch_naming_pattern: true
+
+    # Flags names that match explicitly forbidden patterns (e.g., ending with 'Impl' or 'Manager').
     - arch_naming_antipattern: true
+
+    # Enforces linguistic rules (e.g., UseCases must be [Verb][Noun], Entities must be Nouns).
     - arch_naming_grammar: true
+
+    # Flags classes that have the correct name but are located in the wrong directory.
+    # (e.g., 'LoginUseCase' located inside the 'data' folder).
     - arch_location: true
 
+    # ==============================================================================================
+    # ARCHITECTURAL BOUNDARIES (The "Firewall")
+    # ==============================================================================================
+
+    # Enforces horizontal layering rules defined in [dependencies].
+    # (e.g., 'Domain' layer cannot import 'Data' or 'Presentation' layers).
     - arch_dep_component: true
+
+    # Enforces restrictions on 3rd party packages.
+    # (e.g., 'Domain' layer cannot import 'package:flutter/*' or 'dart:ui').
     - arch_dep_external: true
+
+    # Enforces vertical slicing rules.
+    # (e.g., Feature 'Auth' cannot import files from Feature 'Home').
     - arch_dep_module: true
 
+    # ==============================================================================================
+    # CLASS IDENTITY & INHERITANCE
+    # ==============================================================================================
+
+    # Ensures components inherit from required base classes.
+    # (e.g., Models must extend their corresponding Entities).
     - arch_type_missing_base: true
+
+    # Strictly limits inheritance to a specific allow-list.
+    # (e.g., Entities can ONLY extend Equatable, nothing else).
     - arch_type_strict_inheritance: true
+
+    # Flags inheritance from forbidden classes.
+    # (e.g., Domain classes cannot extend 'StatefulWidget').
     - arch_type_forbidden: true
 
+    # ==============================================================================================
+    # TYPE SAFETY (Signatures)
+    # ==============================================================================================
+
+    # Enforces specific types for method parameters.
+    # (e.g., Repositories must use 'UserId' instead of 'String').
     - arch_safety_param_strict: true
+
+    # Bans specific types in method parameters.
+    # (e.g., Avoid passing 'BuildContext' to Bloc events).
     - arch_safety_param_forbidden: true
+
+    # Enforces specific return types.
+    # (e.g., Domain methods must return 'Future<Either<Failure, T>>').
     - arch_safety_return_strict: true
+
+    # Bans specific return types.
+    # (e.g., Repositories must never return raw 'Future<T>').
     - arch_safety_return_forbidden: true
 
+    # ==============================================================================================
+    # EXCEPTION HANDLING & FLOW
+    # ==============================================================================================
+
+    # Prevents forbidden operations like 'throw' or 'rethrow' in specific layers.
+    # (e.g., Repositories should never throw exceptions, only return Failures).
     - arch_exception_forbidden: true
+
+    # Ensures required flow structures exist.
+    # (e.g., Data Sources must have a try/catch block).
     - arch_exception_missing: true
+
+    # Verifies that exceptions are correctly converted to domain failures.
+    # (e.g., catching 'ServerException' must result in returning 'ServerFailure').
     - arch_exception_conversion: true
 
+    # ==============================================================================================
+    # CLASS MEMBERS (Encapsulation)
+    # ==============================================================================================
+
+    # Ensures specific fields or methods exist.
+    # (e.g., Entities must have an 'id' field).
     - arch_member_missing: true
+
+    # Prevents specific fields or methods.
+    # (e.g., Domain Entities should not have public setters to ensure immutability).
     - arch_member_forbidden: true
 
+    # ==============================================================================================
+    # IMPLEMENTATION DETAILS (Usages)
+    # ==============================================================================================
+
+    # Prevents accessing global service locators (like GetIt) directly in business logic.
     - arch_usage_global_access: true
+
+    # Prevents manual instantiation of dependencies using 'new'.
+    # Enforces Dependency Injection via constructors.
     - arch_usage_instantiation: true
 
+    # ==============================================================================================
+    # METADATA (Annotations)
+    # ==============================================================================================
+
+    # Flags forbidden annotations.
+    # (e.g., Domain entities should not use @JsonSerializable).
     - arch_annot_forbidden: true
+
+    # strictly enforces that ONLY listed annotations are present.
+    - arch_annot_strict: true
+
+    # Ensures required annotations are present.
+    # (e.g., UseCases must be annotated with @Injectable).
     - arch_annot_missing: true
 
+    # ==============================================================================================
+    # CONSISTENCY & PARITY
+    # ==============================================================================================
+
+    # Checks for 1-to-1 parity between components.
+    # (e.g., If 'UserEntity' exists, 'UserModel' must also exist).
     - arch_parity_missing: true
-
-

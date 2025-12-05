@@ -82,7 +82,7 @@ excludes:
 # TYPE: Boolean
 # --------------------------------------------------------------------------------------------------
 modules:
-  features:
+  feature:
     path: 'features/{{name}}'
     default: true
   core: 'core'
@@ -569,6 +569,10 @@ inheritances:
 # TYPE: String | List<String>
 # --------------------------------------------------------------------------------------------------
 dependencies:
+  # Feature can consume anything from Core, Shared, and Config modules.
+  - on: feature
+    allowed: [core, shared, config]
+
   # --- Domain (Inner Circle) ---
   # Domain is platform agnostic and pure.
   - on: domain
