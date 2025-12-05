@@ -15,7 +15,7 @@ class InheritanceAllowedRule extends InheritanceBaseRule {
     name: 'arch_type_strict_inheritance',
     problemMessage: 'The component "{0}" is not allowed to inherit from "{1}".',
     correctionMessage: 'Only the following types are allowed: {2}.',
-    errorSeverity: DiagnosticSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   const InheritanceAllowedRule() : super(code: _code);

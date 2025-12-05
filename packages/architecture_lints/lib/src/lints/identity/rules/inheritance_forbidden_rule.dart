@@ -15,7 +15,7 @@ class InheritanceForbiddenRule extends InheritanceBaseRule {
     name: 'arch_type_forbidden',
     problemMessage: 'The component "{0}" must not inherit from "{1}".',
     correctionMessage: 'Remove the forbidden inheritance.',
-    errorSeverity: DiagnosticSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   const InheritanceForbiddenRule() : super(code: _code);

@@ -14,7 +14,7 @@ class ComponentDependencyRule extends ArchitectureLintRule {
     name: 'arch_dep_component',
     problemMessage: 'Dependency Violation: {0} cannot depend on {1}.',
     correctionMessage: 'Remove the dependency to maintain architectural boundaries.',
-    errorSeverity: DiagnosticSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   const ComponentDependencyRule() : super(code: _code);

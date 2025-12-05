@@ -12,7 +12,7 @@ class NamingPatternRule extends NamingBaseRule with NamingLogic {
     name: 'arch_naming_pattern',
     problemMessage: 'The {0} "{1}" does not follow the required naming convention.',
     correctionMessage: 'Rename it to match the pattern "{2}" (e.g., "{3}").',
-    errorSeverity: DiagnosticSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   const NamingPatternRule() : super(code: _code);

@@ -113,7 +113,7 @@ mixin RelationshipLogic {
       ComponentConfig? targetComponent;
       try {
         targetComponent = config.components.firstWhere((c) => c.id == rule.targetComponent);
-      } on StateError {
+      } catch (e) {
         continue;
       }
 

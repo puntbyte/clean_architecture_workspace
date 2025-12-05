@@ -15,7 +15,7 @@ class InheritanceRequiredRule extends InheritanceBaseRule {
     name: 'arch_type_missing_base',
     problemMessage: 'The component "{0}" must inherit from "{1}".',
     correctionMessage: 'Extend or implement the required type.',
-    errorSeverity: DiagnosticSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   const InheritanceRequiredRule() : super(code: _code);

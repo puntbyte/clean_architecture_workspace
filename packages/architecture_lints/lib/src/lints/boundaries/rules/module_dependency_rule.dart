@@ -14,7 +14,7 @@ class ModuleDependencyRule extends ArchitectureLintRule with ModuleLogic {
     problemMessage: 'Module Isolation Violation: {0} "{1}" cannot import {0} "{2}".',
     correctionMessage:
         'Sibling modules must remain independent. Use a shared module or an abstraction layer.',
-    errorSeverity: DiagnosticSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   const ModuleDependencyRule() : super(code: _code);
