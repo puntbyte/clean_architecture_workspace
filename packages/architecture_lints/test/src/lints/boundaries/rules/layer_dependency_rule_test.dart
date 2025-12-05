@@ -8,13 +8,13 @@ import 'package:architecture_lints/src/config/schema/architecture_config.dart';
 import 'package:architecture_lints/src/config/schema/component_config.dart';
 import 'package:architecture_lints/src/config/schema/dependency_config.dart';
 import 'package:architecture_lints/src/core/resolver/file_resolver.dart';
-import 'package:architecture_lints/src/lints/boundaries/rules/layer_dependency_rule.dart';
+import 'package:architecture_lints/src/lints/boundaries/rules/component_dependency_rule.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'package:path/path.dart' as p;
 import 'package:pubspec_parse/pubspec_parse.dart';
 import 'package:test/test.dart';
 
-class TestLayerDependencyRule extends LayerDependencyRule {
+class TestLayerDependencyRule extends ComponentDependencyRule {
   final ArchitectureConfig mockConfig;
 
   const TestLayerDependencyRule(this.mockConfig);

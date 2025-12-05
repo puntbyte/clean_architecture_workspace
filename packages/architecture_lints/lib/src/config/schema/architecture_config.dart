@@ -1,10 +1,18 @@
 // lib/src/config/schema/architecture_config.dart
 
 import 'package:architecture_lints/src/config/constants/config_keys.dart';
+import 'package:architecture_lints/src/config/schema/annotation_config.dart';
 import 'package:architecture_lints/src/config/schema/component_config.dart';
 import 'package:architecture_lints/src/config/schema/dependency_config.dart';
+import 'package:architecture_lints/src/config/schema/exception_config.dart';
 import 'package:architecture_lints/src/config/schema/inheritance_config.dart';
+import 'package:architecture_lints/src/config/schema/member_config.dart';
+import 'package:architecture_lints/src/config/schema/module_config.dart';
+import 'package:architecture_lints/src/config/schema/relationship_config.dart';
+import 'package:architecture_lints/src/config/schema/service_definition.dart';
 import 'package:architecture_lints/src/config/schema/type_definition.dart';
+import 'package:architecture_lints/src/config/schema/type_safety_config.dart';
+import 'package:architecture_lints/src/config/schema/usage_config.dart';
 import 'package:architecture_lints/src/utils/map_extensions.dart';
 
 class ArchitectureConfig {
@@ -12,12 +20,30 @@ class ArchitectureConfig {
   final List<DependencyConfig> dependencies;
   final List<InheritanceConfig> inheritances;
   final Map<String, TypeDefinition> typeDefinitions;
+  final List<TypeSafetyConfig> typeSafeties;
+  final List<ExceptionConfig> exceptions;
+  final List<MemberConfig> members; // New
+  final Map<String, ServiceDefinition> services; // New
+  final List<UsageConfig> usages; // New
+  final List<AnnotationConfig> annotations; // New
+  final List<RelationshipConfig> relationships; // New
+  final List<ModuleConfig> modules; // New
+  final Map<String, String> templates;
 
   const ArchitectureConfig({
     required this.components,
     this.dependencies = const [],
     this.inheritances = const [],
     this.typeDefinitions = const {},
+    this.typeSafeties = const [],
+    this.exceptions = const [],
+    this.members = const [],
+    this.services = const {},
+    this.usages = const [],
+    this.annotations = const [],
+    this.relationships = const [],
+    this.modules = const [],
+    this.templates = const {},
   });
 
   factory ArchitectureConfig.empty() => const ArchitectureConfig(components: []);
@@ -77,11 +103,80 @@ class ArchitectureConfig {
       }
     }
 
+    final typeSafeties = _mapList<TypeSafetyConfig>(
+      yaml,
+      ConfigKeys.root.typeSafeties,
+      TypeSafetyConfig.fromMap,
+    );
+
+    final exceptions = _mapList<ExceptionConfig>(
+      yaml,
+      ConfigKeys.root.exceptions,
+      ExceptionConfig.fromMap,
+    );
+
+    final members = _mapList<MemberConfig>(
+      yaml,
+      ConfigKeys.root.members,
+      MemberConfig.fromMap,
+    );
+
+    final services = <String, ServiceDefinition>{};
+    yaml.getMapMap(ConfigKeys.root.services).forEach((key, value) {
+      services[key] = ServiceDefinition.fromMap(value);
+    });
+
+    // 6. Parse Usages (List)
+    final usages = _mapList<UsageConfig>(
+      yaml,
+      ConfigKeys.root.usages,
+      UsageConfig.fromMap,
+    );
+
+    final annotations = _mapList<AnnotationConfig>(
+      yaml,
+      ConfigKeys.root.annotations,
+      AnnotationConfig.fromMap,
+    );
+
+    final relationships = _mapList<RelationshipConfig>(
+      yaml,
+      ConfigKeys.root.relationships,
+      RelationshipConfig.fromMap,
+    );
+
+    final modules = <ModuleConfig>[];
+    final rawModules = yaml['modules'];
+    if (rawModules is Map) {
+      rawModules.forEach((key, value) {
+        modules.add(ModuleConfig.fromMap(key.toString(), value));
+      });
+    }
+
+    final templates = <String, String>{};
+    final rawTemplates = yaml[ConfigKeys.root.templates];
+
+    if (rawTemplates is Map) {
+      rawTemplates.forEach((key, value) {
+        if (value is String) {
+          templates[key.toString()] = value;
+        }
+      });
+    }
+
     return ArchitectureConfig(
       components: components,
       dependencies: dependencies,
       inheritances: inheritances,
       typeDefinitions: typeDefinitions,
+      typeSafeties: typeSafeties,
+      exceptions: exceptions,
+      members: members,
+      services: services, // Add
+      usages: usages,     // Add
+      annotations: annotations, // Add
+      relationships: relationships, // Add
+      modules: modules,
     );
   }
 

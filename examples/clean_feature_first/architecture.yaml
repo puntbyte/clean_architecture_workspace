@@ -1033,7 +1033,7 @@ relationships:
     kind: 'class'
     required:
       component: 'model'
-      action: 'create_model_from_entity'
+      action: 'model_template'
 
   # For every public method in a Port, there must be a corresponding Usecase file.
   - on: port
@@ -1043,4 +1043,251 @@ relationships:
     required:
       component: 'usecase'
       # A builtin quick fix to create a Usecase file based on Port method.
-      action: 'create_usecase_from_port_method'
+      action: 'usecase_template'
+
+
+# ==================================================================================================
+# [8] ACTIONS (The Generators)
+# Defines code generation strategies.
+# The 'template_id' refers to a key in Section [9].
+# ==================================================================================================
+
+# --------------------------------------------------------------------------------------------------
+# [8.1] CONFIGURATION SCHEMA
+#
+# [a] trigger
+# Defines the context where this action appears in the IDE.
+# - component: The architectural component (e.g., 'port', 'entity').
+# - element: The AST node type ('class', 'method', 'field').
+#
+# [b] target
+# Defines where the generated file goes.
+# - component: Destination component (e.g., 'usecase').
+# - filename: The output filename (supports filters like | snakeCase).
+#
+# [c] variables
+# A map of keys to values used in the template.
+# VALUE TYPES:
+# 1. String: Simple value or source reference (e.g., '{{source.name}}').
+# 2. List<Map>: A Switch/Case logic chain. The first item where 'if' is true is used.
+#    - { if: '{{BooleanVar}}', value: 'Result' }
+#    - { value: 'DefaultResult' }
+# AVAILABLE FILTERS:
+# - | pascalCase, | camelCase, | snakeCase
+# - | extractGeneric(index=1)
+# - | isEmpty, | isNotEmpty
+#
+# [d] imports
+# List of import strategies.
+# - strategy: 'relative' (to source), 'package' (absolute), 'auto_resolve' (AST lookup), 'type'
+#  (config lookup).
+#
+# [e] template
+# Standard Mustache template string.
+# --------------------------------------------------------------------------------------------------
+actions:
+  # ------------------------------------------------------------------------------------------------
+  # Action ID: create_model_from_entity
+  # ------------------------------------------------------------------------------------------------
+  create_model_from_entity:
+    description: 'Scaffold a Data Model implementation for an Entity'
+    trigger:
+      component: entity
+      element: class
+      visibility: public
+    target:
+      component: model
+      scope: file
+      filename: '{{source.class.name | snakeCase}}_model.dart'
+      exists: skip
+    write:
+      policy: merge
+      merge_strategy:
+        add_missing_imports: true
+
+    variables:
+      ClassName: '{{source.class.name}}Model'
+      EntityName: '{{source.class.name}}'
+      FieldList: '{{source.class.fields}}'
+      Annotation:
+        - if: '{{architecture.style == "clean"}}'
+          value: '@freezed'
+        - value: '@JsonSerializable()'
+      Extends: '{{types.model.base}}'
+
+    imports:
+      - strategy: 'relative'
+        path: '{{source.path}}'
+      - strategy: 'package'
+        uri: 'package:freezed_annotation/freezed_annotation.dart'
+        condition: '{{Annotation}} == "@freezed"'
+      - strategy: 'package'
+        uri: 'package:json_annotation/json_annotation.dart'
+        condition: '{{Annotation}} == "@JsonSerializable()"'
+
+    # Link to Section [9]
+    template_id: 'model_implementation'
+
+
+  # ------------------------------------------------------------------------------------------------
+  # Action ID: create_usecase_from_method
+  # ------------------------------------------------------------------------------------------------
+  create_usecase_from_method:
+    description: 'Generate a UseCase class from a Port method'
+    trigger:
+      component: port
+      element: method
+      visibility: public
+    extract:
+      method_signature: true
+    target:
+      component: usecase
+      scope: 'file'
+      element: 'class'
+      filename: '{{source.method.name | snakeCase}}.dart'
+    write:
+      policy: skip_if_exists
+      on_conflict: prompt
+
+    variables:
+      # Strings
+      MethodName: '{{source.method.name}}'
+      ClassName: '{{MethodName | pascalCase}}'
+      RepoVar: 'repository'
+      RepoClass: '{{source.class.name}}'
+      ReturnType: '{{source.method.returnType | extractGeneric(index=1) }}'
+
+      # Lists
+      ParameterList: '{{source.method.parameters}}'
+
+      # Booleans
+      HasNoParams: '{{ParameterList | isEmpty}}'
+      HasParams: '{{ParameterList | isNotEmpty}}'
+      HasSingleParam: '{{ParameterList | length == 1}}'
+      HasManyParams: '{{ParameterList | length > 1}}'
+
+      # Single Param Helpers
+      SingleParamName: '{{ParameterList.first.name}}'
+      SingleParamIsNamed: '{{ParameterList.first.isNamed}}'
+
+      # Logic
+      TypedefName: '_{{ClassName}}Params'
+      UsecaseClass:
+        - if: '{{HasNoParams}}'
+          value: 'NullaryUsecase'
+        - value: 'UnaryUsecase'
+      ParamType:
+        - if: '{{HasNoParams}}'
+          value: 'void'
+        - if: '{{HasSingleParam}}'
+          value: '{{ParameterList.first.type}}'
+        - value: '{{TypedefName}}'
+
+    imports:
+      - strategy: 'relative'
+        path: '{{source.path}}'
+      - strategy: 'auto_resolve'
+        types: '{{source.method.types}}'
+      - strategy: 'package'
+        uri: 'package:injectable/injectable.dart'
+      - strategy: 'type'
+        key: 'usecase.unary'
+        condition: '{{UsecaseClass}} == "UnaryUsecase"'
+      - strategy: 'type'
+        key: 'usecase.nullary'
+        condition: '{{UsecaseClass}} == "NullaryUsecase"'
+      - strategy: 'type'
+        key: 'result.wrapper'
+
+    # Link to Section [9]
+    template_id: 'usecase_implementation'
+
+
+# ==================================================================================================
+# [9] TEMPLATES (The View)
+# Reusable Mustache templates.
+# ==================================================================================================
+
+templates:
+
+  # ------------------------------------------------------------------------------------------------
+  # Template ID: model_implementation
+  # Context: create_model_from_entity
+  # ------------------------------------------------------------------------------------------------
+  model_implementation: |
+    {{#imports}}import '{{uri}}';
+    {{/imports}}
+
+    {{#parts}}part '{{.}}';
+    {{/parts}}
+
+    {{Annotation}}
+    class {{ClassName}} extends {{EntityName}} {
+      const factory {{ClassName}}({
+        {{#FieldList}}
+        required {{type}} {{name}},
+        {{/FieldList}}
+      }) = _{{ClassName}};
+
+      factory {{ClassName}}.fromJson(Map<String, dynamic> json) =>
+          _${{ClassName}}FromJson(json);
+
+      factory {{ClassName}}.fromEntity({{EntityName}} entity) {
+        return {{ClassName}}(
+          {{#FieldList}}
+          {{name}}: entity.{{name}},
+          {{/FieldList}}
+        );
+      }
+    }
+
+  # ------------------------------------------------------------------------------------------------
+  # Template ID: usecase_implementation
+  # Context: create_usecase_from_method
+  # ------------------------------------------------------------------------------------------------
+  usecase_implementation: |
+    {{#imports}}import '{{uri}}';
+    {{/imports}}
+
+    {{#HasManyParams}}
+    typedef {{TypedefName}} = ({
+      {{#ParameterList}}{{type}} {{name}}, {{/ParameterList}}
+    });
+    {{/HasManyParams}}
+
+    @Injectable()
+    {{#HasNoParams}}
+    final class {{ClassName}} implements {{UsecaseClass}}<{{ReturnType}}> {
+    {{/HasNoParams}}
+    {{#HasParams}}
+    final class {{ClassName}} implements {{UsecaseClass}}<{{ReturnType}}, {{ParamType}}> {
+    {{/HasParams}}
+      @override
+      final {{RepoClass}} {{RepoVar}};
+
+      const {{ClassName}}(this.{{RepoVar}});
+
+      @override
+      {{#HasNoParams}}
+      FutureEither<{{ReturnType}}> call() => {{RepoVar}}.{{MethodName}}();
+      {{/HasNoParams}}
+      {{#HasParams}}
+      FutureEither<{{ReturnType}}> call({{ParamType}} parameter) {
+        return {{RepoVar}}.{{MethodName}}(
+          {{#HasSingleParam}}
+            {{#SingleParamIsNamed}}
+            {{SingleParamName}}: parameter
+            {{/SingleParamIsNamed}}
+            {{^SingleParamIsNamed}}
+            parameter
+            {{/SingleParamIsNamed}}
+          {{/HasSingleParam}}
+          {{#HasManyParams}}
+            {{#ParameterList}}
+            {{name}}: parameter.{{name}},
+            {{/ParameterList}}
+          {{/HasManyParams}}
+        );
+      }
+      {{/HasParams}}
+    }

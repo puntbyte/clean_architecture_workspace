@@ -17,6 +17,7 @@ class Login implements UnaryUsecase<User, _LoginParams> {
   final AuthPort _repository;
 
   @override
+  // ignore:
   Future<Either<Failure, User>> call(_LoginParams params) =>
       _repository.login(params.username, params.password);
 }

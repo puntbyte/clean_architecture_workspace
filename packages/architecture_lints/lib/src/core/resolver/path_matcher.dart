@@ -1,58 +1,56 @@
 // lib/src/core/resolver/path_matcher.dart
 
 class PathMatcher {
-  /// Checks if [filePath] matches the [configPath].
-  ///
-  /// [configPath] can be a simple string (e.g., 'domain/usecases')
-  /// or contain wildcards (e.g., 'features/{{name}}/data').
-  static bool matches(String filePath, String configPath) {
-    // 1. Normalize separators to forward slashes for consistency
+  /// Returns the start index of the match in [filePath], or -1 if no match.
+  static int getMatchIndex(String filePath, String configPath) {
     final normalizedFile = filePath.replaceAll(r'\', '/');
     final normalizedConfig = configPath.replaceAll(r'\', '/');
 
-    // 2. Handle {{name}} wildcard
-    // Matches "features/{{name}}/data" against "features/auth/data"
+    // 1. Handle {{name}} wildcard
     if (normalizedConfig.contains('{{name}}')) {
-      // Escape special regex characters in the config path, except {{name}}
-      final pattern = _escapeRegex(normalizedConfig)
-          .replaceAll(r'\{\{name\}\}', '[^/]+'); // {{name}} becomes "anything except slash"
-
+      final pattern = escapeRegex(normalizedConfig).replaceAll(r'\{\{name\}\}', '[^/]+');
       final regex = RegExp(pattern);
-      return regex.hasMatch(normalizedFile);
+      final match = regex.firstMatch(normalizedFile);
+      return match?.start ?? -1;
     }
 
-    // 3. Handle standard Glob wildcard (*)
+    // 2. Handle standard Glob wildcard (*)
     if (normalizedConfig.contains('*')) {
-      final pattern = _escapeRegex(normalizedConfig)
-          .replaceAll(r'\*', '.*'); // * becomes "anything"
-
+      final pattern = escapeRegex(normalizedConfig).replaceAll(r'\*', '.*');
       final regex = RegExp(pattern);
-      return regex.hasMatch(normalizedFile);
+      final match = regex.firstMatch(normalizedFile);
+      return match?.start ?? -1;
     }
 
-    // 4. Robust Containment Check
-    // We want to match 'domain' against 'lib/domain/file.dart'
-    // But NOT against 'lib/domain_stuff/file.dart'
+    // 3. Robust Containment Check
+    // We check for folder boundaries to avoid partial name matches (e.g. 'port' matching 'support')
 
-    // Check if normalizedFile contains the config path surrounded by separators
-    // OR if it ends with the config path (folder name match)
-    // OR if it contains config path followed by a slash.
+    // Check '/configPath/' (Middle)
+    final index = normalizedFile.indexOf('/$normalizedConfig/');
+    if (index != -1) return index + 1; // +1 to skip the leading slash
 
-    if (normalizedFile.contains('/$normalizedConfig/') ||
-        normalizedFile.endsWith('/$normalizedConfig') ||
-        normalizedFile.startsWith('$normalizedConfig/')) {
-      return true;
+    // Check '/configPath' (End)
+    if (normalizedFile.endsWith('/$normalizedConfig')) {
+      return normalizedFile.length - normalizedConfig.length;
     }
 
-    // Fallback for simple relative matches if above is too strict for your use case
-    // But generally, strictly checking boundaries prevents false positives.
-    return false;
+    // Check 'configPath/' (Start)
+    if (normalizedFile.startsWith('$normalizedConfig/')) {
+      return 0;
+    }
+
+    // Fallback: Exact match
+    if (normalizedFile == normalizedConfig) return 0;
+
+    return -1;
   }
 
-  static String _escapeRegex(String text) {
-    return text.replaceAllMapped(
-        RegExp(r'[.*+?^${}()|[\]\\]'),
-            (match) => '\\${match.group(0)}'
-    );
+  /// Kept for backward compatibility if other rules use it
+  static bool matches(String filePath, String configPath) {
+    return getMatchIndex(filePath, configPath) != -1;
+  }
+
+  static String escapeRegex(String text) {
+    return text.replaceAllMapped(RegExp(r'[.*+?^${}()|[\]\\]'), (match) => '\\${match.group(0)}');
   }
 }

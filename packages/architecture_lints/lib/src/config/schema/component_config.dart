@@ -22,6 +22,8 @@ class ComponentConfig {
   /// The forbidden naming patterns.
   final List<String> antipatterns;
 
+  final List<String> grammar; // New Field
+
   /// Whether this is a default component definition.
   final bool isDefault;
 
@@ -31,6 +33,7 @@ class ComponentConfig {
     this.paths = const [],
     this.patterns = const [],
     this.antipatterns = const [],
+    this.grammar = const [], // New
     this.isDefault = false,
   });
 
@@ -41,12 +44,23 @@ class ComponentConfig {
       paths: map.getStringList(ConfigKeys.component.path),
       patterns: map.getStringList(ConfigKeys.component.pattern),
       antipatterns: map.getStringList(ConfigKeys.component.antipattern),
+      grammar: map.getStringList(ConfigKeys.component.grammar),
       isDefault: map.getBool(ConfigKeys.component.default$),
     );
   }
 
   factory ComponentConfig.fromMapEntry(MapEntry<String, Map<String, dynamic>> entry) {
     return ComponentConfig.fromMap(entry.key, entry.value);
+  }
+
+  String get displayName {
+    if (name != null) return name!;
+
+    return id
+        .split('.')
+        .where((s) => s.isNotEmpty)
+        .map((s) => '${s[0].toUpperCase()}${s.substring(1)}')
+        .join(' ');
   }
 
   @override
@@ -64,7 +78,8 @@ class ComponentConfig {
         other.isDefault == isDefault &&
         const ListEquality<String>().equals(other.paths, paths) &&
         const ListEquality<String>().equals(other.patterns, patterns) &&
-        const ListEquality<String>().equals(other.antipatterns, antipatterns);
+        const ListEquality<String>().equals(other.antipatterns, antipatterns) &&
+        const ListEquality<String>().equals(other.grammar, grammar);
   }
 
   @override
@@ -74,6 +89,7 @@ class ComponentConfig {
         isDefault.hashCode ^
         const ListEquality<String>().hash(paths) ^
         const ListEquality<String>().hash(patterns) ^
-        const ListEquality<String>().hash(antipatterns);
+        const ListEquality<String>().hash(antipatterns) ^
+        const ListEquality<String>().hash(grammar);
   }
 }

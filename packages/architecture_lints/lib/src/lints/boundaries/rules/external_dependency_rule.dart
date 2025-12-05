@@ -13,7 +13,7 @@ class ExternalDependencyRule extends ArchitectureLintRule {
     name: 'arch_dep_external',
     problemMessage: 'External dependency violation: "{0}" cannot depend on "{1}".',
     correctionMessage: 'Remove the usage. This layer should be framework-agnostic.',
-    errorSeverity: DiagnosticSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   const ExternalDependencyRule() : super(code: _code);

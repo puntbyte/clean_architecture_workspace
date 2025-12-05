@@ -50,7 +50,7 @@ class EnforceExceptionOnDataSource extends ArchitectureLintRule {
       for (final rule in rules) {
         // Check Forbidden List
         for (final detail in rule.forbidden) {
-          if (detail.kind != 'return') continue;
+          if (detail.element != 'return') continue;
           if (detail.type == null) continue;
 
           final unsafeTypeName = _resolveTypeName(detail.type!);
@@ -58,7 +58,7 @@ class EnforceExceptionOnDataSource extends ArchitectureLintRule {
           if (returnTypeSource.contains(unsafeTypeName)) {
             // Try to find a suggestion from the 'allowed' list of the same rule
             final suggestion = rule.allowed
-                .where((d) => d.kind == 'return' && d.type != null)
+                .where((d) => d.element == 'return' && d.type != null)
                 .map((d) => _resolveTypeName(d.type!))
                 .firstOrNull ?? 'Future<T>';
 

@@ -22,7 +22,7 @@ class TypeSafetyDetail {
 
   factory TypeSafetyDetail.fromMap(Map<String, dynamic> map) {
     return TypeSafetyDetail(
-      kind: map.asStringOrNull(ConfigKey.rule.kind),
+      kind: map.asStringOrNull(ConfigKey.rule.element),
       definition: map.asStringOrNull(ConfigKey.rule.definition),
       type: map.asStringOrNull(ConfigKey.rule.type),
       import: map.asStringOrNull(ConfigKey.rule.import),

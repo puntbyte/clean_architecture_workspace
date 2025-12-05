@@ -10,6 +10,14 @@ abstract class ConfigKeys {
   static const component = _ComponentKeys();
   static const dependency = _DependencyKeys();
   static const inheritance = _InheritanceKeys();
+  static const typeSafety = _TypeSafetyKeys();
+  static const exception = _ExceptionKeys();
+  static const member = _MemberKeys();
+  static const service = _ServiceKeys(); // New
+  static const usage = _UsageKeys(); // New
+  static const annotation = _AnnotationKeys(); // New
+  static const relationship = _RelationshipKeys(); // New
+
   static const placeholder = _PlaceholderKeys();
 }
 
@@ -20,6 +28,14 @@ class _RootKeys {
   String get types => 'types';
   String get dependencies => 'dependencies';
   String get inheritances => 'inheritances';
+  String get typeSafeties => 'type_safeties';
+  String get exceptions => 'exceptions';
+  String get members => 'members'; // New
+  String get services => 'services'; // New
+  String get usages => 'usages'; // New
+  String get annotations => 'annotations'; // New
+  String get relationships => 'relationships'; // New
+  String get templates => 'templates';
 }
 
 /// There are common keys used redundantly in multiple places.
@@ -42,6 +58,8 @@ class _ComponentKeys {
   String get default$ => 'default';
   String get pattern => 'pattern';
   String get antipattern => 'antipattern';
+  String get grammar => 'grammar'; // New
+
 }
 
 class _TypeDefinitionKeys {
@@ -77,6 +95,99 @@ class _InheritanceKeys {
   String get import => 'import';
   String get definition => 'definition';
   String get component => 'component';
+}
+
+class _ExceptionKeys {
+  const _ExceptionKeys();
+
+  String get on => 'on';
+  String get role => 'role';
+  String get required => 'required';
+  String get forbidden => 'forbidden';
+  String get conversions => 'conversions';
+
+  // Constraint keys
+  String get operation => 'operation';
+  String get definition => 'definition';
+  String get type => 'type';
+
+  // Conversion keys
+  String get fromDefinition => 'from_definition';
+  String get toDefinition => 'to_definition';
+}
+
+class _TypeSafetyKeys {
+  const _TypeSafetyKeys();
+
+  String get on => 'on';
+  String get allowed => 'allowed';
+  String get forbidden => 'forbidden';
+
+  String get kind => 'kind';
+  String get identifier => 'identifier';
+  String get definition => 'definition';
+  String get type => 'type';
+  String get component => 'component';
+}
+
+class _MemberKeys {
+  const _MemberKeys();
+
+  String get on => 'on';
+  String get required => 'required';
+  String get allowed => 'allowed';
+  String get forbidden => 'forbidden';
+
+  // Constraint fields
+  String get kind => 'kind';
+  String get identifier => 'identifier';
+  String get visibility => 'visibility';
+  String get modifier => 'modifier';
+}
+
+class _ServiceKeys {
+  const _ServiceKeys();
+  String get type => 'type';
+  String get identifier => 'identifier';
+  String get import => 'import';
+}
+
+class _UsageKeys {
+  const _UsageKeys();
+  String get on => 'on';
+  String get forbidden => 'forbidden';
+
+  // Constraint keys
+  String get kind => 'kind'; // 'access' | 'instantiation'
+  String get definition => 'definition'; // Ref to service
+  String get component => 'component'; // Ref to component
+}
+
+class _AnnotationKeys {
+  const _AnnotationKeys();
+
+  String get on => 'on';
+  String get mode => 'mode'; // 'strict' | 'implicit'
+  String get required => 'required';
+  String get allowed => 'allowed';
+  String get forbidden => 'forbidden';
+
+  // Constraint keys
+  String get type => 'type';
+  String get import => 'import';
+}
+
+class _RelationshipKeys {
+  const _RelationshipKeys();
+
+  String get on => 'on';
+  String get element => 'kind'; // 'class' | 'method'
+  String get visibility => 'visibility';
+  String get required => 'required'; // Map
+
+  // Inside required map
+  String get component => 'component';
+  String get action => 'action';
 }
 
 class _PlaceholderKeys {

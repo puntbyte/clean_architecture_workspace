@@ -14,14 +14,37 @@ custom_lint:
   rules:
     - arch_orphan_file: true
 
-    - arch_naming_pattern: false
-    - arch_naming_antipattern: false
+    - arch_naming_pattern: true
+    - arch_naming_antipattern: true
+    - arch_naming_grammar: true
+    - arch_location: true
 
-    - arch_dep_layer: false
-    - arch_dep_external: false
+    - arch_dep_component: true
+    - arch_dep_external: true
+    - arch_dep_module: true
 
     - arch_type_missing_base: true
-    - arch_type_strict: true
+    - arch_type_strict_inheritance: true
     - arch_type_forbidden: true
+
+    - arch_safety_param_strict: true
+    - arch_safety_param_forbidden: true
+    - arch_safety_return_strict: true
+    - arch_safety_return_forbidden: true
+
+    - arch_exception_forbidden: true
+    - arch_exception_missing: true
+    - arch_exception_conversion: true
+
+    - arch_member_missing: true
+    - arch_member_forbidden: true
+
+    - arch_usage_global_access: true
+    - arch_usage_instantiation: true
+
+    - arch_annot_forbidden: true
+    - arch_annot_missing: true
+
+    - arch_parity_missing: true
 
 

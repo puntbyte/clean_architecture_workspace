@@ -27,7 +27,7 @@ class DisallowModelReturnFromRepository extends ArchitectureLintRule {
          // These are typically wrappers like FutureEither, Result, etc.
          ...config.typeSafeties.rules
              .expand((rule) => rule.allowed)
-             .where((detail) => detail.kind == 'return' && detail.type != null)
+             .where((detail) => detail.element == 'return' && detail.type != null)
              .map((detail) {
                // Resolve 'result.wrapper' -> 'FutureEither'
                final def = config.typeDefinitions.get(detail.type!);

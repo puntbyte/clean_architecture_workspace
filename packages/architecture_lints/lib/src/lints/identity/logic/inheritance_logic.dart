@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/error/listener.dart';
+import 'package:architecture_lints/src/config/schema/architecture_config.dart';
 import 'package:architecture_lints/src/config/schema/type_definition.dart';
 import 'package:architecture_lints/src/config/schema/type_reference.dart';
 import 'package:architecture_lints/src/core/resolver/file_resolver.dart';
@@ -17,7 +18,6 @@ mixin InheritanceLogic {
       ) {
     final element = type.element;
 
-    // 1. Check Class Name
     if (reference.types.contains(element.name)) {
       if (reference.import != null) {
         final libraryUri = element.library.firstFragment.source.uri.toString();
@@ -26,7 +26,6 @@ mixin InheritanceLogic {
       return true;
     }
 
-    // 2. Check Component
     if (reference.component != null) {
       final sourcePath = element.library.firstFragment.source.fullName;
       final componentConfig = fileResolver.resolve(sourcePath);
@@ -39,7 +38,6 @@ mixin InheritanceLogic {
       }
     }
 
-    // 3. Check Definitions
     if (reference.definitions.isNotEmpty) {
       for (final defId in reference.definitions) {
         final definition = typeRegistry[defId];
@@ -56,6 +54,45 @@ mixin InheritanceLogic {
     }
 
     return false;
+  }
+
+  /// Attempts to identify the architectural component of a class based on what it extends/implements.
+  /// Returns the [id] of the component if a match is found in the [inheritance] configuration.
+  String? findComponentIdByInheritance(
+      ClassDeclaration node,
+      ArchitectureConfig config,
+      FileResolver fileResolver,
+      ) {
+    final element = node.declaredFragment?.element;
+    if (element == null) return null;
+
+    final supertypes = getImmediateSupertypes(element);
+    if (supertypes.isEmpty) return null;
+
+    // Iterate through all inheritance rules
+    for (final rule in config.inheritances) {
+      // We are looking for "Identification Rules" (Required inheritance).
+      // If a rule says: "Components of type 'X' MUST extend 'Y'",
+      // and our class extends 'Y', then our class is likely of type 'X'.
+      if (rule.required.isEmpty) continue;
+
+      final matchesRule = supertypes.any(
+            (type) => matchesReference(
+          type,
+          rule.required,
+          fileResolver,
+          config.typeDefinitions,
+        ),
+      );
+
+      if (matchesRule) {
+        // Return the first component ID this rule applies to.
+        // This effectively identifies the class intention.
+        return rule.onIds.first;
+      }
+    }
+
+    return null;
   }
 
   bool componentMatches(String ruleId, String componentId) {

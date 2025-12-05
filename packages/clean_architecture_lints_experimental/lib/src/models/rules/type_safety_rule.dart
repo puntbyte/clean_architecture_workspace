@@ -1,4 +1,4 @@
-// lib/src/models/rules/type_safety_rule.dart
+// lib/src/models/rules/type_safety_param_forbidden_rule.dart
 part of '../configs/type_safeties_config.dart';
 
 /// Represents a complete type safety rule for architectural components.
