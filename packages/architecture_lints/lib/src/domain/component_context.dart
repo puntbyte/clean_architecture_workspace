@@ -20,9 +20,13 @@ class ComponentContext {
   });
 
   String get id => config.id;
+
   String get displayName => config.displayName;
+
   List<String> get patterns => config.patterns;
+
   List<String> get antipatterns => config.antipatterns;
+
   List<String> get grammar => config.grammar;
 
   /// Checks if this component matches a configuration reference ID.
@@ -31,10 +35,19 @@ class ComponentContext {
   /// 1. Exact Match: id 'data.repo' == ref 'data.repo'
   /// 2. Parent Check: id 'data.repo' startsWith ref 'data.'
   /// 3. Suffix Check: id 'data.repo' endsWith ref '.repo'
+  /// 4. Module Check: module.key 'core' == ref 'core' (NEW)
   bool matchesReference(String referenceId) {
+    // 1. Check Component ID
     if (id == referenceId) return true;
     if (id.startsWith('$referenceId.')) return true;
     if (id.endsWith('.$referenceId')) return true;
+
+    // 2. Check Module Key
+    // This allows rules like "allowed: [core]" to include all components in the 'core' module.
+    if (module != null && module!.key == referenceId) {
+      return true;
+    }
+
     return false;
   }
 

@@ -30,50 +30,66 @@ class ComponentDependencyRule extends ArchitectureLintRule {
   }) {
     if (component == null) return;
 
-    // 1. Filter rules: Ask the component if it matches the 'on' clause
+    // 1. Find all rules that apply to this component
     final rules = config.dependencies.where((rule) {
       return component.matchesAny(rule.onIds);
     }).toList();
 
     if (rules.isEmpty) return;
 
+    // 2. Aggregate Constraints (Union Logic)
+    final allForbidden = <String>{};
+    final allAllowed = <String>{};
+    var hasWhitelist = false;
+
+    for (final rule in rules) {
+      // Collect forbidden
+      allForbidden.addAll(rule.forbidden.components);
+
+      // Collect allowed
+      // We only consider it a "whitelist rule" if it actually defines allowed items.
+      // Rules that only define 'forbidden' are considered "Permissive" (Allow All except X).
+      if (rule.allowed.components.isNotEmpty) {
+        hasWhitelist = true;
+        allAllowed.addAll(rule.allowed.components);
+      }
+    }
+
     // Helper to validate a specific dependency target
     void checkViolation({
       required ComponentContext targetComponent,
-      required Object nodeOrToken, // AstNode or Token
+      required Object nodeOrToken,
     }) {
-      // Allow self-references (same component definition)
       if (component.id == targetComponent.id) return;
 
-      for (final rule in rules) {
-        // A. Check Forbidden (Blacklist)
-        // Ask the TARGET component if it matches the forbidden list
-        if (targetComponent.matchesAny(rule.forbidden.components)) {
+      // A. Check Forbidden (Global Blacklist)
+      // If ANY rule forbids it, it is forbidden.
+      if (targetComponent.matchesAny(allForbidden.toList())) {
+        _report(
+          reporter: reporter,
+          nodeOrToken: nodeOrToken,
+          current: component,
+          target: targetComponent,
+        );
+        return;
+      }
+
+      // B. Check Allowed (Global Whitelist)
+      // Only enforce whitelist if at least one rule defined 'allowed'.
+      // If we have a whitelist, the target MUST be in the Union of all allowed lists.
+      if (hasWhitelist) {
+        if (!targetComponent.matchesAny(allAllowed.toList())) {
           _report(
             reporter: reporter,
             nodeOrToken: nodeOrToken,
             current: component,
             target: targetComponent,
           );
-          return;
-        }
-
-        // B. Check Allowed (Whitelist)
-        // If an allow list exists, the target MUST be in it.
-        if (rule.allowed.components.isNotEmpty) {
-          if (!targetComponent.matchesAny(rule.allowed.components)) {
-            _report(
-              reporter: reporter,
-              nodeOrToken: nodeOrToken,
-              current: component,
-              target: targetComponent,
-            );
-          }
         }
       }
     }
 
-    // 2. Check Imports (Directives)
+    // 3. Check Imports
     context.registry.addImportDirective((node) {
       final importedPath = ImportResolver.resolvePath(node: node);
       if (importedPath == null) return;
@@ -84,7 +100,7 @@ class ComponentDependencyRule extends ArchitectureLintRule {
       }
     });
 
-    // 3. Check Usages (Named Types in code)
+    // 4. Check Usages
     context.registry.addNamedType((node) {
       final element = node.element;
       if (element == null) return;
@@ -108,8 +124,8 @@ class ComponentDependencyRule extends ArchitectureLintRule {
     required ComponentContext target,
   }) {
     final args = [
-      current.displayName, // Use getter from ComponentContext
-      target.displayName, // Use getter from ComponentContext
+      current.displayName,
+      target.displayName,
     ];
 
     if (nodeOrToken is AstNode) {
