@@ -36,6 +36,8 @@ class _RootKeys {
   String get annotations => 'annotations'; // New
   String get relationships => 'relationships'; // New
   String get templates => 'templates';
+
+  String get excludes => 'excludes';
 }
 
 /// There are common keys used redundantly in multiple places.

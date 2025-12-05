@@ -29,6 +29,8 @@ class ArchitectureConfig {
   final List<RelationshipConfig> relationships; // New
   final List<ModuleConfig> modules; // New
   final Map<String, String> templates;
+  final List<String> excludes; // New
+
 
   const ArchitectureConfig({
     required this.components,
@@ -44,6 +46,7 @@ class ArchitectureConfig {
     this.relationships = const [],
     this.modules = const [],
     this.templates = const {},
+    this.excludes = const [],
   });
 
   factory ArchitectureConfig.empty() => const ArchitectureConfig(components: []);
@@ -164,6 +167,8 @@ class ArchitectureConfig {
       });
     }
 
+    final excludes = yaml.getStringList(ConfigKeys.root.excludes);
+
     return ArchitectureConfig(
       components: components,
       dependencies: dependencies,
@@ -177,6 +182,7 @@ class ArchitectureConfig {
       annotations: annotations, // Add
       relationships: relationships, // Add
       modules: modules,
+      excludes: excludes, // Add
     );
   }
 

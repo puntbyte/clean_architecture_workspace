@@ -45,8 +45,14 @@ class PathMatcher {
     return -1;
   }
 
-  /// Kept for backward compatibility if other rules use it
   static bool matches(String filePath, String configPath) {
+    // 1. Handle file extension check specifically for excludes like '*.g.dart'
+    if (configPath.startsWith('*') && !configPath.contains('/')) {
+      final extension = configPath.substring(1); // remove *
+      return filePath.endsWith(extension);
+    }
+
+    // 2. Fallback to standard index matching
     return getMatchIndex(filePath, configPath) != -1;
   }
 

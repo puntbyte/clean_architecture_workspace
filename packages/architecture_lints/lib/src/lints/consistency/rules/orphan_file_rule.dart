@@ -3,10 +3,10 @@ import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:architecture_lints/src/config/schema/architecture_config.dart';
 import 'package:architecture_lints/src/core/resolver/file_resolver.dart';
+import 'package:architecture_lints/src/core/resolver/path_matcher.dart'; // Import PathMatcher
 import 'package:architecture_lints/src/domain/component_context.dart';
 import 'package:architecture_lints/src/lints/architecture_lint_rule.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
-import 'package:path/path.dart' as p;
 
 class OrphanFileRule extends ArchitectureLintRule {
   static const _code = LintCode(
@@ -30,17 +30,17 @@ class OrphanFileRule extends ArchitectureLintRule {
     // 1. If it matches a Component, it is valid.
     if (component != null) return;
 
-    // 2. Ignore generated files
-    final filename = p.basename(resolver.path);
-    if (filename.endsWith('.g.dart') ||
-        filename.endsWith('.freezed.dart') ||
-        filename == 'main.dart' ||
-        filename == 'app.dart' ||
-        filename == 'firebase_options.dart') {
-      return;
+    // 2. Check Excludes (Configurable ignores)
+    // We use PathMatcher because it supports wildcards (*) defined in the config.
+    // e.g. '*.g.dart', 'lib/main.dart'
+    for (final pattern in config.excludes) {
+      // We assume PathMatcher.matches handles glob-like patterns
+      if (PathMatcher.matches(resolver.path, pattern)) {
+        return;
+      }
     }
 
-    // 3. Check if it belongs to a Module (using FileResolver)
+    // 3. Check if it belongs to a Module
     final moduleContext = fileResolver.resolveModule(resolver.path);
 
     context.registry.addCompilationUnit((node) {

@@ -40,6 +40,18 @@ architecture:
   style: clean
   mode: feature_first
 
+# [Optional] Exclude files from Orphan checks
+excludes:
+  - 'lib/main.dart'
+  - 'lib/main_app.dart'
+  - 'lib/app.dart'
+  - 'lib/firebase_options.dart'
+  - 'lib/injection_container.dart'
+  - '**/*.g.dart'
+  - '**/*.freezed.dart'
+  - '**/*.config.dart'
+  - 'test/**'
+
 # ==================================================================================================
 # [2] PROJECT STRUCTURE (The Map)
 # The linter cannot function without identifying where files are located.
