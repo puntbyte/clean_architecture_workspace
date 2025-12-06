@@ -1,3 +1,5 @@
+// lib/src/lints/identity/rules/inheritance_required_rule.dart
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -35,11 +37,11 @@ class InheritanceRequiredRule extends InheritanceBaseRule {
       if (rule.required.isEmpty) continue;
 
       final hasMatch = supertypes.any(
-        (type) => matchesReference(
+        (type) => matchesDefinition(
           type,
           rule.required,
           fileResolver,
-          config.typeDefinitions,
+          config.definitions,
         ),
       );
 
@@ -50,7 +52,7 @@ class InheritanceRequiredRule extends InheritanceBaseRule {
           code: _code,
           arguments: [
             component.displayName,
-            describeReference(rule.required, config.typeDefinitions),
+            describeDefinition(rule.required, config.definitions),
           ],
         );
       }

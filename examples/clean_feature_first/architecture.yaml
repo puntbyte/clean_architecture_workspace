@@ -142,7 +142,7 @@ modules:
 # - verb: {{verb}}, {{verb.present}}, {{verb.past}}, {{verb.gerund}}
 # - other: {{adjective}}, {{adverb}}, {{pronoun}}, {{preposition}}, {{conjunction}}
 # --------------------------------------------------------------------------------------------------
-components:
+componentsOld:
   # ---- Domain (Inner Circle) ---
   domain:
     name: 'Domain'
@@ -180,7 +180,7 @@ components:
 
   # ---- Data (Adapter) ---
   data:
-    name: 'Data'
+    name: 'Data Source'
     path: 'data'
 
   # Models are data objects. Noun Phrases (e.g., "UserModel").
@@ -301,6 +301,167 @@ components:
     pattern: '{{name}}' # Shared widgets might have looser naming rules
     grammar: '{{noun.phrase}}'
 
+components:
+  # ---- Domain (Inner Circle) ---
+  .domain:
+    name: 'Domain'
+    path: 'domain'
+
+    # Entities are objects. They must be Noun Phrases (e.g., "User", "PaymentMethod").
+    .entity:
+      name: 'Entity'
+      path: 'entities'
+      pattern: '{{name}}'
+      antipattern: '{{name}}Entity'
+      grammar: '{{noun.phrase}}'
+
+    # Ports are interfaces. They are Noun Phrases (e.g., "AuthPort").
+    .port:
+      name: 'Port (aka Repository Interface)'
+      path: 'ports'
+      pattern: '{{name}}Port'
+      antipattern: '{{name}}(Interface|Repository)'
+      grammar: '{{noun.phrase}}Port'
+
+    # UseCases are actions. They must start with a Verb and end with a Noun (e.g., "GetUser").
+    .usecase:
+      name: 'Usecase (aka Interactor)'
+      path: 'usecases'
+      pattern: '{{name}}'
+      antipattern: '{{name}}Use(C|c)ase'
+      grammar: '{{verb.present}}{{noun.phrase}}'
+
+    # Parameters are data. They must be Noun Phrases (e.g., "_userIdParam").
+    .usecase.parameter:
+      name: 'Usecase Parameter'
+      pattern: '_{{name}}Param'
+      grammar: '_{{noun.phrase}}Param'
+
+  # ---- Data (Adapter) ---
+  .data:
+    name: 'Data Source'
+    path: 'data'
+
+    # Models are data objects. Noun Phrases (e.g., "UserModel").
+    .model:
+      name: 'Model'
+      path: 'models'
+      pattern: '{{name}}Model'
+      grammar: '{{noun.phrase}}Model'
+
+    .source:
+      name: 'Data Source'
+      path: 'sources'
+
+      # Source Interfaces are objects. Noun Phrases (e.g., "AuthSource").
+      .interface:
+        name: 'Data Source (Interface)'
+        pattern: '{{name}}Source'
+        grammar: '{{noun.phrase}}Source'
+
+      # Source Implementations are concrete objects. Noun Phrases (e.g., "RemoteAuthSource").
+      .implementation:
+        name: 'Data Source (Implementation)'
+        pattern: '{{affix}}{{name}}Source'
+        grammar: '{{noun.phrase}}Source'
+
+    # Repositories are objects. Noun Phrases (e.g., "AuthRepository").
+    .repository:
+      name: 'Repository (Implementation)'
+      path: 'repositories'
+      pattern: '{{affix}}{{name}}Repository'
+      grammar: '{{noun.phrase}}Repository'
+
+  # --- Presentation (Outer Circle) ---
+  .presentation:
+    name: 'Presentation'
+    path: 'presentation'
+
+    # Managers are objects. Noun Phrases (e.g., "AuthBloc", "UserCubit").
+    .manager:
+      name: 'State Manager'
+      path: [ 'managers', 'bloc', 'cubit' ]
+      pattern: '{{name}}(Bloc|Cubit|Manager)'
+      grammar: '{{noun.phrase}}(Bloc|Cubit|Manager)'
+
+      # Event Interfaces are objects/categories. Noun Phrases (e.g., "AuthEvent").
+      .event.interface:
+        name: 'Bloc/Cubit Event (Interface)'
+        pattern: '{{name}}Event'
+        grammar: '{{noun.phrase}}Event'
+
+      # Concrete Events represent something that HAPPENED.
+      # Grammar: Subject + Past Tense Verb (e.g., "UserLoggedIn", "DataLoaded", "ErrorOccurred").
+      .event.implementation:
+        name: 'Bloc/Cubit Event (Implementation)'
+        pattern: '{{name}}'
+        grammar: '{{noun.phrase}}{{verb.past}}'
+
+      # State Interfaces are objects/categories. Noun Phrases (e.g., "AuthState").
+      .state.interface:
+        name: 'Bloc/Cubit State (Interface)'
+        pattern: '{{name}}State'
+        grammar: '{{noun.singular}}State'
+
+      # Concrete States represent a STATUS.
+      # Grammar: Subject + Adjective OR Gerund (e.g., "AuthInitial", "AuthLoading", "AuthSuccess").
+      .state.implementation:
+        name: 'Bloc/Cubit State (Implementation)'
+        pattern: '{{name}}'
+        grammar:
+          - '{{noun.phrase}}{{adjective}}'     # AuthInitial, AuthLoading
+          - '{{noun.phrase}}{{verb.gerund}}'   # AuthLoading (alternative)
+          - '{{noun.phrase}}{{verb.past}}'     # AuthLoaded
+
+    # Widgets are objects. Noun Phrases (e.g., "UserList").
+    .widget:
+      name: 'Widget'
+      path: 'widgets'
+      pattern: '{{name}}(Panel|Section|Widget)'
+      grammar: '{{noun.phrase}}(Panel|Section|Widget)'
+
+    # Forms are objects. Noun Phrases (e.g., "LoginForm", "UserForm").
+    .form:
+      name: 'Form'
+      path: 'forms'
+      pattern: '{{name}}Form'
+      grammar: '{{noun.phrase}}Form'
+
+    # Pages are objects. Noun Phrases (e.g., "LoginPage").
+    .page:
+      name: 'Page'
+      path: 'pages'
+      pattern: '{{name}}Page'
+      antipattern: '{{name}}Screen'
+      grammar: '{{noun.phrase}}Page'
+
+  # --- CORE COMPONENTS (Explicitly assigned to 'core' module) ---
+  core:
+    .failure:
+      module: 'core'
+      name: 'Failure'
+      path: 'error'
+      pattern: '{{name}}Failure'
+
+    .exception:
+      module: 'core'
+      name: 'Exception'
+      path: 'error'
+      pattern: '{{name}}Exception'
+
+    .util:
+      module: 'core'
+      name: 'Utility'
+      path: 'utils'
+
+  # --- SHARED COMPONENTS (Explicitly assigned to 'shared' module) ---
+  shared.widget:
+    module: 'shared'
+    path: 'widgets'
+    pattern: '{{name}}' # Shared widgets might have looser naming rules
+    grammar: '{{noun.phrase}}'
+
+
 # ==================================================================================================
 # [3] DEFINITIONS (The Dictionary)
 # Define reusable types and services here to be referenced by keys in rules below.
@@ -340,40 +501,40 @@ components:
 # List of types expected inside the generics <...>.
 # TYPE: List<Map> (Recursive structure, accepts type, import, definition, arguments)
 # --------------------------------------------------------------------------------------------------
-types:
+definitions:
   # --- Domain Types ---
   usecase:
     # Sets the import context for subsequent items
-    base: { type: 'Usecase', import: 'package:clean_feature_first/core/usecase/usecase.dart' }
+    .base: { type: 'Usecase', import: 'package:clean_feature_first/core/usecase/usecase.dart' }
     # Inherits usecase.dart
-    nullary: 'NullaryUsecase'
+    .nullary: 'NullaryUsecase'
     # Inherits usecase.dart
-    unary: 'UnaryUsecase'
+    .unary: 'UnaryUsecase'
 
   # --- Functional Wrappers ---
   result:
     # No import specified, starts fresh (or null)
-    future: 'Future'
-    stream: 'Stream'
+    .future: 'Future'
+    .stream: 'Stream'
     # New import context
-    wrapper.future:
+    .wrapper.future:
       type: 'FutureEither'
       import: 'package:clean_feature_first/core/utils/types.dart'
       argument: '*'
 
     # Inherits types.dart
-    wrapper.stream:
+    .wrapper.stream:
       type: 'StreamEither'
       argument: '*'
 
     # Overrides context
-    success:
+    .success:
       type: 'Right'
       import: 'package:fpdart/fpdart.dart'
       argument: '*'
 
     # Inherits fpdart
-    failure:
+    .failure:
       type: 'Left'
       argument:
         definition: 'failure.base'
@@ -381,7 +542,7 @@ types:
     # 2. Explicit Nested Generics (The strict way)
     # Matches: Future<Either<Failure, T>>
     # This ensures you aren't just returning Future<int> or Future<Either<String, int>>.
-    wrapper.strict:
+    .wrapper.strict:
       name: 'Future'
       argument:
         name: 'Either'
@@ -394,27 +555,43 @@ types:
 
   # --- Failure ---
   failure:
-    base:
+    .base:
       type: 'Failure'
       import: 'package:clean_feature_first/core/error/failures.dart'
-    server: 'ServerFailure'
-    cache: 'CacheFailure'
+    .server: 'ServerFailure'
+    .cache: 'CacheFailure'
 
   # --- Exceptions ---
   exception:
-    raw: 'Exception'
-    base:
+    .raw: 'Exception'
+    .base:
       type: 'CustomException'
       import: 'package:clean_feature_first/core/error/exceptions.dart'
-    server: 'ServerException'
-    cache: 'CacheException'
+    .server: 'ServerException'
+    .cache: 'CacheException'
 
   # --- identity ---
   identity:
-    integer:
+    .integer:
       type: 'IntId'
       import: 'package:clean_feature_first/core/utils/types.dart'
-    string: 'StringId'
+    .string: 'StringId'
+
+  service:
+    .locator:
+      type: [ 'Injector', 'GetIt' ]
+      import: 'package:clean_feature_first/core/utils/service_locator.dart'
+      identifier: [ 'getIt', 'locator', 'serviceLocator' ]
+
+    .logging:
+      type: 'Logger'
+      import: 'package:logger/logger.dart'
+      identifier: [ 'logger', 'log' ]
+
+    .routing:
+      type: 'GoRouter'
+      import: 'package:go_router/go_router.dart'
+      identifier: [ 'router', 'goRouter' ]
 
 # --------------------------------------------------------------------------------------------------
 # [3.2] services
@@ -437,7 +614,7 @@ types:
 # The source package URI. Used to strictly identify the service and avoid false positives.
 # TYPE: String
 # --------------------------------------------------------------------------------------------------
-services:
+servicesX:
   locator:
     type: [ 'Injector', 'GetIt' ]
     identifier: [ 'getIt', 'locator', 'serviceLocator' ]

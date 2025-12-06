@@ -1,6 +1,8 @@
 // lib/src/config/schema/component_config.dart
 
 import 'package:architecture_lints/src/config/constants/config_keys.dart';
+import 'package:architecture_lints/src/config/parsing/hierarchy_parser.dart';
+import 'package:architecture_lints/src/config/schema/module_config.dart';
 import 'package:architecture_lints/src/utils/map_extensions.dart';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
@@ -49,9 +51,31 @@ class ComponentConfig {
     );
   }
 
-  /// Parses the 'components' map.
-  static List<ComponentConfig> parseMap(Map<String, Map<String, dynamic>> map) {
-    return map.entries.map((e) => ComponentConfig.fromMap(e.key, e.value)).toList();
+  /// Parses using the generic HierarchyParser.
+  static List<ComponentConfig> parseMap(
+      Map<String, dynamic> map,
+      List<ModuleConfig> modules,
+      ) {
+    final moduleKeys = modules.map((m) => m.key).toSet();
+
+    final result = HierarchyParser.parse<ComponentConfig>(
+      yaml: map,
+      scopeKeys: moduleKeys,
+      // Factory: Check type because HierarchyParser allows dynamic now
+      factory: (id, node) {
+        if (node is Map) return ComponentConfig.fromMap(id, node);
+        throw const FormatException('Component definition must be a Map');
+      },
+      shouldParseNode: (node) {
+        if (node is! Map) return false;
+        return node.containsKey(ConfigKeys.component.path) ||
+            node.containsKey(ConfigKeys.component.pattern) ||
+            node.containsKey(ConfigKeys.component.grammar) ||
+            node.containsKey(ConfigKeys.component.antipattern);
+      },
+    );
+
+    return result.values.toList();
   }
 
   String get displayName {

@@ -1,3 +1,5 @@
+// lib/src/lints/identity/rules/inheritance_forbidden_rule.dart
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -35,11 +37,11 @@ class InheritanceForbiddenRule extends InheritanceBaseRule {
       if (rule.forbidden.isEmpty) continue;
 
       for (final type in supertypes) {
-        if (matchesReference(
+        if (matchesDefinition(
           type,
           rule.forbidden,
           fileResolver,
-          config.typeDefinitions,
+          config.definitions,
         )) {
           report(
             reporter: reporter,

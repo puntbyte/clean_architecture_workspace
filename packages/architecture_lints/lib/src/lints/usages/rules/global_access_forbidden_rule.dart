@@ -6,7 +6,7 @@ import 'package:architecture_lints/src/config/schema/architecture_config.dart';
 import 'package:architecture_lints/src/config/schema/usage_config.dart';
 import 'package:architecture_lints/src/core/resolver/file_resolver.dart';
 import 'package:architecture_lints/src/domain/component_context.dart';
-import 'package:architecture_lints/src/domain/symbol_context.dart';
+import 'package:architecture_lints/src/domain/definition_context.dart';
 import 'package:architecture_lints/src/lints/usages/base/usage_base_rule.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
@@ -44,16 +44,16 @@ class GlobalAccessForbiddenRule extends UsageBaseRule {
       }
 
       for (final constraint in constraints) {
-        final definition = config.services[constraint.definition];
+        final definition = config.definitions[constraint.definition];
         if (definition == null) continue;
 
         // Wrap on-the-fly in Context
-        final symbolContext = SymbolContext(
+        final symbolContext = DefinitionContext(
           key: constraint.definition!,
           definition: definition,
         );
 
-        if (symbolContext.matches(node)) {
+        if (symbolContext.matchesUsage(node)) {
           reporter.atNode(
             node,
             _code,

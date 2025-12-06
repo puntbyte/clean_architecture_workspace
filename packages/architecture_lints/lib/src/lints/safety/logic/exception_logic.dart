@@ -1,17 +1,16 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:architecture_lints/src/config/schema/type_definition.dart';
-import 'package:architecture_lints/src/core/resolver/file_resolver.dart';
+import 'package:architecture_lints/src/config/schema/definition.dart';
 
 mixin ExceptionLogic {
   /// Checks if the given [type] matches a definition alias or raw type name.
   bool matchesType(
-      DartType? type,
-      String? definitionKey,
-      String? rawType,
-      Map<String, TypeDefinition> registry,
-      ) {
+    DartType? type,
+    String? definitionKey,
+    String? rawType,
+    Map<String, Definition> registry,
+  ) {
     if (type == null) return false;
     final name = type.element?.name ?? '';
 
@@ -53,10 +52,10 @@ mixin ExceptionLogic {
   /// Checks if a return statement returns a specific type (deep check).
   /// e.g. return Left(ServerFailure()) matches 'failure.server'.
   bool returnStatementMatchesType(
-      ReturnStatement node,
-      String definitionKey,
-      Map<String, TypeDefinition> registry,
-      ) {
+    ReturnStatement node,
+    String definitionKey,
+    Map<String, Definition> registry,
+  ) {
     final expression = node.expression;
     if (expression == null) return false;
 
@@ -79,6 +78,7 @@ mixin ExceptionLogic {
 
 class _TypedVisitor<T extends AstNode> extends RecursiveAstVisitor<void> {
   final List<T> results;
+
   _TypedVisitor(this.results);
 
   @override

@@ -1,8 +1,6 @@
-// lib/src/lints/logic/type_safety_logic.dart
-
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:architecture_lints/src/config/schema/type_definition.dart';
+import 'package:architecture_lints/src/config/schema/definition.dart'; // New Unified Definition
 import 'package:architecture_lints/src/config/schema/type_safety_config.dart';
 import 'package:architecture_lints/src/config/schema/type_safety_constraint.dart';
 import 'package:architecture_lints/src/core/resolver/file_resolver.dart';
@@ -10,34 +8,28 @@ import 'package:architecture_lints/src/core/resolver/file_resolver.dart';
 mixin TypeSafetyLogic {
   /// Checks if [type] matches any constraint in the [constraintList].
   bool matchesAnyConstraint(
-      DartType type,
-      List<TypeSafetyConstraint> constraintList,
-      FileResolver fileResolver,
-      Map<String, TypeDefinition> typeRegistry,
-      ) {
+    DartType type,
+    List<TypeSafetyConstraint> constraintList,
+    FileResolver fileResolver,
+    Map<String, Definition> registry,
+  ) {
     return constraintList.any(
-          (c) => matchesConstraint(type, c, fileResolver, typeRegistry),
+      (c) => matchesConstraint(type, c, fileResolver, registry),
     );
   }
 
   /// Checks if [type] is explicitly forbidden by the [configRule] for the given [kind].
-  ///
-  /// This is used by "Allowed" rules to check if a "Forbidden" rule already covers this case.
-  /// If this returns true, the "Allowed" rule should stay silent to avoid double-jeopardy.
   bool isExplicitlyForbidden({
     required DartType type,
     required TypeSafetyConfig configRule,
     required String kind, // 'return' or 'parameter'
     required FileResolver fileResolver,
-    required Map<String, TypeDefinition> typeRegistry,
-    String? paramName, // For parameter checks
+    required Map<String, Definition> registry,
+    String? paramName,
   }) {
-    // 1. Filter constraints matching the kind (and paramName if applicable)
     final forbiddenConstraints = configRule.forbidden.where((c) {
       if (c.kind != kind) return false;
-
       if (kind == 'parameter') {
-        // Reuse param matching logic inline or helper
         if (c.identifier != null && paramName != null) {
           return RegExp(c.identifier!).hasMatch(paramName);
         }
@@ -45,53 +37,44 @@ mixin TypeSafetyLogic {
       return true;
     }).toList();
 
-    // 2. Check if type matches any forbidden constraint
-    return matchesAnyConstraint(
-      type,
-      forbiddenConstraints,
-      fileResolver,
-      typeRegistry,
-    );
+    return matchesAnyConstraint(type, forbiddenConstraints, fileResolver, registry);
   }
 
   bool matchesConstraint(
     DartType type,
     TypeSafetyConstraint constraint,
     FileResolver fileResolver,
-    Map<String, TypeDefinition> typeRegistry,
+    Map<String, Definition> registry,
   ) {
     // 1. Check Canonical Element (e.g. Future<T>)
     if (_matchesElement(
       type.element,
       constraint,
-      typeRegistry,
+      registry,
       typeArguments: _getTypeArguments(type),
     )) {
       return true;
     }
 
     // 2. Check Type Alias (e.g. FutureEither<T>)
-    // Analyzer resolves typedefs to their underlying type. We must explicitly check the alias.
     if (type.alias != null) {
       if (_matchesElement(
         type.alias!.element,
         constraint,
-        typeRegistry,
+        registry,
         typeArguments: type.alias!.typeArguments,
       )) {
         return true;
       }
     }
 
-    // 3. Component Match (e.g. is this type a 'data.model'?)
+    // 3. Component Match
     if (constraint.component != null) {
       final library = type.element?.library;
       if (library != null) {
-        // Access source safely via fragment
         final sourcePath = library.firstFragment.source.fullName;
         final comp = fileResolver.resolve(sourcePath);
         if (comp != null) {
-          // Check if the resolved component matches the constraint
           if (comp.matchesReference(constraint.component!)) {
             return true;
           }
@@ -102,17 +85,15 @@ mixin TypeSafetyLogic {
     return false;
   }
 
-  /// Helper to extract type arguments safely from various DartType implementations
   List<DartType> _getTypeArguments(DartType type) {
     if (type is InterfaceType) return type.typeArguments;
-    // Add other types if needed (e.g. RecordType fields, FunctionType return/params)
     return [];
   }
 
   bool _matchesElement(
     Element? element,
     TypeSafetyConstraint constraint,
-    Map<String, TypeDefinition> typeRegistry, {
+    Map<String, Definition> registry, {
     List<DartType> typeArguments = const [],
   }) {
     if (element == null) return false;
@@ -125,16 +106,16 @@ mixin TypeSafetyLogic {
       libUri = library.firstFragment.source.uri.toString();
     }
 
-    // 1. Raw Type Match (Shallow check)
+    // 1. Raw Type Match
     if (constraint.types.contains(name)) return true;
 
-    // 2. Definition Match (Deep check with recursion)
+    // 2. Definition Match
     if (constraint.definitions.isNotEmpty) {
       for (final defId in constraint.definitions) {
-        final def = typeRegistry[defId];
+        final def = registry[defId];
         if (def == null) continue;
 
-        if (_matchesDefinitionRecursive(def, name, libUri, typeArguments, typeRegistry)) {
+        if (_matchesDefinitionRecursive(def, name, libUri, typeArguments, registry)) {
           return true;
         }
       }
@@ -143,21 +124,20 @@ mixin TypeSafetyLogic {
     return false;
   }
 
-  /// The Recursive Matching Engine
   bool _matchesDefinitionRecursive(
-    TypeDefinition def,
+    Definition def,
     String? elementName,
     String? elementUri,
     List<DartType> typeArgs,
-    Map<String, TypeDefinition> registry,
+    Map<String, Definition> registry,
   ) {
-    // A. Handle Wildcard (*)
+    // A. Wildcard
     if (def.isWildcard) return true;
 
-    // B. Handle Reference (definition: 'failure.base')
-    if (def.definitionReference != null) {
-      final referencedDef = registry[def.definitionReference];
-      if (referencedDef == null) return false; // Config error
+    // B. Reference
+    if (def.ref != null) {
+      final referencedDef = registry[def.ref];
+      if (referencedDef == null) return false;
       return _matchesDefinitionRecursive(
         referencedDef,
         elementName,
@@ -167,19 +147,15 @@ mixin TypeSafetyLogic {
       );
     }
 
-    // C. Handle Direct Match
-    // 1. Name Check
+    // C. Direct Match
     if (def.type != null && def.type != elementName) return false;
 
-    // 2. Import Check (if defined)
     if (def.import != null) {
       if (elementUri != null && elementUri != def.import) return false;
     }
 
-    // 3. Generics Check (The hard part)
-    // If the definition specifies arguments, the actual type MUST match them.
+    // D. Generics
     if (def.arguments.isNotEmpty) {
-      // If code has fewer args than config requires, fail.
       if (typeArgs.length < def.arguments.length) return false;
 
       for (var i = 0; i < def.arguments.length; i++) {
@@ -205,56 +181,36 @@ mixin TypeSafetyLogic {
     return true;
   }
 
-  /// Converts a constraint into a human-readable string.
-  /// Looks up definition keys in [registry] to find the actual Class Name.
-  String describeConstraint(TypeSafetyConstraint c, Map<String, TypeDefinition> registry) {
-    // 1. Definitions (Lookup key -> Resolve to String)
+  String describeConstraint(TypeSafetyConstraint c, Map<String, Definition> registry) {
     if (c.definitions.isNotEmpty) {
-      return c.definitions
-          .map((key) => _resolveReadableName(key, registry))
-          .join(' or ');
+      return c.definitions.map((key) => _resolveReadableName(key, registry)).join(' or ');
     }
-
-    // 2. Raw Types
     if (c.types.isNotEmpty) return c.types.join(' or ');
-
-    // 3. Component
     if (c.component != null) return 'Component: ${c.component}';
-
     return 'Defined Rule';
   }
 
-  /// Recursively resolves the display name for a type definition key.
-  /// e.g. 'result.wrapper' -> 'FutureEither'
-  String _resolveReadableName(String key, Map<String, TypeDefinition> registry) {
+  String _resolveReadableName(String key, Map<String, Definition> registry) {
     final def = registry[key];
     if (def == null) return key;
 
-    // Case A: It's a reference to another definition
-    if (def.definitionReference != null) {
-      return _resolveReadableName(def.definitionReference!, registry);
+    if (def.ref != null) {
+      return _resolveReadableName(def.ref!, registry);
     }
 
-    // Case B: It has a concrete type name
     if (def.type != null) {
-      // If it has generic arguments, try to format them nicely
       if (def.arguments.isNotEmpty) {
-        final args = def.arguments.map((arg) {
-          // If the arg is a wildcard, print '*'
-          if (arg.isWildcard) return '*';
-          // If the arg refers to another def, resolve it
-          if (arg.definitionReference != null) {
-            return _resolveReadableName(arg.definitionReference!, registry);
-          }
-          // Otherwise print type name or '?'
-          return arg.type ?? '?';
-        }).join(', ');
-
+        final args = def.arguments
+            .map((arg) {
+              if (arg.isWildcard) return '*';
+              if (arg.ref != null) return _resolveReadableName(arg.ref!, registry);
+              return arg.type ?? '?';
+            })
+            .join(', ');
         return '${def.type}<$args>';
       }
       return def.type!;
     }
-
     return key;
   }
 }

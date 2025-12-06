@@ -1,5 +1,5 @@
 import 'package:architecture_lints/src/config/constants/config_keys.dart';
-import 'package:architecture_lints/src/config/schema/type_reference.dart';
+import 'package:architecture_lints/src/config/schema/definition.dart';
 import 'package:architecture_lints/src/utils/map_extensions.dart';
 import 'package:meta/meta.dart';
 
@@ -9,13 +9,13 @@ class InheritanceConfig {
   final List<String> onIds;
 
   /// The class MUST inherit from one of these.
-  final TypeReference required;
+  final Definition required;
 
   /// The class MAY ONLY inherit from one of these (Whitelist).
-  final TypeReference allowed;
+  final Definition allowed;
 
   /// The class MUST NOT inherit from these (Blacklist).
-  final TypeReference forbidden;
+  final Definition forbidden;
 
   const InheritanceConfig({
     required this.onIds,
@@ -25,20 +25,11 @@ class InheritanceConfig {
   });
 
   factory InheritanceConfig.fromMap(Map<dynamic, dynamic> map) {
-    final onIds = <String>[];
-    final rawOn = map[ConfigKeys.inheritance.on]; // 'on'
-
-    if (rawOn is String) {
-      onIds.add(rawOn);
-    } else if (rawOn is List) {
-      onIds.addAll(rawOn.map((e) => e.toString()));
-    }
-
     return InheritanceConfig(
       onIds: map.getStringList(ConfigKeys.inheritance.on),
-      required: TypeReference.fromDynamic(map[ConfigKeys.inheritance.required]),
-      allowed: TypeReference.fromDynamic(map[ConfigKeys.inheritance.allowed]),
-      forbidden: TypeReference.fromDynamic(map[ConfigKeys.inheritance.forbidden]),
+      required: Definition.fromDynamic(map[ConfigKeys.inheritance.required]),
+      allowed: Definition.fromDynamic(map[ConfigKeys.inheritance.allowed]),
+      forbidden: Definition.fromDynamic(map[ConfigKeys.inheritance.forbidden]),
     );
   }
 

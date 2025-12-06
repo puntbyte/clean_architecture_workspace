@@ -34,7 +34,7 @@ class ExceptionForbiddenRule extends ExceptionBaseRule {
               type,
               constraint.definition,
               constraint.type,
-              config.typeDefinitions,
+              config.definitions,
             );
             final genericBan = constraint.definition == null && constraint.type == null;
 

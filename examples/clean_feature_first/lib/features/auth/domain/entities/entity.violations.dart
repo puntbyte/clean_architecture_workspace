@@ -2,17 +2,17 @@
 
 import 'package:clean_feature_first/core/entity/entity.dart';
 
-// LINT: [1] arch_dep_external
-// REASON: The domain layer must remain platform-agnostic (no Flutter dependencies).
-import 'package:flutter/material.dart'; //! <-- LINT WARNING (Forbidden Import)
-
-// LINT: [2] arch_dep_component
+// LINT: [1] arch_dep_component
 // REASON: Domain layer must not import components from the Data layer.
 import 'package:clean_feature_first/features/auth/data/models/user_model.dart'; //! <-- LINT WARNING
 
+// LINT: [2] arch_dep_external
+// REASON: The domain layer must remain platform-agnostic (no Flutter dependencies).
+import 'package:flutter/material.dart'; //! <-- LINT WARNING
+
 // LINT: [3] arch_annot_forbidden
 // REASON: Entities should be POJOs; Dependency Injection imports are forbidden.
-import 'package:injectable/injectable.dart'; //! <-- LINT WARNING (the warning is visible)
+import 'package:injectable/injectable.dart'; //! <-- LINT WARNING
 
 // LINT: [4] arch_annot_forbidden (Forbidden Annotation)
 // REASON: Entities should be POJOs; Dependency Injection annotations are forbidden.

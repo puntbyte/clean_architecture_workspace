@@ -1,3 +1,5 @@
+// lib/src/lints/safety/rules/type_safety_param_forbidden.dart
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
@@ -35,21 +37,11 @@ class TypeSafetyParamForbiddenRule extends TypeSafetyBaseRule {
       if (forbidden.isEmpty) continue;
 
       // 1. Check Forbidden
-      final isForbidden = matchesAnyConstraint(
-          type,
-          forbidden,
-          fileResolver,
-          config.typeDefinitions
-      );
+      final isForbidden = matchesAnyConstraint(type, forbidden, fileResolver, config.definitions);
 
       if (isForbidden) {
-        // 2. CRITICAL FIX: Check Allowed Override
-        final isAllowed = matchesAnyConstraint(
-            type,
-            allowed,
-            fileResolver,
-            config.typeDefinitions
-        );
+        // 2. Check Allowed Override
+        final isAllowed = matchesAnyConstraint(type, allowed, fileResolver, config.definitions);
 
         if (isAllowed) continue; // Skip reporting
 
@@ -57,7 +49,7 @@ class TypeSafetyParamForbiddenRule extends TypeSafetyBaseRule {
         var suggestion = '';
         if (allowed.isNotEmpty) {
           final allowedNames = allowed
-              .map((a) => "'${describeConstraint(a, config.typeDefinitions)}'")
+              .map((a) => "'${describeConstraint(a, config.definitions)}'")
               .join(' or ');
           suggestion = ' Use $allowedNames instead.';
         }

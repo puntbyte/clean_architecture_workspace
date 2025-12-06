@@ -36,25 +36,25 @@ class TypeSafetyParamAllowedRule extends TypeSafetyBaseRule {
       if (allowed.isEmpty) continue;
 
       final matchesAny = allowed.any(
-        (c) => matchesConstraint(type, c, fileResolver, config.typeDefinitions),
+        (c) => matchesConstraint(type, c, fileResolver, config.definitions),
       );
 
       if (!matchesAny) {
-        // --- SMART CHECK: Avoid Double Jeopardy ---
+        // --- SMART CHECK ---
         final isForbidden = isExplicitlyForbidden(
           type: type,
           configRule: rule,
           kind: 'parameter',
           paramName: paramName,
           fileResolver: fileResolver,
-          typeRegistry: config.typeDefinitions,
+          registry: config.definitions,
         );
 
         if (isForbidden) continue;
-        // ------------------------------------------
+        // ------------------
 
         final description = allowed
-            .map((c) => describeConstraint(c, config.typeDefinitions))
+            .map((c) => describeConstraint(c, config.definitions))
             .join(', ');
 
         reporter.atNode(

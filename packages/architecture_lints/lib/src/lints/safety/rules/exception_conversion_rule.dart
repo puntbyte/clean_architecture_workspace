@@ -41,7 +41,7 @@ class ExceptionConversionRule extends ExceptionBaseRule {
   ) {
     for (final conversion in rule.conversions) {
       // 1. Does the caught exception match the 'from' rule?
-      if (matchesType(caughtType, conversion.fromDefinition, null, config.typeDefinitions)) {
+      if (matchesType(caughtType, conversion.fromDefinition, null, config.definitions)) {
         // 2. Scan return statements in this catch block
         final returns = findNodes<ReturnStatement>(node.body);
 
@@ -49,15 +49,15 @@ class ExceptionConversionRule extends ExceptionBaseRule {
 
         // 3. Verify at least one return matches the 'to' rule
         final hasValidReturn = returns.any(
-          (r) => returnStatementMatchesType(r, conversion.toDefinition, config.typeDefinitions),
+          (r) => returnStatementMatchesType(r, conversion.toDefinition, config.definitions),
         );
 
         if (!hasValidReturn) {
           // Resolve human readable names
           final fromName =
-              config.typeDefinitions[conversion.fromDefinition]?.type ?? conversion.fromDefinition;
+              config.definitions[conversion.fromDefinition]?.type ?? conversion.fromDefinition;
           final toName =
-              config.typeDefinitions[conversion.toDefinition]?.type ?? conversion.toDefinition;
+              config.definitions[conversion.toDefinition]?.type ?? conversion.toDefinition;
 
           reporter.atNode(
             node.exceptionType ?? node,

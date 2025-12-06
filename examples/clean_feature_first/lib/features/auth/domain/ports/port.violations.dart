@@ -2,11 +2,12 @@
 
 import 'package:clean_feature_first/core/port/port.dart';
 import 'package:clean_feature_first/core/utils/types.dart';
-import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
 
 // LINT: [1] arch_dep_component
 // REASON: Domain layer cannot import from the Data layer.
 import 'package:clean_feature_first/features/auth/data/models/user_model.dart'; //! <-- LINT WARNING
+
+import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
 
 // LINT: [2] arch_dep_external
 // REASON: Domain must be platform agnostic (no UI types).
@@ -23,7 +24,6 @@ abstract interface class AuthContract implements Port {
   // REASON: Cannot return a Data Model (DTO) from a Domain Port. Use Entities.
   FutureEither<UserModel> unsafeReturn(); //! <-- LINT WARNING
 
-
   // LINT: [9] arch_safety_param_forbidden
   // REASON: Parameter named 'id' must be of type `IntId`, not `int`.
   FutureEither<User> unsafeParameter(int id); //! <-- LINT WARNING
@@ -34,7 +34,9 @@ abstract interface class AuthContract implements Port {
 // LINT: [8] arch_type_missing_base
 // REASON: Ports must implement/extend the base `Port` interface defined in Core.
 abstract interface class UncontractedAuthPort { //! <-- LINT WARNING
-  void doSomething();
+  // LINT: [8] arch_safety_return_strict
+  // REASON: Return type must be `FutureEither<T>`, not `void`.
+  void doSomething(); //! <-- LINT WARNING
 
   // LINT: [6] arch_dep_component
   // REASON: Cannot accept a Data Model as a parameter. Use Entities.
@@ -47,16 +49,17 @@ abstract interface class UncontractedAuthPort { //! <-- LINT WARNING
 }
 
 abstract interface class TypeSafetyViolationsPort implements Port {
+  // LINT: arch_safety_return_forbidden
   // REASON: Return type must be `FutureEither<T>`, not raw `Future<T>`.
   Future<User> login(String username); //! <-- LINT WARNING
 
   // LINT: [9] enforce_type_safety
   // REASON: Parameter named 'id' must be of type `IntId`, not `int`.
-  FutureEither<User> getUser(int id); //! <-- LINT WARNING
+  FutureEither<User> unsafeIntIdParameter(int id); //! <-- LINT WARNING
 
   // LINT: [10] enforce_type_safety
   // REASON: Parameter named 'id' must be of type `StringId`, not `String`.
-  FutureEither<void> deleteUser(String id); //! <-- LINT WARNING
+  FutureEither<void> unsafeIntStringParameter(String id); //! <-- LINT WARNING
 }
 
 abstract interface class PurityViolationsPort implements Port {

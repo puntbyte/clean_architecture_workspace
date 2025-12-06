@@ -1,3 +1,5 @@
+// lib/src/lints/safety/rules/type_safety_return_forbidden.dart
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
@@ -31,27 +33,14 @@ class TypeSafetyReturnForbiddenRule extends TypeSafetyBaseRule {
       final forbidden = rule.forbidden.where((c) => c.kind == 'return').toList();
       final allowed = rule.allowed.where((c) => c.kind == 'return').toList();
 
-      // Skip if no forbidden rules exist
       if (forbidden.isEmpty) continue;
 
-      // 1. Check if the type matches any FORBIDDEN rule
-      final isForbidden = matchesAnyConstraint(
-          type,
-          forbidden,
-          fileResolver,
-          config.typeDefinitions
-      );
+      // 1. Check if type matches Forbidden rule
+      final isForbidden = matchesAnyConstraint(type, forbidden, fileResolver, config.definitions);
 
       if (isForbidden) {
-        // 2. CRITICAL FIX: "Specific Beats General"
-        // If the type is ALSO matched by an ALLOWED rule, assume the user
-        // intended to allow this specific case (e.g., allow FutureEither vs forbid Future).
-        final isAllowed = matchesAnyConstraint(
-            type,
-            allowed,
-            fileResolver,
-            config.typeDefinitions
-        );
+        // 2. Check Allowed Override (Specific Beats General)
+        final isAllowed = matchesAnyConstraint(type, allowed, fileResolver, config.definitions);
 
         if (isAllowed) continue; // Skip reporting
 
@@ -59,7 +48,7 @@ class TypeSafetyReturnForbiddenRule extends TypeSafetyBaseRule {
         var suggestion = '';
         if (allowed.isNotEmpty) {
           final allowedNames = allowed
-              .map((a) => "'${describeConstraint(a, config.typeDefinitions)}'")
+              .map((a) => "'${describeConstraint(a, config.definitions)}'")
               .join(' or ');
           suggestion = ' Use $allowedNames instead.';
         }

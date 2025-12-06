@@ -8,6 +8,7 @@ abstract class ConfigKeys {
   static const root = _RootKeys();
   static const typeDef = _TypeDefinitionKeys();
   static const component = _ComponentKeys();
+  static const definition = _DefinitionKeys();
   static const dependency = _DependencyKeys();
   static const inheritance = _InheritanceKeys();
   static const typeSafety = _TypeSafetyKeys();
@@ -26,6 +27,7 @@ class _RootKeys {
 
   String get modules => 'modules';
   String get components => 'components';
+  String get definitions => 'definitions';
   String get types => 'types';
   String get dependencies => 'dependencies';
   String get inheritances => 'inheritances';
@@ -73,6 +75,18 @@ class _TypeDefinitionKeys {
   String get name => 'name'; // Alias for type in some contexts
   String get argument => 'argument'; // New: Recursive definition
   String get definition => 'definition'; // Reference to another key
+}
+
+class _DefinitionKeys {
+  const _DefinitionKeys();
+  String get type => 'type';
+  String get import => 'import';
+  String get definition => 'definition'; // References
+  String get argument => 'argument'; // Generics
+  String get component => 'component';
+
+  // New: Merged from Services
+  String get identifiers => 'identifiers';
 }
 
 class _DependencyKeys {

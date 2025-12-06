@@ -1,50 +1,54 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:architecture_lints/src/config/schema/symbol_definition.dart';
+import 'package:architecture_lints/src/config/schema/definition.dart'; // Unified Schema
 
 mixin UsageLogic {
-  /// Checks if an identifier expression matches a forbidden service definition.
-  bool matchesService(
+  /// Checks if an identifier usage matches a forbidden definition.
+  bool matchesDefinition(
     Identifier node,
-    SymbolDefinition service,
+    Definition definition,
   ) {
-    // FIX: Use .element instead of .staticElement
     final element = node.element;
     if (element == null) return false;
 
-    // 1. Check Identifier Name (e.g., 'getIt', 'sl')
-    // We check simple identifiers (sl) or prefixed ones (GetIt.I)
+    // 1. Check Identifier Name (e.g. usage of variable 'sl', 'locator')
     final name = node.name;
-    if (service.identifiers.contains(name)) {
-      return _checkImport(element, service);
+    if (definition.identifiers.contains(name)) {
+      return _checkImport(element, definition);
     }
 
-    // 2. Check Static Type (e.g. usage of a class static member)
-    // If the node is 'GetIt', check if 'GetIt' is in allowed types
-    if (element is ClassElement || element is InterfaceElement) {
-      if (service.types.contains(element.name)) {
-        return _checkImport(element, service);
+    // 2. Check Static Access (e.g. usage of 'GetIt.instance')
+    // We check if the element being accessed belongs to the Type defined.
+    if (definition.type != null) {
+      if (element is ClassElement || element is InterfaceElement) {
+        if (element.name == definition.type) {
+          return _checkImport(element, definition);
+        }
       }
     }
 
     // 3. Check Variable Type (e.g. 'final loc = GetIt.I')
-    // If we are accessing a variable whose type is the service
-    if (element is VariableElement) {
-      final typeName = element.type.element?.name;
-      if (service.types.contains(typeName)) {
-        return _checkImport(element.type.element, service);
+    // We check if the variable being accessed IS of the Type defined.
+    if (definition.type != null) {
+      if (element is VariableElement) {
+        final typeName = element.type.element?.name;
+        if (typeName == definition.type) {
+          return _checkImport(element.type.element, definition);
+        }
       }
     }
 
     return false;
   }
 
-  bool _checkImport(Element? element, SymbolDefinition service) {
-    if (service.import == null) return true; // No import restriction
+  bool _checkImport(Element? element, Definition definition) {
+    if (definition.import == null) return true; // No import restriction
     if (element == null) return false;
 
-    // Check library URI
-    final uri = element.library?.firstFragment.source.uri.toString();
-    return uri == service.import;
+    final lib = element.library;
+    if (lib == null) return false;
+
+    final uri = lib.firstFragment.source.uri.toString();
+    return uri == definition.import;
   }
 }
