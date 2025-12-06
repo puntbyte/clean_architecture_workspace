@@ -5,15 +5,15 @@ import 'package:clean_feature_first/core/utils/types.dart';
 import 'package:clean_feature_first/features/auth/data/models/user_model.dart';
 import 'package:clean_feature_first/features/auth/data/sources/auth_source.dart';
 
-// CORRECT:
-// 1. Name matches `Default{{name}}Source`.
-// 2. Implements the specific interface `AuthSource`.
+// Wrong: arch_type_missing_base
+// Warning: The component "Data Source (Interface)" is invalid. It must extend or implement: Source.
+//
+// Extend or implement one of the required types.
 class DefaultAuthSource implements AuthSource {
 
   @override
   Future<UserModel> getUser(StringId id) async {
-    // CORRECT: Error Handling
-    // DataSources are "Producers". They throw Exceptions, they do NOT return Failures.
+
     if (id.isEmpty) {
       throw ServerException();
     }

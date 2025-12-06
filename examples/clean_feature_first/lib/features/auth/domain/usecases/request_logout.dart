@@ -1,4 +1,4 @@
-// lib/features/auth/domain/usecases/logout.dart
+// lib/features/auth/domain/usecases/request_logout.dart
 
 import 'package:clean_feature_first/core/usecase/usecase.dart';
 import 'package:clean_feature_first/core/utils/types.dart';

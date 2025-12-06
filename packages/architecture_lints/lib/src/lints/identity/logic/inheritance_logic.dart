@@ -14,24 +14,23 @@ mixin InheritanceLogic {
   /// Attempts to identify the architectural component of a class based on what it
   /// extends/implements.
   String? findComponentIdByInheritance(
-    ClassDeclaration node,
-    ArchitectureConfig config,
-    FileResolver fileResolver,
-  ) {
+      ClassDeclaration node,
+      ArchitectureConfig config,
+      FileResolver fileResolver,
+      ) {
     final element = node.declaredFragment?.element;
     if (element == null) return null;
 
-    final supertypes = getImmediateSupertypes(element);
+    // FIX: Use allSupertypes to support transitive inheritance (A implements B, B extends C -> A is C)
+    final supertypes = element.allSupertypes;
     if (supertypes.isEmpty) return null;
 
     for (final rule in config.inheritances) {
-      // We are looking for "Identification Rules" (Required inheritance).
       if (rule.required.isEmpty) continue;
 
-      // Check if ANY supertype matches ANY of the required definitions
       final matchesRule = supertypes.any((type) {
         return rule.required.any(
-          (reqDef) => matchesDefinition(type, reqDef, fileResolver, config.definitions),
+              (reqDef) => matchesDefinition(type, reqDef, fileResolver, config.definitions),
         );
       });
 

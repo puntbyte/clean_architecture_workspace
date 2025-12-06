@@ -70,7 +70,7 @@ void main() {
     }
 
     test('Default Rule: reports violation when use case does not extend base', () async {
-      const path = 'lib/features/auth/domain/usecases/login.dart';
+      const path = 'lib/features/auth/domain/usecases/request_login.dart';
       addFile(path, 'class Login {}');
 
       final lints = await runLint(filePath: path);

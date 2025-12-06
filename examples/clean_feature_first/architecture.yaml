@@ -792,6 +792,11 @@ dependencies:
     allowed: [ 'entity', 'port' ]
 
   # --- Data (Adapter) ---
+  # Data is platform agnostic and pure.
+  - on: data
+    forbidden:
+      import: [ 'package:flutter/**', 'dart:ui' ]
+
   # Models adapt raw data to Entities.
   - on: model
     allowed: [ 'entity', 'data' ]

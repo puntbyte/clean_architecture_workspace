@@ -59,8 +59,8 @@ components:
       final configPath = p.join(tempDir.path, ConfigKeys.configFilename);
       File(configPath).writeAsStringSync('components: { core: { path: core } }');
 
-      // Deep file: /tmp/.../lib/features/auth/presentation/login.dart
-      final deepFile = p.join(tempDir.path, 'lib', 'features', 'auth', 'presentation', 'login.dart');
+      // Deep file: /tmp/.../lib/features/auth/presentation/request_login.dart
+      final deepFile = p.join(tempDir.path, 'lib', 'features', 'auth', 'presentation', 'request_login.dart');
       File(deepFile).createSync(recursive: true);
 
       final config = await ConfigLoader.loadFromContext(deepFile);

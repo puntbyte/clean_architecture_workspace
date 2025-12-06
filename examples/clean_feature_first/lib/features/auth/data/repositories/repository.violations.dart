@@ -1,5 +1,7 @@
 // example/lib/features/auth/data/repositories/repository.violations.dart
 
+import 'dart:ui';
+
 import 'package:clean_feature_first/core/error/exceptions.dart';
 import 'package:clean_feature_first/core/error/failures.dart';
 import 'package:clean_feature_first/core/utils/types.dart';
@@ -44,6 +46,7 @@ class AuthService implements AuthPort { // <-- LINT WARNING HERE (Missing Annota
 
   @override
   FutureEither<void> logout() => throw UnimplementedError();
+
 }
 
 // LINT: [8] enforce_repository_contract
@@ -56,6 +59,7 @@ class RogueRepository { // <-- LINT WARNING HERE
 // ignore: enforce_annotations
 class BadErrorHandlingRepository implements AuthPort {
   final AuthSource _source;
+
   const BadErrorHandlingRepository(this._source);
 
   @override
@@ -79,6 +83,7 @@ class BadErrorHandlingRepository implements AuthPort {
     }
   }
 
+  // Lint: arch_exception_missing
   @override
   FutureEither<void> logout() => throw UnimplementedError();
 }

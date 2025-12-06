@@ -82,8 +82,8 @@ void main() {
       ''');
 
       // Create the corresponding use case
-      // Default config expects: lib/features/auth/domain/usecases/login.dart
-      addFile('lib/features/auth/domain/usecases/login.dart', 'class Login {}');
+      // Default config expects: lib/features/auth/domain/usecases/request_login.dart
+      addFile('lib/features/auth/domain/usecases/request_login.dart', 'class Login {}');
 
       final lints = await runLint(filePath: repoPath);
       expect(lints, isEmpty);

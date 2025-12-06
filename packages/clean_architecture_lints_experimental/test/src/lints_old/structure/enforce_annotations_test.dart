@@ -239,7 +239,7 @@ void main() {
           'required': {'name': 'Injectable'},
         };
 
-        const path = 'lib/features/auth/domain/usecases/login.dart';
+        const path = 'lib/features/auth/domain/usecases/request_login.dart';
         addFile(path, 'class Login {}');
 
         final lints = await runLint(
@@ -282,7 +282,7 @@ void main() {
             'required': {'name': 'injectable', 'import': 'package:injectable/injectable.dart'},
           };
 
-          const path = 'lib/features/auth/domain/usecases/logout.dart';
+          const path = 'lib/features/auth/domain/usecases/request_logout.dart';
           addFile(path, '''
           import 'package:injectable/injectable.dart';
 

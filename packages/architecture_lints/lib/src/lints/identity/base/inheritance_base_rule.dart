@@ -36,7 +36,8 @@ abstract class InheritanceBaseRule extends ArchitectureLintRule with Inheritance
       final element = node.declaredFragment?.element;
       if (element == null) return;
 
-      final supertypes = getImmediateSupertypes(element);
+      // FIX: Use allSupertypes here too
+      final supertypes = element.allSupertypes;
 
       checkInheritance(
         node: node,

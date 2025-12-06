@@ -141,7 +141,7 @@ void main() {
 
       final errors = await runLint(
         config: config,
-        relativePath: 'lib/domain/usecases/login.dart',
+        relativePath: 'lib/domain/usecases/request_login.dart',
         content: "import '../entities/user.dart';\nclass Login {}",
         extraFiles: [
           {'path': 'lib/domain/entities/user.dart', 'content': 'class User {}'},
