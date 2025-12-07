@@ -7,7 +7,6 @@ import 'package:meta/meta.dart';
 
 @immutable
 class Definition {
-  final String? type;
   final List<String> types;
   final List<String> identifiers;
   final List<String> imports;
@@ -17,7 +16,6 @@ class Definition {
   final bool isWildcard;
 
   const Definition({
-    this.type,
     this.types = const [],
     this.identifiers = const [],
     this.imports = const [],
@@ -27,20 +25,17 @@ class Definition {
     this.isWildcard = false,
   });
 
-  // Backward compatibility getter
+  /// Backward compatibility getter.
+  String? get type => types.isNotEmpty ? types.first : null;
   String? get import => imports.isNotEmpty ? imports.first : null;
 
-  /// Factory to parse a definition value.
-  /// Note: Context/Inheritance is handled by [HierarchyParser] merging properties into [value] if
-  /// it is a Map.
   factory Definition.fromDynamic(dynamic value) {
     if (value == null) return const Definition();
 
-    // 1. Shorthand String
+    // 1. Shorthand String -> Single Type in List
     if (value is String) {
       if (value == '*') return const Definition(isWildcard: true);
-      // Pass shorthand as type, no imports by default
-      return Definition(type: value);
+      return Definition(types: [value]);
     }
 
     // 2. Map
@@ -53,22 +48,18 @@ class Definition {
       final refKey = map.tryGetString(ConfigKeys.definition.definition);
       if (refKey != null) return Definition(ref: refKey);
 
-      final typeName = map.tryGetString(ConfigKeys.definition.type);
-      if (typeName == '*') return const Definition(isWildcard: true);
+      // Parse Types: Handles both "type: 'String'" and "type: ['A', 'B']"
+      final typesList = map.getStringList(ConfigKeys.definition.type);
+      if (typesList.contains('*')) return const Definition(isWildcard: true);
 
-      final rawType = map[ConfigKeys.definition.type];
-      final typesList = <String>[];
-      if (rawType is List) typesList.addAll(rawType.map((e) => e.toString()));
-      if (typeName != null) typesList.add(typeName);
-
-      // PARSE IMPORTS (Handle String or List)
+      // Parse Imports
       final importsList = map.getStringList(ConfigKeys.definition.import);
 
-      final rawIds = map[ConfigKeys.definition.identifier];
-      final ids = <String>[];
-      if (rawIds is String) ids.add(rawIds);
-      if (rawIds is List) ids.addAll(rawIds.map((e) => e.toString()));
+      // Parse Identifiers
+      // Note: ConfigKeys.definition.identifier should map to 'identifier'
+      final ids = map.getStringList(ConfigKeys.definition.identifier);
 
+      // Parse Arguments
       final rawArgs = map[ConfigKeys.definition.argument];
       final args = <Definition>[];
       if (rawArgs != null) {
@@ -80,10 +71,9 @@ class Definition {
       }
 
       return Definition(
-        type: typeName,
         types: typesList,
         identifiers: ids,
-        imports: importsList, // Store list
+        imports: importsList,
         arguments: args,
       );
     }
@@ -91,7 +81,6 @@ class Definition {
     return const Definition();
   }
 
-  /// Parses the 'definitions' registry using HierarchyParser.
   static Map<String, Definition> parseRegistry(Map<String, dynamic> map) {
     return HierarchyParser.parse<Definition>(
       yaml: map,
@@ -112,13 +101,51 @@ class Definition {
     );
   }
 
-  @override
-  String toString() {
-    if (isWildcard) return '*';
-    if (ref != null) return 'Ref($ref)';
+  /// Generates a human-readable description of this definition.
+  ///
+  /// [registry]: Optional map to resolve `ref` pointers recursively.
+  String describe([Map<String, Definition>? registry]) {
+    // 1. Wildcard
+    if (isWildcard) return 'Any';
+
+    // 2. Component Reference
     if (component != null) return 'Component($component)';
-    final base = type ?? (identifiers.isNotEmpty ? identifiers.first : '?');
-    if (arguments.isEmpty) return base;
-    return '$base<${arguments.join(', ')}>';
+
+    // 3. Definition Reference (Recursive Lookup)
+    if (ref != null) {
+      if (registry != null) {
+        final resolved = registry[ref];
+        if (resolved != null) {
+          return resolved.describe(registry);
+        }
+      }
+      // Fallback if registry missing or key not found
+      return 'Ref($ref)';
+    }
+
+    // 4. Identifiers (e.g. for Services)
+    if (identifiers.isNotEmpty) {
+      return identifiers.join('|');
+    }
+
+    // 5. Types (e.g. for Classes)
+    if (types.isNotEmpty) {
+      final baseName = types.join('|');
+
+      // Handle Generics (e.g. Future<Either<L, R>>)
+      if (arguments.isNotEmpty) {
+        final argsDescription = arguments
+            .map((arg) => arg.describe(registry))
+            .join(', ');
+        return '$baseName<$argsDescription>';
+      }
+
+      return baseName;
+    }
+
+    return 'Unknown Definition';
   }
+
+  @override
+  String toString() => describe();
 }

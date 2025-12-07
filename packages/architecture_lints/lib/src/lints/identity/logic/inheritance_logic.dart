@@ -53,7 +53,7 @@ mixin InheritanceLogic {
     // 1. Wildcard
     if (def.isWildcard) return true;
 
-    // 2. Reference (Recursive)
+    // 2. Reference
     if (def.ref != null) {
       final referencedDef = registry[def.ref];
       if (referencedDef != null) {
@@ -62,13 +62,21 @@ mixin InheritanceLogic {
     }
 
     // 3. Direct Type Match
-    if (def.type != null) {
-      if (element.name == def.type) {
+    if (def.types.isNotEmpty) {
+      if (def.types.contains(element.name)) {
         // Import Check
-        if (def.import != null) {
+        if (def.imports.isNotEmpty) {
           final lib = element.library;
           final uri = lib.firstFragment.source.uri.toString();
-          if (uri != def.import) return false;
+
+          var importMatched = false;
+          for (final imp in def.imports) {
+            if (uri == imp || uri.startsWith(imp)) {
+              importMatched = true;
+              break;
+            }
+          }
+          if (!importMatched) return false;
         }
         return true;
       }
@@ -110,29 +118,6 @@ mixin InheritanceLogic {
       }
     }
     return null;
-  }
-
-  String describeDefinition(Definition def, [Map<String, Definition>? registry]) {
-    // 1. Resolve Reference
-    if (def.ref != null) {
-      if (registry != null) {
-        final resolved = registry[def.ref];
-        // RECURSIVE: If resolved, describe THAT.
-        if (resolved != null) {
-          return describeDefinition(resolved, registry);
-        }
-      }
-      // Fallback if registry missing or key not found
-      return 'Reference(${def.ref})';
-    }
-
-    // 2. Direct Type
-    if (def.type != null) return def.type!;
-
-    // 3. Component
-    if (def.component != null) return 'Component(${def.component})';
-
-    return 'Defined Rule';
   }
 
   void report({

@@ -48,7 +48,7 @@ class InheritanceRequiredRule extends InheritanceBaseRule {
           ..write('The component "${component.displayName}" is invalid. ');
 
         final descriptions = rule.required
-            .map((d) => describeDefinition(d, config.definitions))
+            .map((d) => d.describe(config.definitions))
             .join(' OR ');
 
         // Check if we are demanding a Component location vs a Class type

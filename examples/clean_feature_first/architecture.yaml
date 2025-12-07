@@ -142,165 +142,6 @@ modules:
 # - verb: {{verb}}, {{verb.present}}, {{verb.past}}, {{verb.gerund}}
 # - other: {{adjective}}, {{adverb}}, {{pronoun}}, {{preposition}}, {{conjunction}}
 # --------------------------------------------------------------------------------------------------
-componentsX:
-  # ---- Domain (Inner Circle) ---
-  domain:
-    name: 'Domain'
-    path: 'domain'
-
-  # Entities are objects. They must be Noun Phrases (e.g., "User", "PaymentMethod").
-  domain.entity:
-    name: 'Entity'
-    path: 'entities'
-    pattern: '{{name}}'
-    antipattern: '{{name}}Entity'
-    grammar: '{{noun.phrase}}'
-
-  # Ports are interfaces. They are Noun Phrases (e.g., "AuthPort").
-  domain.port:
-    name: 'Port (aka Repository Interface)'
-    path: 'ports'
-    pattern: '{{name}}Port'
-    antipattern: '{{name}}(Interface|Repository)'
-    grammar: '{{noun.phrase}}Port'
-
-  # UseCases are actions. They must start with a Verb and end with a Noun (e.g., "GetUser").
-  domain.usecase:
-    name: 'Usecase (aka Interactor)'
-    path: 'usecases'
-    pattern: '{{name}}'
-    antipattern: '{{name}}Use(C|c)ase'
-    grammar: '{{verb.present}}{{noun.phrase}}'
-
-  # Parameters are data. They must be Noun Phrases (e.g., "_userIdParam").
-  domain.usecase.parameter:
-    name: 'Usecase Parameter'
-    pattern: '_{{name}}Param'
-    grammar: '_{{noun.phrase}}Param'
-
-  # ---- Data (Adapter) ---
-  data:
-    name: 'Data Source'
-    path: 'data'
-
-  # Models are data objects. Noun Phrases (e.g., "UserModel").
-  data.model:
-    name: 'Model'
-    path: 'models'
-    pattern: '{{name}}Model'
-    grammar: '{{noun.phrase}}Model'
-
-  data.source:
-    name: 'Data Source'
-    path: 'sources'
-
-  # Source Interfaces are objects. Noun Phrases (e.g., "AuthSource").
-  data.source.interface:
-    name: 'Data Source (Interface)'
-    pattern: '{{name}}Source'
-    grammar: '{{noun.phrase}}Source'
-
-  # Source Implementations are concrete objects. Noun Phrases (e.g., "RemoteAuthSource").
-  data.source.implementation:
-    name: 'Data Source (Implementation)'
-    pattern: '{{affix}}{{name}}Source'
-    grammar: '{{noun.phrase}}Source'
-
-  # Repositories are objects. Noun Phrases (e.g., "AuthRepository").
-  data.repository:
-    name: 'Repository (Implementation)'
-    path: 'repositories'
-    pattern: '{{affix}}{{name}}Repository'
-    grammar: '{{noun.phrase}}Repository'
-
-  # --- Presentation (Outer Circle) ---
-  presentation:
-    name: 'Presentation'
-    path: 'presentation'
-
-  # Managers are objects. Noun Phrases (e.g., "AuthBloc", "UserCubit").
-  presentation.manager:
-    name: 'State Manager'
-    path: [ 'managers', 'bloc', 'cubit' ]
-    pattern: '{{name}}(Bloc|Cubit|Manager)'
-    grammar: '{{noun.phrase}}(Bloc|Cubit|Manager)'
-
-  # Event Interfaces are objects/categories. Noun Phrases (e.g., "AuthEvent").
-  presentation.manager.event.interface:
-    name: 'Bloc/Cubit Event (Interface)'
-    pattern: '{{name}}Event'
-    grammar: '{{noun.phrase}}Event'
-
-  # Concrete Events represent something that HAPPENED.
-  # Grammar: Subject + Past Tense Verb (e.g., "UserLoggedIn", "DataLoaded", "ErrorOccurred").
-  presentation.manager.event.implementation:
-    name: 'Bloc/Cubit Event (Implementation)'
-    pattern: '{{name}}'
-    grammar: '{{noun.phrase}}{{verb.past}}'
-
-  # State Interfaces are objects/categories. Noun Phrases (e.g., "AuthState").
-  presentation.manager.state.interface:
-    name: 'Bloc/Cubit State (Interface)'
-    pattern: '{{name}}State'
-    grammar: '{{noun.singular}}State'
-
-  # Concrete States represent a STATUS.
-  # Grammar: Subject + Adjective OR Gerund (e.g., "AuthInitial", "AuthLoading", "AuthSuccess").
-  presentation.manager.state.implementation:
-    name: 'Bloc/Cubit State (Implementation)'
-    pattern: '{{name}}'
-    grammar:
-      - '{{noun.phrase}}{{adjective}}'     # AuthInitial, AuthLoading
-      - '{{noun.phrase}}{{verb.gerund}}'   # AuthLoading (alternative)
-      - '{{noun.phrase}}{{verb.past}}'     # AuthLoaded
-
-  # Widgets are objects. Noun Phrases (e.g., "UserList").
-  presentation.widget:
-    name: 'Widget'
-    path: 'widgets'
-    pattern: '{{name}}(Panel|Section|Widget)'
-    grammar: '{{noun.phrase}}(Panel|Section|Widget)'
-
-  # Forms are objects. Noun Phrases (e.g., "LoginForm", "UserForm").
-  presentation.form:
-    name: 'Form'
-    path: 'forms'
-    pattern: '{{name}}Form'
-    grammar: '{{noun.phrase}}Form'
-
-  # Pages are objects. Noun Phrases (e.g., "LoginPage").
-  presentation.page:
-    name: 'Page'
-    path: 'pages'
-    pattern: '{{name}}Page'
-    antipattern: '{{name}}Screen'
-    grammar: '{{noun.phrase}}Page'
-
-  # --- CORE COMPONENTS (Explicitly assigned to 'core' module) ---
-  core.failure:
-    module: 'core'
-    name: 'Failure'
-    path: 'error'
-    pattern: '{{name}}Failure'
-
-  core.exception:
-    module: 'core'
-    name: 'Exception'
-    path: 'error'
-    pattern: '{{name}}Exception'
-
-  core.util:
-    module: 'core'
-    name: 'Utility'
-    path: 'utils'
-
-  # --- SHARED COMPONENTS (Explicitly assigned to 'shared' module) ---
-  shared.widget:
-    module: 'shared'
-    path: 'widgets'
-    pattern: '{{name}}' # Shared widgets might have looser naming rules
-    grammar: '{{noun.phrase}}'
-
 components:
   # ---- Domain (Inner Circle) ---
   .domain:
@@ -558,7 +399,7 @@ definitions:
     # Inherits fpdart
     .failure: 'Left'
 
-  # --- Failure ---
+  # --- Failures ---
   failure:
     .base:
       type: 'Failure'
@@ -575,7 +416,7 @@ definitions:
     .server: 'ServerException'
     .cache: 'CacheException'
 
-  # --- Identity ---
+  # --- Identities ---
   identity:
     .integer:
       type: 'IntId'
@@ -625,22 +466,6 @@ definitions:
 # [a.3] import
 # The source package URI. Used to strictly identify the service and avoid false positives.
 # TYPE: String
-# --------------------------------------------------------------------------------------------------
-servicesX:
-  locator:
-    type: [ 'Injector', 'GetIt' ]
-    identifier: [ 'getIt', 'locator', 'serviceLocator' ]
-    import: 'package:clean_feature_first/core/utils/service_locator.dart'
-
-  logging:
-    type: 'Logger'
-    identifier: [ 'logger', 'log' ]
-    import: 'package:logger/logger.dart'
-
-  routing:
-    type: 'GoRouter'
-    identifier: [ 'router', 'goRouter' ]
-    import: 'package:go_router/go_router.dart'
 
 
 # ==================================================================================================

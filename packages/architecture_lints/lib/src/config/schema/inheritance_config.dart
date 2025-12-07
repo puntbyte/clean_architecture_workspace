@@ -36,29 +36,31 @@ class InheritanceConfig {
   static List<Definition> _parseDefinitionList(dynamic value) {
     if (value == null) return const [];
 
-    // Case 1: Standard List of Objects/Strings
+    // Case 1: Standard List (e.g. required: [ 'Entity', { type: 'Base' } ])
     if (value is List) {
       return value.map(Definition.fromDynamic).toList();
     }
 
-    // Case 2: Map Shorthand (e.g. { definition: ['a', 'b'] })
+    // Case 2: Map Shorthand (e.g. required: { definition: ['usecase.unary', 'usecase.nullary'] })
     if (value is Map) {
-      // Check for 'definition' list
-      final defs = value[ConfigKeys.definition.definition];
+      final map = Map<String, dynamic>.from(value);
+
+      // Expansion Logic:
+      // Since Definition.ref is singular, we must expand a list of refs
+      // into multiple Definition objects.
+      final defs = map[ConfigKeys.definition.definition];
       if (defs is List) {
         return defs.map((ref) => Definition(ref: ref.toString())).toList();
       }
 
-      // Check for 'type' list
-      final types = value[ConfigKeys.definition.type];
-      if (types is List) {
-        return types.map((t) => Definition(type: t.toString())).toList();
-      }
+      // Note: We do NOT need to expand 'type': ['A', 'B'] here,
+      // because Definition.fromDynamic handles 'type' as a list internally now.
 
-      // Fallback: It's a single definition object
+      // Fallback: Parse as a single definition object
       return [Definition.fromDynamic(value)];
     }
 
+    // Case 3: Single String shorthand (e.g. required: 'Entity')
     return [Definition.fromDynamic(value)];
   }
 }

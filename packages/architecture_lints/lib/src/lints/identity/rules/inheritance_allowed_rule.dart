@@ -43,9 +43,9 @@ class InheritanceAllowedRule extends InheritanceBaseRule {
         );
 
         if (!isAllowed) {
-          final description = rule.allowed
-              .map((d) => describeDefinition(d, config.definitions))
-              .join(', ');
+          final descriptions = rule.allowed
+              .map((d) => d.describe(config.definitions))
+              .join(' OR ');
 
           report(
             reporter: reporter,
@@ -54,7 +54,7 @@ class InheritanceAllowedRule extends InheritanceBaseRule {
             arguments: [
               component.displayName,
               type.element.name ?? 'Unknown',
-              description,
+              descriptions,
             ],
           );
         }

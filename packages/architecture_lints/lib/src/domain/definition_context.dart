@@ -26,7 +26,8 @@ class DefinitionContext {
 
     // 2. Check Static Access (GetIt.I)
     if (element is ClassElement || element is InterfaceElement) {
-      if (definition.type == element.name) {
+      // Check if element name is in the allowed types list
+      if (definition.types.contains(element.name)) {
         return _checkImport(element);
       }
     }
@@ -34,7 +35,7 @@ class DefinitionContext {
     // 3. Check Variable Type (final loc = GetIt.I)
     if (element is VariableElement) {
       final typeName = element.type.element?.name;
-      if (definition.type == typeName) {
+      if (definition.types.contains(typeName)) {
         return _checkImport(element.type.element);
       }
     }
@@ -54,7 +55,8 @@ class DefinitionContext {
 
   bool _matchesElement(Element? element) {
     if (element == null) return false;
-    if (element.name != definition.type) return false;
+    // Check list of types
+    if (!definition.types.contains(element.name)) return false;
     return _checkImport(element);
   }
 
@@ -65,8 +67,10 @@ class DefinitionContext {
     final uri = element.library?.firstFragment.source.uri.toString();
     if (uri == null) return false;
 
-    // Check against list
-    return definition.imports.contains(uri) ||
-        definition.imports.any(uri.startsWith);
+    for (final expected in definition.imports) {
+      if (uri == expected) return true;
+      if (uri.startsWith(expected)) return true;
+    }
+    return false;
   }
 }

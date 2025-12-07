@@ -182,35 +182,23 @@ mixin TypeSafetyLogic {
   }
 
   String describeConstraint(TypeSafetyConstraint c, Map<String, Definition> registry) {
+    // 1. Definitions
     if (c.definitions.isNotEmpty) {
-      return c.definitions.map((key) => _resolveReadableName(key, registry)).join(' or ');
+      return c.definitions
+          .map((key) {
+            // Lookup the definition and describe it
+            final def = registry[key];
+            return def?.describe(registry) ?? key;
+          })
+          .join(' or ');
     }
+
+    // 2. Raw Types
     if (c.types.isNotEmpty) return c.types.join(' or ');
+
+    // 3. Component
     if (c.component != null) return 'Component: ${c.component}';
+
     return 'Defined Rule';
-  }
-
-  String _resolveReadableName(String key, Map<String, Definition> registry) {
-    final def = registry[key];
-    if (def == null) return key;
-
-    if (def.ref != null) {
-      return _resolveReadableName(def.ref!, registry);
-    }
-
-    if (def.type != null) {
-      if (def.arguments.isNotEmpty) {
-        final args = def.arguments
-            .map((arg) {
-              if (arg.isWildcard) return '*';
-              if (arg.ref != null) return _resolveReadableName(arg.ref!, registry);
-              return arg.type ?? '?';
-            })
-            .join(', ');
-        return '${def.type}<$args>';
-      }
-      return def.type!;
-    }
-    return key;
   }
 }
