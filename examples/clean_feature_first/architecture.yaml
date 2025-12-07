@@ -585,9 +585,15 @@ definitions:
   # --- Services ---
   service:
     .locator:
-      type: [ 'Injector', 'GetIt' ]
-      import: 'package:clean_feature_first/core/utils/service_locator.dart'
+      type: 'GetIt'
+      import:
+        - 'package:clean_feature_first/core/utils/service_locator.dart'
+        - 'package:get_it/get_it.dart'
       identifier: [ 'getIt', 'locator', 'serviceLocator' ]
+
+      .injectable:
+        type: 'Injectable'
+        import: 'package:injectable/injectable.dart'
 
     .logging:
       type: 'Logger'

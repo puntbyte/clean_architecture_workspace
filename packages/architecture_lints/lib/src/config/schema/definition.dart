@@ -10,7 +10,7 @@ class Definition {
   final String? type;
   final List<String> types;
   final List<String> identifiers;
-  final String? import;
+  final List<String> imports;
   final String? ref;
   final String? component;
   final List<Definition> arguments;
@@ -20,12 +20,15 @@ class Definition {
     this.type,
     this.types = const [],
     this.identifiers = const [],
-    this.import,
+    this.imports = const [],
     this.ref,
     this.component,
     this.arguments = const [],
     this.isWildcard = false,
   });
+
+  // Backward compatibility getter
+  String? get import => imports.isNotEmpty ? imports.first : null;
 
   /// Factory to parse a definition value.
   /// Note: Context/Inheritance is handled by [HierarchyParser] merging properties into [value] if
@@ -36,6 +39,7 @@ class Definition {
     // 1. Shorthand String
     if (value is String) {
       if (value == '*') return const Definition(isWildcard: true);
+      // Pass shorthand as type, no imports by default
       return Definition(type: value);
     }
 
@@ -52,15 +56,15 @@ class Definition {
       final typeName = map.tryGetString(ConfigKeys.definition.type);
       if (typeName == '*') return const Definition(isWildcard: true);
 
-      // Parse List of Types (reuse 'type' key)
       final rawType = map[ConfigKeys.definition.type];
       final typesList = <String>[];
       if (rawType is List) typesList.addAll(rawType.map((e) => e.toString()));
       if (typeName != null) typesList.add(typeName);
 
-      final import = map.tryGetString(ConfigKeys.definition.import);
+      // PARSE IMPORTS (Handle String or List)
+      final importsList = map.getStringList(ConfigKeys.definition.import);
 
-      final rawIds = map[ConfigKeys.definition.identifiers];
+      final rawIds = map[ConfigKeys.definition.identifier];
       final ids = <String>[];
       if (rawIds is String) ids.add(rawIds);
       if (rawIds is List) ids.addAll(rawIds.map((e) => e.toString()));
@@ -79,7 +83,7 @@ class Definition {
         type: typeName,
         types: typesList,
         identifiers: ids,
-        import: import,
+        imports: importsList, // Store list
         arguments: args,
       );
     }
@@ -94,12 +98,11 @@ class Definition {
       factory: (id, node) => Definition.fromDynamic(node),
       cascadeProperties: [ConfigKeys.definition.import],
       shorthandKey: ConfigKeys.definition.type,
-      // NEW: Expands string shorthands to {type: string}
       shouldParseNode: (node) {
         if (node is String) return true;
         if (node is Map) {
           return node.containsKey(ConfigKeys.definition.type) ||
-              node.containsKey(ConfigKeys.definition.identifiers) ||
+              node.containsKey(ConfigKeys.definition.identifier) ||
               node.containsKey(ConfigKeys.definition.definition) ||
               node.containsKey(ConfigKeys.definition.component) ||
               node.containsKey(ConfigKeys.definition.argument);
@@ -114,10 +117,8 @@ class Definition {
     if (isWildcard) return '*';
     if (ref != null) return 'Ref($ref)';
     if (component != null) return 'Component($component)';
-
     final base = type ?? (identifiers.isNotEmpty ? identifiers.first : '?');
     if (arguments.isEmpty) return base;
-
     return '$base<${arguments.join(', ')}>';
   }
 }

@@ -1,3 +1,5 @@
+// lib/src/config/enums/usage_kind.dart
+
 import 'package:collection/collection.dart';
 
 enum UsageKind {

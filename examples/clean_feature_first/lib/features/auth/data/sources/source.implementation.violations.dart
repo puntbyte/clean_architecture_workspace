@@ -4,15 +4,13 @@ import 'package:clean_feature_first/core/error/failures.dart';
 import 'package:clean_feature_first/core/utils/types.dart';
 import 'package:clean_feature_first/features/auth/data/models/user_model.dart';
 import 'package:clean_feature_first/features/auth/data/sources/auth_source.dart';
+import 'package:fpdart/fpdart.dart';
 
 // LINT: [1] arch_dep_external
 // REASON: While this is data layer, flutter is generally discouraged in pure Dart sources
 // unless it's a local source using something like SharedPreferences (depends on config).
 // (Assuming config blocks it or context implies strictness).
 import 'package:flutter/material.dart';
-
-import 'package:fpdart/fpdart.dart';
-
 
 // LINT: [2] arch_naming_pattern
 // REASON: Name must match `Default{{name}}Source` (configured pattern).

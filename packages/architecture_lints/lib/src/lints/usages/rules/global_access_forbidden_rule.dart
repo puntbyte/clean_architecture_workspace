@@ -1,7 +1,6 @@
-// lib/src/lints/usages/rules/global_access_forbidden.dart
-
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
+// Hide LintCode to avoid conflict with custom_lint_builder
+import 'package:analyzer/error/error.dart' hide LintCode;
 import 'package:analyzer/error/listener.dart';
 import 'package:architecture_lints/src/config/enums/usage_kind.dart';
 import 'package:architecture_lints/src/config/schema/architecture_config.dart';
@@ -40,27 +39,51 @@ class GlobalAccessForbiddenRule extends UsageBaseRule {
 
     context.registry.addIdentifier((node) {
       final parent = node.parent;
-      if (parent is PropertyAccess) return;
-      if (parent is PrefixedIdentifier) {
-        if (parent.identifier == node) return;
-      }
+
+      // --- 1. FILTERING (AST Noise Reduction) ---
+
+      // Case A: Property Access (obj.prop)
+      // We only want to check 'obj'. If 'node' is 'prop', skip it.
+      if (parent is PropertyAccess && parent.propertyName == node) return;
+
+      // Case B: Prefixed Identifier (prefix.id)
+      // e.g. GetIt.I -> Check 'GetIt', skip 'I'.
+      if (parent is PrefixedIdentifier && parent.identifier == node) return;
+
+      // Case C: Method Invocation (obj.method())
+      // Check 'obj', skip 'method'.
+      if (parent is MethodInvocation && parent.methodName == node) return;
+
+      // Case D: Declaration Usage (e.g. "class GetIt {}")
+      if (parent is ClassDeclaration || parent is VariableDeclaration) return;
+      if (parent is ConstructorDeclaration) return;
+
+      // Case E: Type Annotations (e.g. final GetIt locator;)
+      // We flag *access* (values), not type references.
+      if (parent is NamedType) return;
+
+      // -------------------------------------------
 
       for (final constraint in constraints) {
         final definition = config.definitions[constraint.definition];
         if (definition == null) continue;
 
-        // Wrap on-the-fly in Context
         final symbolContext = DefinitionContext(
           key: constraint.definition!,
           definition: definition,
         );
 
         if (symbolContext.matchesUsage(node)) {
+          // FIX: Use the actual node name (e.g., "locator", "GetIt") for the message
+          // instead of the internal config key ("service.locator").
+          final displayName = node.name;
+
           reporter.atNode(
             node,
             _code,
-            arguments: [constraint.definition!],
+            arguments: [displayName],
           );
+          // Stop after first match
           return;
         }
       }

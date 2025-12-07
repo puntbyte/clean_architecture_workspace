@@ -1,3 +1,5 @@
+// lib/src/config/schema/usage_config.dart
+
 import 'package:architecture_lints/src/config/constants/config_keys.dart';
 import 'package:architecture_lints/src/config/enums/usage_kind.dart'; // Import Enum
 import 'package:architecture_lints/src/utils/map_extensions.dart';

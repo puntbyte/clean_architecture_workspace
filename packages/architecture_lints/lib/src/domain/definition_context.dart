@@ -1,3 +1,5 @@
+// lib/src/domain/definition_context.dart
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -57,9 +59,14 @@ class DefinitionContext {
   }
 
   bool _checkImport(Element? element) {
-    if (definition.import == null) return true;
+    if (definition.imports.isEmpty) return true;
     if (element == null) return false;
+
     final uri = element.library?.firstFragment.source.uri.toString();
-    return uri == definition.import;
+    if (uri == null) return false;
+
+    // Check against list
+    return definition.imports.contains(uri) ||
+        definition.imports.any(uri.startsWith);
   }
 }

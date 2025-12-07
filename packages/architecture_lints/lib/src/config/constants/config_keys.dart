@@ -94,7 +94,7 @@ class _DefinitionKeys {
   String get component => 'component';
 
   // New: Merged from Services
-  String get identifiers => 'identifiers';
+  String get identifier => 'identifier';
 }
 
 class _DependencyKeys {

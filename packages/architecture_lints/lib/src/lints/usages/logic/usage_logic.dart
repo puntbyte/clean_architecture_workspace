@@ -5,36 +5,29 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:architecture_lints/src/config/schema/definition.dart';
 
 mixin UsageLogic {
-  /// Checks if an identifier usage matches a forbidden definition.
-  bool matchesDefinition(
-    Identifier node,
-    Definition definition,
-  ) {
+  bool matchesDefinition(Identifier node, Definition definition) {
     final element = node.element;
     if (element == null) return false;
 
-    // 1. Check Identifier Name (e.g. usage of variable 'sl', 'locator')
-    final name = node.name;
-    if (definition.identifiers.contains(name)) {
+    // 1. Check Identifiers (Variable Names)
+    if (definition.identifiers.contains(node.name)) {
       return _checkImport(element, definition);
     }
 
-    // 2. Check Static Access (e.g. usage of 'GetIt.instance')
-    // We check if the element being accessed belongs to the Type defined.
-    if (definition.type != null) {
-      if (element is ClassElement || element is InterfaceElement) {
-        if (element.name == definition.type) {
-          return _checkImport(element, definition);
-        }
+    // 2. Check Static Access (Class Names)
+    if (element is ClassElement || element is InterfaceElement) {
+      final name = element.name;
+      // Check singular 'type' AND list 'types'
+      if (definition.type == name || definition.types.contains(name)) {
+        return _checkImport(element, definition);
       }
     }
 
-    // 3. Check Variable Type (e.g. 'final loc = GetIt.I')
-    // We check if the variable being accessed IS of the Type defined.
-    if (definition.type != null) {
-      if (element is VariableElement) {
-        final typeName = element.type.element?.name;
-        if (typeName == definition.type) {
+    // 3. Check Variable Type
+    if (element is VariableElement) {
+      final typeName = element.type.element?.name;
+      if (typeName != null) {
+        if (definition.type == typeName || definition.types.contains(typeName)) {
           return _checkImport(element.type.element, definition);
         }
       }
@@ -44,13 +37,29 @@ mixin UsageLogic {
   }
 
   bool _checkImport(Element? element, Definition definition) {
-    if (definition.import == null) return true; // No import restriction
+    // If no imports defined, match ANY import
+    if (definition.imports.isEmpty) return true;
+
     if (element == null) return false;
 
     final lib = element.library;
     if (lib == null) return false;
 
     final uri = lib.firstFragment.source.uri.toString();
-    return uri == definition.import;
+
+    // Check if URI matches any allowed import
+    for (final imp in definition.imports) {
+      if (_matchesUri(uri, imp)) return true;
+    }
+
+    return false;
+  }
+
+  bool _matchesUri(String actual, String expected) {
+    if (actual == expected) return true;
+    if (actual.startsWith('package:') && expected.startsWith('package:')) {
+      return actual.startsWith(expected);
+    }
+    return false;
   }
 }

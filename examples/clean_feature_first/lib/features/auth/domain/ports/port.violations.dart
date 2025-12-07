@@ -2,12 +2,11 @@
 
 import 'package:clean_feature_first/core/port/port.dart';
 import 'package:clean_feature_first/core/utils/types.dart';
+import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
 
 // LINT: [1] arch_dep_component
 // REASON: Domain layer cannot import from the Data layer.
 import 'package:clean_feature_first/features/auth/data/models/user_model.dart'; //! <-- LINT WARNING
-
-import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
 
 // LINT: [2] arch_dep_external
 // REASON: Domain must be platform agnostic (no UI types).
