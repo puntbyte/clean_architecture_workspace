@@ -27,6 +27,7 @@ class Definition {
 
   /// Backward compatibility getter.
   String? get type => types.isNotEmpty ? types.first : null;
+
   String? get import => imports.isNotEmpty ? imports.first : null;
 
   factory Definition.fromDynamic(dynamic value) {
@@ -115,18 +116,14 @@ class Definition {
     if (ref != null) {
       if (registry != null) {
         final resolved = registry[ref];
-        if (resolved != null) {
-          return resolved.describe(registry);
-        }
+        if (resolved != null) return resolved.describe(registry);
       }
       // Fallback if registry missing or key not found
       return 'Ref($ref)';
     }
 
     // 4. Identifiers (e.g. for Services)
-    if (identifiers.isNotEmpty) {
-      return identifiers.join('|');
-    }
+    if (identifiers.isNotEmpty) return identifiers.join('|');
 
     // 5. Types (e.g. for Classes)
     if (types.isNotEmpty) {
@@ -134,9 +131,7 @@ class Definition {
 
       // Handle Generics (e.g. Future<Either<L, R>>)
       if (arguments.isNotEmpty) {
-        final argsDescription = arguments
-            .map((arg) => arg.describe(registry))
-            .join(', ');
+        final argsDescription = arguments.map((arg) => arg.describe(registry)).join(', ');
         return '$baseName<$argsDescription>';
       }
 

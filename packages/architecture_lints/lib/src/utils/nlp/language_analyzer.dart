@@ -1,21 +1,22 @@
+import 'package:architecture_lints/src/config/schema/vocabulary_config.dart';
 import 'package:architecture_lints/src/utils/nlp/nlp_constants.dart';
 import 'package:dictionaryx/dictentry.dart';
 import 'package:dictionaryx/dictionary_msa.dart';
 
 class LanguageAnalyzer {
+  /// Static instance shared across all analyzer instances to avoid reloading memory.
+  static final DictionaryMSA _sharedDictionary = DictionaryMSA();
+
   final DictionaryMSA? _dictionary;
-
-  // Simple cache to avoid repeated lookups for the same word
-  final Map<String, Set<String>> _posCache = {};
-
-  /// If true, the presence of a dictionary entry is treated as a weak signal
-  /// that the token is a noun.
+  final VocabularyConfig _overrides;
   final bool treatEntryAsNounIfExists;
 
   LanguageAnalyzer({
     DictionaryMSA? dictionary,
+    VocabularyConfig? vocabulary,
     this.treatEntryAsNounIfExists = true,
-  }) : _dictionary = dictionary;
+  }) : _dictionary = dictionary ?? _sharedDictionary,
+       _overrides = vocabulary ?? const VocabularyConfig();
 
   bool isAdjective(String word) => _hasPos(word, POS.ADJ);
 
@@ -33,11 +34,13 @@ class LanguageAnalyzer {
 
   bool isNounPlural(String word) {
     final lower = word.toLowerCase();
+    // Check override first (e.g. 'stats' -> noun)
+    if (_overrides.nouns.contains(lower)) return true;
+
     if (!lower.endsWith('s')) return false;
     if (singularNounExceptions.contains(lower)) return false;
     if (irregularPlurals.containsKey(lower)) return true;
 
-    // Simple morphology
     if (lower.endsWith('ies')) return _hasPos('${lower.substring(0, lower.length - 3)}y', POS.NOUN);
     if (lower.endsWith('es')) return _hasPos(lower.substring(0, lower.length - 2), POS.NOUN);
 
@@ -50,31 +53,41 @@ class LanguageAnalyzer {
 
   bool isVerbGerund(String word) {
     final lower = word.toLowerCase();
+    // Override check: if user says "MyThing" is a noun, it's not a gerund even if it ends in ing.
+    if (_overrides.nouns.contains(lower)) return false;
+    if (_overrides.verbs.contains(lower)) return true;
+
     if (!lower.endsWith('ing')) return false;
-    // Strip 'ing' and check if base is verb (handling simple doubling like 'getting' -> 'get')
     final stem = lower.substring(0, lower.length - 3);
     return isVerb(stem) || isVerb('${stem}e');
   }
 
   bool isVerbPast(String word) {
     final lower = word.toLowerCase();
+    if (_overrides.verbs.contains(lower)) return true;
+
     if (irregularPastVerbs.containsKey(lower)) return true;
     if (lower.endsWith('ed')) {
       final stem = lower.substring(0, lower.length - 2);
       return isVerb(stem) || isVerb('${stem}e');
     }
-    return isVerb(word); // Some past tenses look like base (put -> put)
+    return isVerb(word);
   }
 
   bool _hasPos(String word, POS pos) {
     final lower = word.toLowerCase();
 
-    // 1. Fast Path (Constants)
+    // 1. Vocabulary Overrides (Highest Priority)
+    if (pos == POS.NOUN && _overrides.nouns.contains(lower)) return true;
+    if (pos == POS.VERB && _overrides.verbs.contains(lower)) return true;
+    if (pos == POS.ADJ && _overrides.adjectives.contains(lower)) return true;
+
+    // 2. Fast Path (Constants)
     if (pos == POS.NOUN && commonNouns.contains(lower)) return true;
     if (pos == POS.VERB && commonVerbs.contains(lower)) return true;
     if (pos == POS.ADV && commonAdverbs.contains(lower)) return true;
 
-    // 2. Dictionary Lookup
+    // 3. Dictionary Lookup
     if (_dictionary != null) {
       if (_checkDictionary(lower, pos)) return true;
     }
@@ -84,11 +97,10 @@ class LanguageAnalyzer {
 
   bool _checkDictionary(String word, POS pos) {
     try {
-      // Logic from DictionaryX
       final hasEntry = _dictionary!.hasEntry(word);
       if (!hasEntry) return false;
 
-      final entry = _dictionary!.getEntry(word);
+      final entry = _dictionary.getEntry(word);
       if (entry.meanings.any((m) => m.pos == pos)) return true;
 
       // Weak signal fallback

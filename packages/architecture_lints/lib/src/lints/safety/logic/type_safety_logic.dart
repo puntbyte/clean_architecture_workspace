@@ -1,12 +1,63 @@
+// lib/src/lints/safety/logic/type_safety_logic.dart
+
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:architecture_lints/src/config/schema/definition.dart'; // New Unified Definition
+import 'package:architecture_lints/src/config/schema/definition.dart';
 import 'package:architecture_lints/src/config/schema/type_safety_config.dart';
 import 'package:architecture_lints/src/config/schema/type_safety_constraint.dart';
 import 'package:architecture_lints/src/core/resolver/file_resolver.dart';
 
+enum MatchSpecificity { none, canonical, alias }
+
 mixin TypeSafetyLogic {
-  /// Checks if [type] matches any constraint in the [constraintList].
+  /// Determines how specific the match is.
+  MatchSpecificity getMatchSpecificity(
+    DartType type,
+    List<TypeSafetyConstraint> constraintList,
+    FileResolver fileResolver,
+    Map<String, Definition> registry,
+  ) {
+    var best = MatchSpecificity.none;
+
+    for (final c in constraintList) {
+      // 1. Check Alias (Strongest Match)
+      if (type.alias != null) {
+        if (_matchesElement(
+          type.alias!.element,
+          c,
+          registry,
+          typeArguments: type.alias!.typeArguments,
+        )) {
+          return MatchSpecificity.alias; // Return immediately found highest specificity
+        }
+      }
+
+      // 2. Check Canonical (Weak Match)
+      if (_matchesElement(
+        type.element,
+        c,
+        registry,
+        typeArguments: _getTypeArguments(type),
+      )) {
+        // If we haven't found an alias match yet, mark as canonical
+        if (best == MatchSpecificity.none) best = MatchSpecificity.canonical;
+      }
+
+      // 3. Component Match (Treat as Canonical for now)
+      if (c.component != null) {
+        final library = type.element?.library;
+        if (library != null) {
+          final sourcePath = library.firstFragment.source.fullName;
+          final comp = fileResolver.resolve(sourcePath);
+          if (comp != null && comp.matchesReference(c.component!)) {
+            if (best == MatchSpecificity.none) best = MatchSpecificity.canonical;
+          }
+        }
+      }
+    }
+    return best;
+  }
+
   bool matchesAnyConstraint(
     DartType type,
     List<TypeSafetyConstraint> constraintList,
@@ -18,11 +69,10 @@ mixin TypeSafetyLogic {
     );
   }
 
-  /// Checks if [type] is explicitly forbidden by the [configRule] for the given [kind].
   bool isExplicitlyForbidden({
     required DartType type,
     required TypeSafetyConfig configRule,
-    required String kind, // 'return' or 'parameter'
+    required String kind,
     required FileResolver fileResolver,
     required Map<String, Definition> registry,
     String? paramName,
@@ -46,7 +96,7 @@ mixin TypeSafetyLogic {
     FileResolver fileResolver,
     Map<String, Definition> registry,
   ) {
-    // 1. Check Canonical Element (e.g. Future<T>)
+    // 1. Check Canonical Element
     if (_matchesElement(
       type.element,
       constraint,
@@ -56,7 +106,7 @@ mixin TypeSafetyLogic {
       return true;
     }
 
-    // 2. Check Type Alias (e.g. FutureEither<T>)
+    // 2. Check Type Alias
     if (type.alias != null) {
       if (_matchesElement(
         type.alias!.element,
@@ -96,6 +146,8 @@ mixin TypeSafetyLogic {
     Map<String, Definition> registry, {
     List<DartType> typeArguments = const [],
   }) {
+    // Handle void/dynamic special cases if needed (element is null)
+    // For now assume standard types
     if (element == null) return false;
     final name = element.name;
     if (name == null) return false;
@@ -148,10 +200,17 @@ mixin TypeSafetyLogic {
     }
 
     // C. Direct Match
-    if (def.type != null && def.type != elementName) return false;
+    // Use list 'types' instead of 'type'
+    if (def.types.isNotEmpty) {
+      if (!def.types.contains(elementName)) return false;
+    }
 
-    if (def.import != null) {
-      if (elementUri != null && elementUri != def.import) return false;
+    // Use list 'imports' instead of 'import'
+    if (def.imports.isNotEmpty) {
+      if (elementUri == null) return false;
+      // Must match at least one allowed import
+      final importMatched = def.imports.any((imp) => elementUri.startsWith(imp));
+      if (!importMatched) return false;
     }
 
     // D. Generics
@@ -186,7 +245,6 @@ mixin TypeSafetyLogic {
     if (c.definitions.isNotEmpty) {
       return c.definitions
           .map((key) {
-            // Lookup the definition and describe it
             final def = registry[key];
             return def?.describe(registry) ?? key;
           })

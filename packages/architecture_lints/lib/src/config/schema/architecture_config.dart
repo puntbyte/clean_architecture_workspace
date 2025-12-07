@@ -12,6 +12,7 @@ import 'package:architecture_lints/src/config/schema/module_config.dart';
 import 'package:architecture_lints/src/config/schema/relationship_config.dart';
 import 'package:architecture_lints/src/config/schema/type_safety_config.dart';
 import 'package:architecture_lints/src/config/schema/usage_config.dart';
+import 'package:architecture_lints/src/config/schema/vocabulary_config.dart';
 import 'package:architecture_lints/src/utils/map_extensions.dart';
 
 class ArchitectureConfig {
@@ -29,6 +30,7 @@ class ArchitectureConfig {
   final List<RelationshipConfig> relationships;
   final Map<String, String> templates;
   final List<String> excludes;
+  final VocabularyConfig vocabulary;
 
   const ArchitectureConfig({
     required this.components,
@@ -44,6 +46,7 @@ class ArchitectureConfig {
     this.templates = const {},
     this.excludes = const [],
     this.definitions = const {},
+    this.vocabulary = const VocabularyConfig(),
   });
 
   factory ArchitectureConfig.empty() => const ArchitectureConfig(components: []);
@@ -58,6 +61,10 @@ class ArchitectureConfig {
     final components = ComponentConfig.parseMap(
       yaml.mustGetMap(ConfigKeys.root.components),
       modules,
+    );
+
+    final vocabulary = VocabularyConfig.fromMap(
+      yaml.getMap(ConfigKeys.root.vocabulary),
     );
 
     return ArchitectureConfig(
@@ -91,6 +98,7 @@ class ArchitectureConfig {
       }),
 
       excludes: yaml.mustGetStringList(ConfigKeys.root.excludes),
+      vocabulary: vocabulary,
 
     );
   }

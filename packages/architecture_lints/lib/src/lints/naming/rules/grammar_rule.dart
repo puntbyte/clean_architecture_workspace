@@ -7,7 +7,6 @@ import 'package:architecture_lints/src/lints/naming/base/naming_base_rule.dart';
 import 'package:architecture_lints/src/lints/naming/logic/grammar_logic.dart';
 import 'package:architecture_lints/src/utils/nlp/language_analyzer.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
-import 'package:dictionaryx/dictionary_msa.dart';
 
 class GrammarRule extends NamingBaseRule with GrammarLogic {
   static const _code = LintCode(
@@ -17,30 +16,34 @@ class GrammarRule extends NamingBaseRule with GrammarLogic {
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
-  late final LanguageAnalyzer _analyzer;
+  // Removed late final _analyzer.
+  // We create it on the fly or rely on a static cache if needed.
+  // Since we use a static dictionary in LanguageAnalyzer, creating the instance is cheap.
 
-  GrammarRule() : super(code: _code) {
-    _analyzer = LanguageAnalyzer(dictionary: DictionaryMSA());
-  }
+  const GrammarRule() : super(code: _code);
 
   @override
   void checkName({
     required ClassDeclaration node,
     required ComponentConfig config,
     required DiagnosticReporter reporter,
-    required ArchitectureConfig rootConfig,
+    required ArchitectureConfig rootConfig, // We need rootConfig for vocabulary
   }) {
     if (config.grammar.isEmpty) return;
 
     final className = node.name.lexeme;
+
+    // Create analyzer with the current project's vocabulary
+    final analyzer = LanguageAnalyzer(
+      vocabulary: rootConfig.vocabulary,
+    );
 
     String? failureReason;
     String? failureCorrection;
     bool hasMatch = false;
 
     for (final grammar in config.grammar) {
-      // Use logic mixin
-      final result = validateGrammar(grammar, className, _analyzer);
+      final result = validateGrammar(grammar, className, analyzer);
       if (result.isValid) {
         hasMatch = true;
         break;
@@ -50,7 +53,6 @@ class GrammarRule extends NamingBaseRule with GrammarLogic {
       }
     }
 
-    // Check failureReason is not null (implicitly promoted)
     if (!hasMatch && failureReason != null) {
       reporter.atToken(
         node.name,

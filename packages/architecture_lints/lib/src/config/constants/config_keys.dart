@@ -19,6 +19,7 @@ abstract class ConfigKeys {
   static const usage = _UsageKeys(); // New
   static const annotation = _AnnotationKeys(); // New
   static const relationship = _RelationshipKeys(); // New
+  static const vocabulary = _VocabularyKeys();
 
   static const placeholder = _PlaceholderKeys();
 }
@@ -40,6 +41,7 @@ class _RootKeys {
   String get annotations => 'annotations'; // New
   String get relationships => 'relationships'; // New
   String get templates => 'templates';
+  String get vocabulary => 'vocabulary';
 
   String get excludes => 'excludes';
 }
@@ -217,6 +219,14 @@ class _RelationshipKeys {
   // Inside required map
   String get component => 'component';
   String get action => 'action';
+}
+
+class _VocabularyKeys {
+  const _VocabularyKeys();
+  String get nouns => 'nouns';
+  String get verbs => 'verbs';
+  String get adjectives => 'adjectives';
+// We can add adverbs later if needed
 }
 
 class _PlaceholderKeys {

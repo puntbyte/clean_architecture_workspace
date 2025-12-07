@@ -1093,6 +1093,15 @@ relationships:
       # A builtin quick fix to create a Usecase file based on Port method.
       action: 'usecase_template'
 
+vocabulary:
+  nouns:
+    - auth    # 'Auth' is usually an abbreviation, dictionary might not know it
+    - todo
+    - nav     # Navigation
+  verbs:
+    - upsert  # Technical jargon
+    - unfriend
+    - rebase
 
 # ==================================================================================================
 # [8] ACTIONS (The Generators)

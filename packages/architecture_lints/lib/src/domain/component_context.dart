@@ -39,16 +39,21 @@ class ComponentContext {
   /// 3. Suffix Check: id 'data.repo' endsWith ref '.repo'
   /// 4. Module Check: module.key 'core' == ref 'core' (NEW)
   bool matchesReference(String referenceId) {
-    // 1. Check Component ID
+    // 1. Exact Match
     if (id == referenceId) return true;
+
+    // 2. Parent Check (e.g. ref 'data', id 'data.source')
     if (id.startsWith('$referenceId.')) return true;
+
+    // 3. Suffix Check (e.g. ref 'source', id 'data.source')
     if (id.endsWith('.$referenceId')) return true;
 
-    // 2. Check Module Key
-    // This allows rules like "allowed: [core]" to include all components in the 'core' module.
-    if (module != null && module!.key == referenceId) {
-      return true;
-    }
+    // 4. Middle Segment Check (e.g. ref 'source', id 'data.source.interface')
+    // We check for dots on both sides to avoid partial matches (e.g. 'resource' vs 'source')
+    if (id.contains('.$referenceId.')) return true;
+
+    // 5. Module Key Check
+    if (module != null && module!.key == referenceId) return true;
 
     return false;
   }
