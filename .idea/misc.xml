@@ -1,5 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ProjectResources">
+    <resource url="https://github.com/puntbyte/clean_architecture_workspace/blob/master/architecture.schema.json" location="$PROJECT_DIR$" />
     <resource url="https://raw.githubusercontent.com/blaugold/melos-code/main/melos.yaml.schema.json" location="$PROJECT_DIR$" />
   </component>
   <component name="ProjectRootManager">
