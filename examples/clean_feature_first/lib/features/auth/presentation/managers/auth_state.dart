@@ -1,3 +1,5 @@
+// lib/features/auth/presentation/manager/auth_state.dart
+
 part of 'auth_bloc.dart';
 
 // LINT: [Structure] arch_structure_modifier

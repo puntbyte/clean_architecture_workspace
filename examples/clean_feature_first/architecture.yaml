@@ -278,7 +278,7 @@ components:
           name: 'Event Interface'
           mode: part
           kind: class
-          modifier: [ sealed, abstract ]
+          modifier: [ abstract ]
           pattern: '{{name}}Event'
           grammar: '{{noun.phrase}}Event'
 
@@ -759,7 +759,7 @@ dependencies:
   # 2. Pages (Screens):
   # - Can see: Managers, Domain (Entities), Shared Widgets.
   # - Cannot see: Data Layer directly.
-  - on: presentation.page
+  - on: page
     allowed: [ 'presentation.manager', 'presentation.widget', 'domain', 'shared', 'core', 'config' ]
     forbidden:
       component: [ 'data' ]

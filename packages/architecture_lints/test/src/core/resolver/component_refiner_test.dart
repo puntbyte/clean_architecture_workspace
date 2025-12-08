@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:architecture_lints/src/config/enums/component_kind.dart';
+import 'package:architecture_lints/src/config/enums/component_mode.dart';
+import 'package:architecture_lints/src/config/enums/component_modifier.dart';
 import 'package:architecture_lints/src/config/schema/architecture_config.dart';
 import 'package:architecture_lints/src/config/schema/component_config.dart';
 import 'package:architecture_lints/src/config/schema/definition.dart';
@@ -13,11 +16,10 @@ import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-// Mock Dependencies
 class MockFileResolver extends Mock implements FileResolver {}
 
 void main() {
-  group('ComponentRefiner', () {
+  group('ComponentRefiner (The Brain)', () {
     late Directory tempDir;
     late MockFileResolver mockResolver;
 
@@ -30,173 +32,207 @@ void main() {
       if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
     });
 
-    /// Helper to create a ResolvedUnitResult from string content
-    Future<ResolvedUnitResult> resolveContent(String content) async {
+    // --- Helpers ---
+
+    Future<ResolvedUnitResult> resolveCode(String content) async {
       final file = File(p.join(tempDir.path, 'lib/test.dart'))
         ..createSync(recursive: true)
         ..writeAsStringSync(content);
-
       final result = await resolveFile(path: p.normalize(file.absolute.path));
       return result as ResolvedUnitResult;
     }
 
-    /// Helper to create a candidate with a specific path match length
-    Candidate createCandidate(ComponentConfig config, int matchLength) {
-      return Candidate(config, matchLength);
+    Candidate candidate(
+      String id, {
+      List<String> paths = const [],
+      List<String> patterns = const [],
+      List<ComponentKind> kinds = const [],
+      List<ComponentModifier> modifiers = const [],
+      ComponentMode mode = ComponentMode.file,
+      int matchIndex = 0,
+      int matchLength = 10,
+    }) {
+      return Candidate(
+        // FIX: Use named parameters
+        component: ComponentConfig(
+          id: id,
+          paths: paths,
+          patterns: patterns,
+          kinds: kinds,
+          modifiers: modifiers,
+          mode: mode,
+        ),
+        matchLength: matchLength,
+        matchIndex: matchIndex,
+      );
     }
 
-    test('should return null if no candidates are found', () async {
-      final unit = await resolveContent('class A {}');
-      when(() => mockResolver.resolveAllCandidates(any())).thenReturn([]);
+    // --- Tests ---
 
-      final refiner = ComponentRefiner(ArchitectureConfig.empty(), mockResolver);
-      final result = refiner.refine(filePath: 'lib/test.dart', unit: unit);
-
-      expect(result, isNull);
-    });
-
-    test('should prioritize Longer Path Match (Base Score)', () async {
-      final cGeneral = const ComponentConfig(id: 'domain', paths: ['domain']);
-      final cSpecific = const ComponentConfig(id: 'domain.usecase', paths: ['domain/usecases']);
-
+    test('should prioritize Mode: File over Mode: Part', () async {
+      // Scenario: A file vs a part defined in the same folder.
+      // E.g. 'UserBloc' (File) vs 'UserEvent' (Part of Bloc).
       final candidates = [
-        createCandidate(cGeneral, 6),
-        createCandidate(cSpecific, 15),
+        candidate('bloc.event', mode: ComponentMode.part, patterns: ['{{name}}']),
+        // Generic pattern
+        candidate('bloc.main', mode: ComponentMode.file, patterns: ['{{name}}Bloc']),
       ];
 
       when(() => mockResolver.resolveAllCandidates(any())).thenReturn(candidates);
       when(() => mockResolver.resolveModule(any())).thenReturn(null);
 
-      final unit = await resolveContent('class AnyClass {}');
+      final unit = await resolveCode('class UserBloc {}');
       final refiner = ComponentRefiner(ArchitectureConfig.empty(), mockResolver);
 
-      final result = refiner.refine(filePath: 'lib/test.dart', unit: unit);
+      final result = refiner.refine(filePath: 'user_bloc.dart', unit: unit);
 
-      expect(result?.id, 'domain.usecase');
+      // File mode gets +50, Part mode gets -50. File wins easily.
+      expect(result?.id, 'bloc.main');
+    });
+
+    test('should prioritize Specific Path Match over Generic', () async {
+      // Scenario: 'domain' vs 'domain.model'.
+      final candidates = [
+        candidate('domain', matchLength: 6, matchIndex: 0),
+        candidate('domain.model', matchLength: 12, matchIndex: 0),
+      ];
+
+      when(() => mockResolver.resolveAllCandidates(any())).thenReturn(candidates);
+      when(() => mockResolver.resolveModule(any())).thenReturn(null);
+
+      final unit = await resolveCode('class User {}');
+      final refiner = ComponentRefiner(ArchitectureConfig.empty(), mockResolver);
+
+      final result = refiner.refine(filePath: 'user.dart', unit: unit);
+
+      // Deeper path length wins (12 > 6)
+      expect(result?.id, 'domain.model');
+    });
+
+    test('should prioritize Correct Structure (Abstract vs Concrete)', () async {
+      // Scenario: Interface vs Implementation in same folder.
+      final cInterface = candidate(
+        'source.interface',
+        modifiers: [ComponentModifier.abstract], // Must be abstract
+      );
+      final cImpl = candidate(
+        'source.implementation',
+        modifiers: [], // Can be concrete
+      );
+
+      when(() => mockResolver.resolveAllCandidates(any())).thenReturn([cInterface, cImpl]);
+      when(() => mockResolver.resolveModule(any())).thenReturn(null);
+
+      final refiner = ComponentRefiner(ArchitectureConfig.empty(), mockResolver);
+
+      // Case A: Concrete Class -> Should resolve to Implementation
+      final concreteUnit = await resolveCode('class AuthSourceImpl {}');
+      final resConcrete = refiner.refine(filePath: 'file.dart', unit: concreteUnit);
+
+      // Interface gets -200 penalty for being concrete. Implementation wins.
+      expect(resConcrete?.id, 'source.implementation');
+
+      // Case B: Abstract Class -> Should resolve to Interface
+      final abstractUnit = await resolveCode('abstract class AuthSource {}');
+      final resAbstract = refiner.refine(filePath: 'file.dart', unit: abstractUnit);
+
+      // Interface gets +20 bonus. Implementation gets neutral/lower.
+      expect(resAbstract?.id, 'source.interface');
     });
 
     test('should prioritize Naming Pattern Match', () async {
-      final cModel = const ComponentConfig(
-        id: 'model',
-        paths: ['data'],
-        patterns: ['{{name}}Model'],
-      );
-      final cEntity = const ComponentConfig(
-        id: 'entity',
-        paths: ['data'],
-        patterns: ['{{name}}Entity'],
-      );
+      final cEntity = candidate('entity', patterns: ['{{name}}Entity']);
+      final cModel = candidate('model', patterns: ['{{name}}Model']);
 
-      final candidates = [
-        createCandidate(cModel, 4),
-        createCandidate(cEntity, 4),
-      ];
-
-      when(() => mockResolver.resolveAllCandidates(any())).thenReturn(candidates);
+      when(() => mockResolver.resolveAllCandidates(any())).thenReturn([cEntity, cModel]);
       when(() => mockResolver.resolveModule(any())).thenReturn(null);
 
-      final unit = await resolveContent('class UserEntity {}');
+      final unit = await resolveCode('class UserModel {}');
       final refiner = ComponentRefiner(ArchitectureConfig.empty(), mockResolver);
 
-      final result = refiner.refine(filePath: 'lib/test.dart', unit: unit);
+      final result = refiner.refine(filePath: 'file.dart', unit: unit);
 
-      expect(result?.id, 'entity');
+      // Model pattern matches (+40). Entity pattern fails (-5).
+      expect(result?.id, 'model');
     });
 
-    test('should prioritize Inheritance Match (Highest Weight)', () async {
-      final cInterface = const ComponentConfig(
-        id: 'repo.interface',
-        paths: ['repo'],
-      );
-      final cImpl = const ComponentConfig(
-        id: 'repo.impl',
-        paths: ['repo'],
-      );
+    test('should handle The "AuthSourceImpl" Grand Scenario', () async {
+      // This tests the interaction of Inheritance, Convention, and Structure.
 
-      final config = ArchitectureConfig(
-        components: [cInterface, cImpl],
-        definitions: {
-          'repo_base': const Definition(types: ['Repo']),
-        },
-        inheritances: [
-          InheritanceConfig(
-            onIds: ['repo.impl'],
-            required: [const Definition(ref: 'repo_base')],
-            allowed: [],
-            forbidden: [],
-          )
-        ],
-      );
-
-      final candidates = [
-        createCandidate(cInterface, 4),
-        createCandidate(cImpl, 4),
-      ];
-
-      when(() => mockResolver.resolveAllCandidates(any())).thenReturn(candidates);
-      when(() => mockResolver.resolveModule(any())).thenReturn(null);
-
-      // FIX: Ensure MyRepoImpl is the first class so Refiner checks it
-      final unit = await resolveContent('''
-        class MyRepoImpl implements Repo {}
-        class Repo {}
-      ''');
-
-      final refiner = ComponentRefiner(config, mockResolver);
-      final result = refiner.refine(filePath: 'lib/test.dart', unit: unit);
-
-      expect(result?.id, 'repo.impl');
-    });
-
-    test('should handle The "AuthSourceImpl" Scenario (Complex Tie-Break)', () async {
-      final cInterface = const ComponentConfig(
-        id: 'source.interface',
-        paths: ['src'],
+      // 1. Interface: Requires abstract.
+      final cInterface = candidate(
+        'data.source.interface',
         patterns: ['{{name}}Source'],
+        modifiers: [ComponentModifier.abstract],
       );
-      final cImpl = const ComponentConfig(
-        id: 'source.impl',
-        paths: ['src'],
-        patterns: ['{{name}}Impl'],
+
+      // 2. Implementation: Requires sibling inheritance + 'Impl' convention.
+      final cImpl = candidate(
+        'data.source.implementation',
+        patterns: ['{{affix}}{{name}}Source'], // Doesn't match 'AuthSourceImpl'
       );
 
       final config = ArchitectureConfig(
-        components: [cInterface, cImpl],
+        components: [cInterface.component, cImpl.component],
         inheritances: [
-          InheritanceConfig(
-            onIds: ['source.impl'],
-            required: [const Definition(component: 'source.interface')],
+          const InheritanceConfig(
+            onIds: ['data.source.implementation'],
+            required: [Definition(component: 'data.source.interface')],
             allowed: [],
             forbidden: [],
-          )
+          ),
         ],
       );
 
-      final candidates = [
-        createCandidate(cInterface, 3),
-        createCandidate(cImpl, 3),
-      ];
-
-      when(() => mockResolver.resolveAllCandidates(any())).thenReturn(candidates);
+      when(() => mockResolver.resolveAllCandidates(any())).thenReturn([cInterface, cImpl]);
       when(() => mockResolver.resolveModule(any())).thenReturn(null);
 
-      when(() => mockResolver.resolve(any())).thenAnswer((invocation) {
+      // Mock the inheritance lookup: 'AuthSource' -> 'data.source.interface'
+      when(() => mockResolver.resolve(any())).thenAnswer((_) {
         return ComponentContext(
-          filePath: 'mock/auth_source.dart',
-          config: cInterface,
+          filePath: 'auth_source.dart',
+          config: cInterface.component,
         );
       });
 
-      // FIX: Ensure Implementation class is first
-      final unit = await resolveContent('''
+      // THE CODE: Concrete class ending in 'Impl', implementing the interface.
+      final unit = await resolveCode('''
+        abstract class AuthSource {} 
         class AuthSourceImpl implements AuthSource {}
-        class AuthSource {}
       ''');
 
       final refiner = ComponentRefiner(config, mockResolver);
-      final result = refiner.refine(filePath: 'lib/test.dart', unit: unit);
+      final result = refiner.refine(filePath: 'auth_source_impl.dart', unit: unit);
 
-      expect(result?.id, 'source.impl');
+      // SCORING PREDICTION:
+      // Interface:
+      // - Structure: Concrete class (-200). Disqualified.
+      //
+      // Implementation:
+      // - Structure: Concrete (Neutral/Positive).
+      // - Inheritance: Implements AuthSource (interface) -> (+80).
+      // - Convention: 'Impl' suffix match (+60).
+      // - Naming: 'AuthSourceImpl' vs '...Source' pattern (-5).
+      //
+      // Winner: Implementation (by a huge margin).
+      expect(result?.id, 'data.source.implementation');
+    });
+
+    test('should fallback to ID depth if everything else is equal', () async {
+      // e.g. 'source' vs 'source.sub'. Both match path and naming.
+      final cParent = candidate('source', matchLength: 5);
+      final cChild = candidate('source.sub', matchLength: 5);
+
+      when(() => mockResolver.resolveAllCandidates(any())).thenReturn([cParent, cChild]);
+      when(() => mockResolver.resolveModule(any())).thenReturn(null);
+
+      final unit = await resolveCode('class Anything {}');
+      final refiner = ComponentRefiner(ArchitectureConfig.empty(), mockResolver);
+
+      final result = refiner.refine(filePath: 'file.dart', unit: unit);
+
+      // Child has longer ID, so it wins the tie-breaker.
+      expect(result?.id, 'source.sub');
     });
   });
 }

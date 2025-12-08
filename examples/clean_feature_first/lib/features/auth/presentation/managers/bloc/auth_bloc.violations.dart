@@ -9,7 +9,7 @@ import 'package:clean_feature_first/features/auth/presentation/managers/auth_blo
 // LINT: disallow_service_locator
 import 'package:get_it/get_it.dart';
 
-// ignore: arch_type_strict_inheritance
+// ignore: arch_type_strict_inheritance, arch_type_missing_base
 class LazyBloc extends Cubit<void> {
   final AuthPort _repo; // <-- Violation
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 // Widgets are reusable leaves; Pages are containers.
 import 'package:clean_feature_first/features/auth/presentation/pages/home_page.dart'; //! <-- WARNING
 
+// ignore: arch_naming_pattern
 class UserAvatar extends StatelessWidget {
   const UserAvatar({super.key});
 

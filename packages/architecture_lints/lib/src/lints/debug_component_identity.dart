@@ -1,7 +1,8 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-// Hide LintCode to avoid conflict
+// Hide LintCode to avoid conflict with custom_lint_builder
 import 'package:analyzer/error/error.dart' hide LintCode;
 import 'package:analyzer/error/listener.dart';
 import 'package:architecture_lints/src/config/schema/architecture_config.dart';
@@ -32,9 +33,10 @@ class DebugComponentIdentity extends ArchitectureLintRule {
     // Helper to report on any node with optional Type info
     void reportOn({
       required Object nodeOrToken, // AstNode or Token
-      required String typeLabel,   // "Class", "Return Value", "Invocation"
-      required String name,        // "User", "Future<void>"
-      DartType? dartType,          // Optional: The static type being analyzed
+      required String typeLabel, // "Class", "Return Value", "Invocation"
+      required String name, // "User", "Future<void>"
+      DartType? dartType, // Optional: The static type being analyzed
+      AstNode? astNode, // Optional: The node itself for structural inspection
     }) {
       final message = _generateDebugReport(
         typeLabel: typeLabel,
@@ -42,6 +44,8 @@ class DebugComponentIdentity extends ArchitectureLintRule {
         path: resolver.path,
         component: component,
         dartType: dartType,
+        astNode: astNode,
+        fileResolver: fileResolver,
       );
 
       if (nodeOrToken is AstNode) {
@@ -56,15 +60,16 @@ class DebugComponentIdentity extends ArchitectureLintRule {
     context.registry.addClassDeclaration((node) {
       reportOn(
         nodeOrToken: node.name,
-        typeLabel: 'Class Def',
+        typeLabel: 'Class Definition',
         name: node.name.lexeme,
+        astNode: node, // Pass node to inspect modifiers/extends
       );
     });
 
     context.registry.addMethodDeclaration((node) {
       reportOn(
         nodeOrToken: node.name,
-        typeLabel: 'Method Def',
+        typeLabel: 'Method Definition',
         name: node.name.lexeme,
         dartType: node.returnType?.type,
       );
@@ -73,7 +78,7 @@ class DebugComponentIdentity extends ArchitectureLintRule {
     context.registry.addVariableDeclaration((node) {
       reportOn(
         nodeOrToken: node.name,
-        typeLabel: 'Variable Def',
+        typeLabel: 'Variable Definition',
         name: node.name.lexeme,
         dartType: node.declaredElement?.type,
       );
@@ -90,16 +95,14 @@ class DebugComponentIdentity extends ArchitectureLintRule {
       );
     });
 
-    // --- 2. EXPRESSIONS & FLOW (The Logic) ---
+    // --- 2. EXPRESSIONS & FLOW ---
 
-    // Returns: Highlight the actual value being returned
+    // Returns
     context.registry.addReturnStatement((node) {
       final expression = node.expression;
       if (expression != null) {
-        // Truncate source if too long
         var source = expression.toSource();
         if (source.length > 30) source = '${source.substring(0, 27)}...';
-
         reportOn(
           nodeOrToken: expression,
           typeLabel: 'Return Value',
@@ -120,23 +123,23 @@ class DebugComponentIdentity extends ArchitectureLintRule {
       );
     });
 
-    // Method Invocations (e.g. GetIt.I.get(), repo.getData())
+    // Method Invocations
     context.registry.addMethodInvocation((node) {
       reportOn(
         nodeOrToken: node.methodName,
         typeLabel: 'Invocation',
         name: node.methodName.name,
-        dartType: node.staticType, // Shows what the method returns
+        dartType: node.staticType,
       );
     });
 
-    // Instantiations (e.g. AuthRepository())
+    // Instantiations
     context.registry.addInstanceCreationExpression((node) {
       reportOn(
         nodeOrToken: node.constructorName,
         typeLabel: 'Instantiation',
         name: node.constructorName.toSource(),
-        dartType: node.staticType, // Shows the type created
+        dartType: node.staticType,
       );
     });
   }
@@ -146,59 +149,77 @@ class DebugComponentIdentity extends ArchitectureLintRule {
     required String name,
     required String path,
     required ComponentContext? component,
+    required FileResolver fileResolver,
     DartType? dartType,
+    AstNode? astNode,
   }) {
     final sb = StringBuffer();
-    sb.writeln('[DEBUG REPORT: $typeLabel]');
-    sb.writeln('Name/Source: "$name"');
-    sb.writeln('--------------------------------------------------');
+    sb.writeln('[DEBUG: $typeLabel] "$name"');
+    sb.writeln('==================================================');
 
     // 1. RESOLUTION RESULT
     if (component != null) {
-      sb.writeln('✅ Component ID: "${component.id}"');
-      // sb.writeln('🏷️  Display Name: "${component.displayName}"');
+      sb.writeln('✅ RESOLVED: "${component.id}"');
       if (component.module != null) {
-        sb.writeln('📦 Module:       "${component.module!.key}"');
+        sb.writeln('📦 Module:   "${component.module!.key}"');
       }
+      sb.writeln('📂 Mode:     ${component.config.mode.name}');
     } else {
-      sb.writeln('❌ Component:    <NULL> (Orphan File)');
+      sb.writeln('❌ RESOLVED: <NULL> (Orphan)');
     }
 
-    // 2. TYPE ANALYSIS (Crucial for TypeSafety rules)
-    if (dartType != null) {
-      sb.writeln('\n🔬 Type Analysis:');
-      sb.writeln('   • Static Type: "${dartType.getDisplayString()}"');
-      sb.writeln('   • Type Class:  "${dartType.runtimeType}"');
+    // 2. SCORING LOG (Crucial for debugging Refiner logic)
+    if (component?.debugScoreLog != null) {
+      sb.writeln('\n🧮 SCORING LOG (Why was this chosen?):');
+      sb.writeln(component!.debugScoreLog!.trimRight());
+    } else {
+      // Fallback if no log exists (e.g. refiner wasn't run)
+      final candidates = fileResolver.resolveAllCandidates(path);
+      sb.writeln('\n📊 COMPETITION (Raw Path Match):');
+      if (candidates.isEmpty) {
+        sb.writeln('   (No components match path)');
+      } else {
+        for (final c in candidates) {
+          final isWinner = component?.id == c.component.id;
+          sb.writeln('${isWinner ? "➤" : " "} ${c.component.id} (Idx:${c.matchIndex}, Len:${c.matchLength})');
+        }
+      }
+    }
 
+    // 3. STRUCTURE ANALYSIS (If highlighting a class)
+    if (astNode is ClassDeclaration) {
+      sb.writeln('\n🏗️ CLASS STRUCTURE:');
+      final element = astNode.declaredFragment?.element;
+      if (element != null) {
+        sb.writeln('   • Name: "${element.name}"');
+        sb.writeln('   • Abstract? ${element.isAbstract}');
+        sb.writeln('   • Interface? ${element.isInterface}');
+        sb.writeln('   • Mixin Class? ${element.isMixinClass}');
+
+        final supertypes = element.allSupertypes
+            .map((t) => t.element.name)
+            .where((n) => n != 'Object')
+            .join(', ');
+        sb.writeln('   • Hierarchy: [ $supertypes ]');
+      }
+    }
+
+    // 4. TYPE ANALYSIS (If available)
+    if (dartType != null) {
+      sb.writeln('\n🔬 TYPE DETAILS:');
+      sb.writeln('   • Display: "${dartType.getDisplayString()}"');
       final element = dartType.element;
       if (element != null) {
-        // sb.writeln('   • Element:     "${element.name}" (${element.kind.displayName})');
-
-        final lib = element.library;
-        if (lib != null) {
-          // Use firstFragment for Analyzer 6.0+ compatibility
-          final uri = lib.firstFragment.source.uri.toString();
-          sb.writeln('   • Source URI:  "$uri"');
-        } else {
-          sb.writeln('   • Source URI:  <Unknown Library>');
-        }
-      } else {
-        sb.writeln('   • Element:     <Null> (Dynamic, Void, or Unresolved)');
+        sb.writeln('   • Element: ${element.name} (${element.kind.displayName})');
+        final uri = element.library?.firstFragment.source.uri.toString();
+        sb.writeln('   • Import:  $uri');
       }
-
       if (dartType.alias != null) {
-        sb.writeln('   • Type Alias:  "${dartType.alias!.element.name}"');
+        sb.writeln('   • Alias:   ${dartType.alias!.element.name}');
       }
     }
 
-    // 3. CONFIG MATCHING PREVIEW
-    if (component != null) {
-      sb.writeln('\n🔗 Component Matching:');
-      sb.writeln('   • "source"?               ${component.matchesReference("source")}');
-      sb.writeln('   • "source.implementation"? ${component.matchesReference("source.implementation")}');
-      sb.writeln('   • "data.source"?          ${component.matchesReference("data.source")}');
-    }
-
+    sb.writeln('==================================================');
     return sb.toString();
   }
 }

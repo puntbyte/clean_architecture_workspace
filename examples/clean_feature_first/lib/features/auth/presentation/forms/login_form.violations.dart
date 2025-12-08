@@ -11,7 +11,7 @@ import 'package:clean_feature_first/features/auth/domain/usecases/request_login.
 
 // ignore: arch_location
 class LoginForm extends StatelessWidget {
-  final Login loginUser; // <-- Violation
+  final RequestLogin loginUser; // <-- Violation
 
   const LoginForm({super.key, required this.loginUser});
 
