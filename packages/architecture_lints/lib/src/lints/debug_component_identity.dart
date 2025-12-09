@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 // Hide LintCode to avoid conflict
 import 'package:analyzer/error/error.dart' hide LintCode;
@@ -34,7 +35,9 @@ class DebugComponentIdentity extends ArchitectureLintRule {
       required String typeLabel,
       required String name,
       DartType? dartType,
+      Element? element,
       AstNode? astNode,
+      String? extraInfo,
     }) {
       final message = _generateDebugReport(
         typeLabel: typeLabel,
@@ -42,7 +45,9 @@ class DebugComponentIdentity extends ArchitectureLintRule {
         path: resolver.path,
         component: component,
         dartType: dartType,
+        element: element,
         astNode: astNode,
+        extraInfo: extraInfo,
         fileResolver: fileResolver,
       );
 
@@ -53,70 +58,185 @@ class DebugComponentIdentity extends ArchitectureLintRule {
       }
     }
 
-    // --- 0. FILE HEADER (Guaranteed Visibility) ---
+    // =========================================================================
+    // 1. FILE CONTEXT (Header)
+    // =========================================================================
     context.registry.addCompilationUnit((node) {
-      // Try to find the first directive (import/export/part)
-      final firstNode = node.directives.firstOrNull ??
-          node.declarations.firstOrNull; // Or first class
+      final target = node.directives.firstOrNull ??
+          node.declarations.firstOrNull;
 
-      if (firstNode != null) {
+      if (target != null) {
+        // Find a token to hang the file report on
+        final token = target is AnnotatedNode
+            ? target.firstTokenAfterCommentAndMetadata
+            : target.beginToken;
+
         reportOn(
-          nodeOrToken: firstNode,
-          typeLabel: 'FILE RESOLUTION',
+          nodeOrToken: token,
+          typeLabel: 'FILE CONTEXT',
           name: resolver.path.split('/').last,
         );
       }
     });
 
-    // --- 1. DEFINITIONS ---
+    // =========================================================================
+    // 2. DIRECTIVES (Imports/Exports)
+    // =========================================================================
+    context.registry.addImportDirective((node) {
+      final libImport = node.libraryImport;
+      final importedLib = libImport?.importedLibrary;
+
+      var info = '';
+      if (importedLib != null) {
+        info = 'Source: ${importedLib.firstFragment.source.fullName}';
+      }
+
+      reportOn(
+        nodeOrToken: node.uri,
+        typeLabel: 'Import',
+        name: node.uri.stringValue ?? '???',
+        element: null, // LibraryImport is not an Element we want to display as "Element: ..."
+        extraInfo: info,
+      );
+    });
+
+    context.registry.addExportDirective((node) {
+      reportOn(
+        nodeOrToken: node.uri,
+        typeLabel: 'Export',
+        name: node.uri.stringValue ?? '???',
+      );
+    });
+
+    context.registry.addAnnotation((node) {
+      reportOn(
+        nodeOrToken: node.name,
+        typeLabel: 'Annotation',
+        name: node.name.name,
+        element: node.element,
+      );
+    });
+
+    // =========================================================================
+    // 3. DEFINITIONS (Classes, Methods, Vars)
+    // =========================================================================
 
     context.registry.addClassDeclaration((node) {
       reportOn(
         nodeOrToken: node.name,
-        typeLabel: 'Class Definition',
+        typeLabel: 'Class Def',
         name: node.name.lexeme,
-        astNode: node,
+        astNode: node, // Pass node for Structure analysis
+        element: node.declaredFragment?.element,
       );
+    });
+
+    context.registry.addMixinDeclaration((node) {
+      reportOn(
+        nodeOrToken: node.name,
+        typeLabel: 'Mixin Def',
+        name: node.name.lexeme,
+        element: node.declaredFragment?.element,
+      );
+    });
+
+    context.registry.addEnumDeclaration((node) {
+      reportOn(
+        nodeOrToken: node.name,
+        typeLabel: 'Enum Def',
+        name: node.name.lexeme,
+        element: node.declaredFragment?.element,
+      );
+    });
+
+    context.registry.addExtensionDeclaration((node) {
+      reportOn(
+        nodeOrToken: node.name ?? node.firstTokenAfterCommentAndMetadata,
+        typeLabel: 'Extension Def',
+        name: node.name?.lexeme ?? '<unnamed>',
+        element: node.declaredFragment?.element,
+      );
+    });
+
+    context.registry.addConstructorDeclaration((node) {
+      reportOn(
+        nodeOrToken: node.name ?? node.returnType,
+        typeLabel: 'Constructor',
+        name: node.name?.lexeme ?? node.returnType.name,
+        element: node.declaredFragment?.element,
+      );
+    });
+
+    context.registry.addFieldDeclaration((node) {
+      for (final variable in node.fields.variables) {
+        reportOn(
+          nodeOrToken: variable.name,
+          typeLabel: 'Field',
+          name: variable.name.lexeme,
+          dartType: variable.declaredElement?.type,
+          element: variable.declaredElement,
+        );
+      }
     });
 
     context.registry.addMethodDeclaration((node) {
       reportOn(
         nodeOrToken: node.name,
-        typeLabel: 'Method Definition',
+        typeLabel: 'Method',
         name: node.name.lexeme,
         dartType: node.returnType?.type,
+        element: node.declaredFragment?.element,
       );
     });
 
     context.registry.addVariableDeclaration((node) {
+      // Local variables (exclude fields which are handled above)
+      if (node.parent?.parent is! FieldDeclaration) {
+        reportOn(
+          nodeOrToken: node.name,
+          typeLabel: 'Variable',
+          name: node.name.lexeme,
+          dartType: node.declaredElement?.type,
+        );
+      }
+    });
+
+    context.registry.addFormalParameter((node) {
+      final name = node.name?.lexeme ?? '<unnamed>';
+      final type = node.declaredFragment?.element.type;
       reportOn(
-        nodeOrToken: node.name,
-        typeLabel: 'Variable Definition',
-        name: node.name.lexeme,
-        dartType: node.declaredElement?.type,
+        nodeOrToken: node.name ?? node,
+        typeLabel: 'Parameter',
+        name: name,
+        dartType: type,
       );
     });
 
-    // Highlight Type Aliases (typedefs)
-    context.registry.addGenericTypeAlias((node) {
+    // =========================================================================
+    // 4. TYPE REFERENCES (Inheritance & Usage)
+    // =========================================================================
+
+    context.registry.addNamedType((node) {
+      // Avoid highlighting definitions themselves
+      if (node.parent is ClassDeclaration ||
+          node.parent is ConstructorDeclaration ||
+          node.parent is MethodDeclaration) {
+        // Note: We DO want Extends/Implements/With to be highlighted for debugging inheritance
+        return;
+      }
+
       reportOn(
-        nodeOrToken: node.name,
-        typeLabel: 'Typedef',
-        name: node.name.lexeme,
-        astNode: node,
+        nodeOrToken: node.name2,
+        typeLabel: 'Type Ref',
+        name: node.name2.lexeme,
+        dartType: node.type,
+        element: node.element,
       );
     });
 
-    context.registry.addFunctionTypeAlias((node) {
-      reportOn(
-        nodeOrToken: node.name,
-        typeLabel: 'Typedef (Legacy)',
-        name: node.name.lexeme,
-        astNode: node,
-      );
-    });
-
-    // --- 2. EXPRESSIONS & FLOW ---
+    // =========================================================================
+    // 5. FLOW & LOGIC
+    // =========================================================================
 
     context.registry.addReturnStatement((node) {
       final expression = node.expression;
@@ -125,7 +245,7 @@ class DebugComponentIdentity extends ArchitectureLintRule {
         if (source.length > 30) source = '${source.substring(0, 27)}...';
         reportOn(
           nodeOrToken: expression,
-          typeLabel: 'Return Value',
+          typeLabel: 'Return',
           name: source,
           dartType: expression.staticType,
         );
@@ -148,15 +268,24 @@ class DebugComponentIdentity extends ArchitectureLintRule {
         typeLabel: 'Invocation',
         name: node.methodName.name,
         dartType: node.staticType,
+        element: node.methodName.element,
       );
     });
 
     context.registry.addInstanceCreationExpression((node) {
+      // Correct way to get element for ConstructorName
+      final cName = node.constructorName;
+      final element = cName.name?.element; // For named constructors .from()
+      // Fallback for unnamed could be harder to reach via element directly on name,
+      // usually staticElement on ConstructorName worked but is deprecated.
+      // We rely on staticType for basic info.
+
       reportOn(
-        nodeOrToken: node.constructorName,
+        nodeOrToken: cName,
         typeLabel: 'Instantiation',
-        name: node.constructorName.toSource(),
+        name: cName.toSource(),
         dartType: node.staticType,
+        element: element,
       );
     });
   }
@@ -168,7 +297,9 @@ class DebugComponentIdentity extends ArchitectureLintRule {
     required ComponentContext? component,
     required FileResolver fileResolver,
     DartType? dartType,
+    Element? element,
     AstNode? astNode,
+    String? extraInfo,
   }) {
     final sb = StringBuffer();
     sb.writeln('[DEBUG: $typeLabel] "$name"');
@@ -182,44 +313,63 @@ class DebugComponentIdentity extends ArchitectureLintRule {
       }
       sb.writeln('📂 Mode:     ${component.config.mode.name}');
     } else {
-      sb.writeln('❌ RESOLVED: <NULL> (Orphan)');
+      sb.writeln('❌ RESOLVED: <NULL> (Orphan File)');
     }
 
-    // 2. SCORING LOG
-    if (component?.debugScoreLog != null) {
-      sb.writeln('\n🧮 SCORING LOG:');
-      sb.writeln(component!.debugScoreLog!.trimRight());
-    } else {
-      // Fallback
-      final candidates = fileResolver.resolveAllCandidates(path);
-      sb.writeln('\n📊 COMPETITION (Raw Path Match):');
-      if (candidates.isEmpty) {
-        sb.writeln('   (No components match path)');
-      } else {
-        for (final c in candidates) {
-          final isWinner = component?.id == c.component.id;
-          sb.writeln('${isWinner ? "➤" : " "} ${c.component.id} (Idx:${c.matchIndex}, Len:${c.matchLength})');
+    // 2. ELEMENT & TYPE ANALYSIS
+    if (dartType != null || element != null || extraInfo != null) {
+      sb.writeln('\n🔬 ANALYSIS:');
+      if (dartType != null) {
+        sb.writeln('   • Type:    "${dartType.getDisplayString()}"');
+        if (dartType.alias != null) {
+          sb.writeln('   • Alias:   "${dartType.alias!.element.name}"');
         }
       }
-    }
-
-    // 3. STRUCTURE ANALYSIS
-    if (astNode is ClassDeclaration) {
-      sb.writeln('\n🏗️ CLASS STRUCTURE:');
-      final element = astNode.declaredFragment?.element;
       if (element != null) {
-        sb.writeln('   • Name: "${element.name}"');
-        sb.writeln('   • Abstract? ${element.isAbstract}');
-        sb.writeln('   • Interface? ${element.isInterface}');
-        final supertypes = element.allSupertypes
-            .map((t) => t.element.name)
-            .where((n) => n != 'Object')
-            .join(', ');
-        sb.writeln('   • Hierarchy: [ $supertypes ]');
+        final kindName = element.kind.displayName;
+        sb.writeln('   • Element: "${element.name}" ($kindName)');
+
+        final lib = element.library;
+        if (lib != null) {
+          final uri = lib.firstFragment.source.uri.toString();
+          sb.writeln('   • Import:  "$uri"');
+        }
+      }
+      if (extraInfo != null) {
+        sb.writeln('   • Info:    $extraInfo');
       }
     }
 
-    sb.writeln('==================================================');
+    // 3. STRUCTURAL ANALYSIS (For Classes/Mixins)
+    if (astNode is ClassDeclaration) {
+      sb.writeln('\n🏗️ STRUCTURE:');
+      final el = astNode.declaredFragment?.element;
+      if (el != null) {
+        sb.writeln('   • Abstract? ${el.isAbstract}');
+        sb.writeln('   • Interface? ${el.isInterface}');
+
+        final supertypes = el.allSupertypes
+            .map((t) => t.element.name)
+            .whereType<String>()
+            .where((n) => n != 'Object')
+            .toList();
+
+        sb.writeln('   • Hierarchy: ${_formatList(supertypes)}');
+      }
+    }
+
+    // 4. SCORING LOG
+    if (component?.debugScoreLog != null) {
+      sb.writeln('\n🧮 SCORING LOG:');
+      sb.write(component!.debugScoreLog!.trimRight());
+    }
+
+    sb.writeln('\n==================================================');
     return sb.toString();
+  }
+
+  String _formatList(List<String> items) {
+    if (items.isEmpty) return '[]';
+    return '[ ${items.join(", ")} ]';
   }
 }

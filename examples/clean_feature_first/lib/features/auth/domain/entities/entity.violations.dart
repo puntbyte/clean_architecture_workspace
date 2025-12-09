@@ -18,7 +18,7 @@ import 'package:injectable/injectable.dart'; //! <-- LINT WARNING
 // REASON: Entities should be POJOs; Dependency Injection annotations are forbidden.
 @Injectable() @lazySingleton //! <-- LINT WARNING
 // ignore: arch_member_missing
-class AnnotatedUser extends Entity {}
+class AnnotatedUser implements Entity {}
 
 // LINT: [5] arch_naming_antipattern
 // REASON: Name matches antipattern `{{name}}Entity`; use `User` instead.

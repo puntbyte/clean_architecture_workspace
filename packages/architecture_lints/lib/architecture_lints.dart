@@ -36,7 +36,7 @@ class _ArchitectureLintsPlugin extends PluginBase {
   @override
   List<LintRule> getLintRules(CustomLintConfigs configs) {
     return [
-      //const DebugComponentIdentity(),
+      const DebugComponentIdentity(),
 
       const OrphanFileRule(),
 
