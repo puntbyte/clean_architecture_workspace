@@ -9,7 +9,10 @@ class NodeWrapper {
   final AstNode node;
   final Map<String, Definition> definitions;
 
-  const NodeWrapper(this.node, {this.definitions = const {}});
+  const NodeWrapper(
+    this.node, {
+    this.definitions = const {},
+  });
 
   factory NodeWrapper.create(AstNode node, [Map<String, Definition> definitions = const {}]) {
     if (node is MethodDeclaration) return MethodWrapper(node, definitions: definitions);

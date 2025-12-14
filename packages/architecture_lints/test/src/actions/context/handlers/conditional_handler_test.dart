@@ -21,7 +21,7 @@ void main() {
           .first;
 
       engine = ExpressionEngine(
-        sourceNode: method,
+        node: method,
         config: ArchitectureConfig.empty(),
       );
       handler = ConditionalHandler(engine);

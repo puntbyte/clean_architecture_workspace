@@ -7,10 +7,10 @@ class ListWrapper<E> with IterableMixin<E> {
 
   const ListWrapper(this._inner);
 
-  static MemberAccessor<ListWrapper> get accessor =>
-      const MemberAccessor<ListWrapper>.fallback(_getMember);
+  static MemberAccessor<ListWrapper<dynamic>> get accessor =>
+      const MemberAccessor<ListWrapper<dynamic>>.fallback(_getMember);
 
-  static dynamic _getMember(ListWrapper obj, String name) => switch (name) {
+  static dynamic _getMember(ListWrapper<dynamic> obj, String name) => switch (name) {
     'hasMany' => obj.hasMany,
     'isSingle' => obj.isSingle,
     'isEmpty' => obj.isEmpty,

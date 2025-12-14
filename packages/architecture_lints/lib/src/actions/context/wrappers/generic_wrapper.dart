@@ -4,13 +4,13 @@ import 'package:architecture_lints/src/actions/context/wrappers/type_wrapper.dar
 import 'package:expressions/expressions.dart';
 
 class GenericWrapper {
-  /// The base type name (e.g. "Future", "Either", "Map").
   final StringWrapper base;
-
-  /// The list of generic arguments (e.g. [String, int]).
   final ListWrapper<TypeWrapper> args;
 
-  const GenericWrapper(this.base, this.args);
+  const GenericWrapper(
+    this.base,
+    this.args,
+  );
 
   static MemberAccessor<GenericWrapper> get accessor =>
       const MemberAccessor<GenericWrapper>.fallback(_getMember);

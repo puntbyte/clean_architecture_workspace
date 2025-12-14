@@ -12,10 +12,10 @@ class ListHandler extends VariableHandler {
 
   @override
   dynamic handle(
-      VariableConfig config,
-      Map<String, dynamic> context,
-      VariableResolver resolver,
-      ) {
+    VariableConfig config,
+    Map<String, dynamic> context,
+    VariableResolver resolver,
+  ) {
     final result = <dynamic>[];
 
     // A. From Source
@@ -26,10 +26,7 @@ class ListHandler extends VariableHandler {
       // print('[ListHandler] Source type: ${source.runtimeType}');
 
       // Unwrap ListWrapper
-      if (source is ListWrapper) {
-        source = source.toList();
-        // print('[ListHandler] Unwrapped ListWrapper. Length: ${source.length}');
-      }
+      if (source is ListWrapper) source = source.toList();
 
       if (source is Iterable) {
         final mappedItems = source.map((item) {

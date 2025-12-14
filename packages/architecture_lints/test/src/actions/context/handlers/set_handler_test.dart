@@ -18,7 +18,7 @@ void main() {
       final node = unit.unit.declarations.first;
       final config = ArchitectureConfig.empty();
 
-      final engine = ExpressionEngine(sourceNode: node, config: config);
+      final engine = ExpressionEngine(node: node, config: config);
 
       // SetHandler usually needs ImportExtractor for the resolver's context,
       // but the SetHandler logic itself just aggregates.

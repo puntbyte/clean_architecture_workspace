@@ -27,7 +27,7 @@ void main() {
       final method = clazz.members.whereType<MethodDeclaration>().first;
 
       final config = ArchitectureConfig.empty();
-      engine = ExpressionEngine(sourceNode: method, config: config);
+      engine = ExpressionEngine(node: method, config: config);
       handler = ListHandler(engine);
 
       // We need a real resolver because ListHandler calls resolver.resolveConfig recursively

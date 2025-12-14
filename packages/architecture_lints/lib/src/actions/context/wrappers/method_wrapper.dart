@@ -9,7 +9,10 @@ import 'package:expressions/expressions.dart';
 class MethodWrapper extends NodeWrapper {
   final MethodDeclaration method;
 
-  const MethodWrapper(this.method, {super.definitions = const {}}) : super(method);
+  const MethodWrapper(
+    this.method, {
+    super.definitions = const {},
+  }) : super(method);
 
   static MemberAccessor<MethodWrapper> get accessor =>
       const MemberAccessor<MethodWrapper>.fallback(_getMember);

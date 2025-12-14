@@ -63,15 +63,20 @@ class ConfigWrapper {
     }
 
     List<Definition> mapConstraints(List<AnnotationConstraint> constraints) {
-      final defs = <Definition>[];
+      final definitions = <Definition>[];
 
-      for (final c in constraints) {
-        for (final type in c.types) {
-          defs.add(Definition(types: [type], imports: c.import != null ? [c.import!] : []));
+      for (final constraint in constraints) {
+        for (final type in constraint.types) {
+          definitions.add(
+            Definition(
+              types: [type],
+              imports: constraint.import != null ? [constraint.import!] : [],
+            ),
+          );
         }
       }
 
-      return defs;
+      return definitions;
     }
 
     // Note: If you want these lists to support .hasMany/.isEmpty in templates,

@@ -7,7 +7,10 @@ import 'package:expressions/expressions.dart';
 class ParameterWrapper extends NodeWrapper {
   final FormalParameter param;
 
-  const ParameterWrapper(this.param, {super.definitions = const {}}) : super(param);
+  const ParameterWrapper(
+    this.param, {
+    super.definitions = const {},
+  }) : super(param);
 
   static MemberAccessor<ParameterWrapper> get accessor =>
       const MemberAccessor<ParameterWrapper>.fallback(_getMember);

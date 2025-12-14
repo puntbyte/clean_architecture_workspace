@@ -17,7 +17,7 @@ void main() {
       final unit = await resolveContent('class A {}');
       final node = unit.unit.declarations.first;
       final config = ArchitectureConfig.empty();
-      final engine = ExpressionEngine(sourceNode: node, config: config);
+      final engine = ExpressionEngine(node: node, config: config);
 
       handler = MapHandler(engine);
       resolver = VariableResolver(sourceNode: node, config: config, packageName: 'test');

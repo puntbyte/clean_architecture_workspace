@@ -21,19 +21,19 @@ class VariableResolver {
     required AstNode sourceNode,
     required ArchitectureConfig config,
     required String packageName,
-  }) : _engine = ExpressionEngine(sourceNode: sourceNode, config: config),
+  }) : _engine = ExpressionEngine(node: sourceNode, config: config),
        _importExtractor = ImportExtractor(packageName, rewrites: config.importRewrites),
        _conditionalHandler = ConditionalHandler(
-         ExpressionEngine(sourceNode: sourceNode, config: config),
+         ExpressionEngine(node: sourceNode, config: config),
        ),
        _listHandler = ListHandler(
-         ExpressionEngine(sourceNode: sourceNode, config: config),
+         ExpressionEngine(node: sourceNode, config: config),
        ),
        _setHandler = SetHandler(
-         ExpressionEngine(sourceNode: sourceNode, config: config),
+         ExpressionEngine(node: sourceNode, config: config),
        ),
        _mapHandler = MapHandler(
-         ExpressionEngine(sourceNode: sourceNode, config: config),
+         ExpressionEngine(node: sourceNode, config: config),
        );
 
   Map<String, dynamic> resolveMap(Map<String, dynamic> variablesConfig) {
@@ -41,6 +41,7 @@ class VariableResolver {
 
     variablesConfig.forEach((key, value) {
       dynamic resolvedValue;
+
       if (value is String) {
         resolvedValue = _engine.evaluate(value, result);
       } else if (value is VariableConfig) {

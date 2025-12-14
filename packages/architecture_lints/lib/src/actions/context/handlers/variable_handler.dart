@@ -18,14 +18,12 @@ abstract class VariableHandler {
   );
 
   /// Helper to build the rich metadata map for collections.
-  Map<String, dynamic> buildListMeta(List<dynamic> items) {
-    return {
-      'items': items,
-      'length': items.length,
-      'isEmpty': items.isEmpty,
-      'isNotEmpty': items.isNotEmpty,
-      'hasMany': items.length > 1,
-      'isSingle': items.length == 1,
-    };
-  }
+  Map<String, dynamic> buildListMeta(List<dynamic> items) => {
+    'items': items,
+    'length': items.length,
+    'isEmpty': items.isEmpty,
+    'isNotEmpty': items.isNotEmpty,
+    'hasMany': items.length > 1,
+    'isSingle': items.length == 1,
+  };
 }

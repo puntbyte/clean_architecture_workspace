@@ -17,10 +17,10 @@ class ExpressionEngine {
   final RegExp _interpolationRegex = RegExp(r'\$\{([^}]+)\}');
 
   ExpressionEngine({
-    required AstNode sourceNode,
+    required AstNode node,
     required ArchitectureConfig config,
   }) : _evaluator = evaluator(),
-       rootContext = _rootContext(sourceNode, config);
+       rootContext = _rootContext(node, config);
 
   static ExpressionEvaluator evaluator() => ExpressionEvaluator(
     memberAccessors: [

@@ -33,7 +33,7 @@ void main() {
       );
 
       // 3. Initialize Engine
-      engine = ExpressionEngine(sourceNode: method, config: mockConfig);
+      engine = ExpressionEngine(node: method, config: mockConfig);
     });
 
     group('evaluate()', () {

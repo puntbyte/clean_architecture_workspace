@@ -9,10 +9,10 @@ class SetHandler extends VariableHandler {
 
   @override
   dynamic handle(
-      VariableConfig config,
-      Map<String, dynamic> context,
-      VariableResolver resolver,
-      ) {
+    VariableConfig config,
+    Map<String, dynamic> context,
+    VariableResolver resolver,
+  ) {
     final result = <dynamic>{};
 
     // 1. From
