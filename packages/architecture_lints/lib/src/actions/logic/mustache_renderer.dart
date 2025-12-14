@@ -10,8 +10,9 @@ class MustacheRenderer {
       final template = Template(
         templateString,
         lenient: true,
-        htmlEscapeValues: false, // FIX: Disable HTML escaping
+        htmlEscapeValues: false,
       );
+
       return template.renderString(context);
     } catch (e) {
       return '/* Error rendering template: $e */';
