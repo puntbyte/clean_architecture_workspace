@@ -28,7 +28,7 @@ void main() {
       when(() => config.antipatterns).thenReturn(['test_*']);
       when(() => config.grammar).thenReturn(['snake_case']);
 
-      final ctx = ComponentContext(filePath: filePath, config: config, module: null);
+      final ctx = ComponentContext(filePath: filePath, definition: config, module: null);
 
       expect(ctx.id, equals('data.source.implementation'));
       expect(ctx.displayName, equals('Source Implementation'));
@@ -43,7 +43,7 @@ void main() {
       when(() => config.id).thenReturn('data.source.implementation');
       when(() => module.key).thenReturn('my-module-key');
 
-      final ctx = ComponentContext(filePath: filePath, config: config, module: module);
+      final ctx = ComponentContext(filePath: filePath, definition: config, module: module);
 
       expect(ctx.matchesReference('my-module-key'), isTrue);
     });
@@ -51,7 +51,7 @@ void main() {
     test('returns true for exact id match', () {
       when(() => config.id).thenReturn('data.source.implementation');
 
-      final ctx = ComponentContext(filePath: filePath, config: config);
+      final ctx = ComponentContext(filePath: filePath, definition: config);
 
       expect(ctx.matchesReference('data.source.implementation'), isTrue);
     });
@@ -61,7 +61,7 @@ void main() {
       // ref: source.implementation -> suffix match
       when(() => config.id).thenReturn('data.source.implementation');
 
-      final ctx = ComponentContext(filePath: filePath, config: config);
+      final ctx = ComponentContext(filePath: filePath, definition: config);
 
       expect(ctx.matchesReference('source.implementation'), isTrue);
     });
@@ -71,7 +71,7 @@ void main() {
       // ref: data.source -> prefix match
       when(() => config.id).thenReturn('data.source.implementation');
 
-      final ctx = ComponentContext(filePath: filePath, config: config);
+      final ctx = ComponentContext(filePath: filePath, definition: config);
 
       expect(ctx.matchesReference('data.source'), isTrue);
     });
@@ -81,7 +81,7 @@ void main() {
       // ref: b.c -> middle match
       when(() => config.id).thenReturn('a.b.c.d');
 
-      final ctx = ComponentContext(filePath: filePath, config: config);
+      final ctx = ComponentContext(filePath: filePath, definition: config);
 
       expect(ctx.matchesReference('b.c'), isTrue);
     });
@@ -91,7 +91,7 @@ void main() {
       // ref: x.y.z (longer) -> false early
       when(() => config.id).thenReturn('a.b');
 
-      final ctx = ComponentContext(filePath: filePath, config: config);
+      final ctx = ComponentContext(filePath: filePath, definition: config);
 
       expect(ctx.matchesReference('x.y.z'), isFalse);
     });
@@ -99,7 +99,7 @@ void main() {
     test('returns false when no contiguous match found', () {
       when(() => config.id).thenReturn('alpha.beta.gamma');
 
-      final ctx = ComponentContext(filePath: filePath, config: config);
+      final ctx = ComponentContext(filePath: filePath, definition: config);
 
       expect(ctx.matchesReference('beta.gamma.delta'), isFalse);
       expect(ctx.matchesReference('zeta'), isFalse);
@@ -110,7 +110,7 @@ void main() {
     test('returns true if any reference matches', () {
       when(() => config.id).thenReturn('data.source.implementation');
 
-      final ctx = ComponentContext(filePath: filePath, config: config);
+      final ctx = ComponentContext(filePath: filePath, definition: config);
 
       expect(ctx.matchesAny(['no.match', 'source.implementation', 'other']), isTrue);
     });
@@ -118,7 +118,7 @@ void main() {
     test('returns false if none match', () {
       when(() => config.id).thenReturn('data.source.implementation');
 
-      final ctx = ComponentContext(filePath: filePath, config: config);
+      final ctx = ComponentContext(filePath: filePath, definition: config);
 
       expect(ctx.matchesAny(['no.match', 'another.one']), isFalse);
     });
@@ -126,7 +126,7 @@ void main() {
     test('returns true when match appears later in a long list of references', () {
       when(() => config.id).thenReturn('a.b.c.d');
 
-      final ctx = ComponentContext(filePath: filePath, config: config);
+      final ctx = ComponentContext(filePath: filePath, definition: config);
 
       // matching ref is near the end of the list
       final refs = [
@@ -142,7 +142,7 @@ void main() {
     test('handles duplicate and multiple matching reference ids', () {
       when(() => config.id).thenReturn('service.handler.impl');
 
-      final ctx = ComponentContext(filePath: filePath, config: config);
+      final ctx = ComponentContext(filePath: filePath, definition: config);
 
       final refs = [
         'nope',
@@ -161,7 +161,7 @@ void main() {
       when(() => config.id).thenReturn('data.repo');
       when(() => module.name).thenReturn('Payments Module');
 
-      final ctx = ComponentContext(filePath: filePath, config: config, module: module);
+      final ctx = ComponentContext(filePath: filePath, definition: config, module: module);
 
       expect(ctx.toString(), contains('ComponentContext(id: data.repo'));
       expect(ctx.toString(), contains('module: Payments Module'));
@@ -170,7 +170,7 @@ void main() {
     test('shows module as null when module absent', () {
       when(() => config.id).thenReturn('data.repo');
 
-      final ctx = ComponentContext(filePath: filePath, config: config);
+      final ctx = ComponentContext(filePath: filePath, definition: config);
 
       expect(ctx.toString(), contains('ComponentContext(id: data.repo, module: null)'));
     });

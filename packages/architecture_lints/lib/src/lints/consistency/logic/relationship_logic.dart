@@ -96,7 +96,7 @@ mixin RelationshipLogic on NamingLogic {
 
       final targetPath = findTargetFilePath(
         currentFilePath: currentFilePath,
-        currentComponent: currentComponent.config,
+        currentComponent: currentComponent.definition,
         targetComponent: targetComponent,
         targetFileName: targetFileName,
       );
@@ -108,7 +108,7 @@ mixin RelationshipLogic on NamingLogic {
             coreName: coreName,
             targetClassName: targetClassName,
             templateId: rule.action,
-            sourceComponent: currentComponent.config,
+            sourceComponent: currentComponent.definition,
           ),
         );
       }

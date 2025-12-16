@@ -66,7 +66,7 @@ void main() {
               as ResolvedUnitResult;
 
       final config = makeConfig(services: servicesConfig);
-      final lint = DisallowServiceLocator(config: config, layerResolver: LayerResolver(config));
+      final lint = DisallowServiceLocator(definition: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }

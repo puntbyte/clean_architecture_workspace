@@ -80,7 +80,7 @@ class EnforceFileAndFolderLocation extends ArchitectureRule {
   }
 
   bool _satisfiesInheritanceRule(ClassElement element, ArchComponent targetComponent) {
-    final rule = config.inheritances.ruleFor(targetComponent);
+    final rule = definition.inheritances.ruleFor(targetComponent);
     if (rule == null || rule.required.isEmpty) return false;
 
     return rule.required.any((detail) => _hasSupertype(element, detail));

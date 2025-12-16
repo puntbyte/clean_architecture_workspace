@@ -98,7 +98,7 @@ void main() {
       );
 
       final lint = ConvertExceptionsToFailures(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

@@ -44,7 +44,7 @@ void main() {
       await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath)
       as ResolvedUnitResult;
       final config = makeConfig(namingRules: namingRules);
-      final lint = EnforceNamingAntipattern(config: config, layerResolver: LayerResolver(config));
+      final lint = EnforceNamingAntipattern(definition: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }

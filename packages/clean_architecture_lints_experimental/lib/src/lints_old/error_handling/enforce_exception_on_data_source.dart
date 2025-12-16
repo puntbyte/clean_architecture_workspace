@@ -38,7 +38,7 @@ class EnforceExceptionOnDataSource extends ArchitectureRule {
 
     if (!isDataSource) return;
 
-    final rules = config.typeSafeties.rulesFor(component);
+    final rules = definition.typeSafeties.rulesFor(component);
     if (rules.isEmpty) return;
 
     context.registry.addMethodDeclaration((node) {
@@ -75,7 +75,7 @@ class EnforceExceptionOnDataSource extends ArchitectureRule {
   }
 
   String _resolveTypeName(String key) {
-    final definition = config.typeDefinitions.get(key);
+    final definition = definition.typeDefinitions.get(key);
     return definition?.name ?? key;
   }
 }

@@ -56,7 +56,7 @@ void main() {
         typeSafeties: typeSafeties,
         typeDefinitions: typeDefinitions,
       );
-      final lint = EnforceTypeSafety(config: config, layerResolver: LayerResolver(config));
+      final lint = EnforceTypeSafety(definition: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }

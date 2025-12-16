@@ -66,7 +66,7 @@ void main() {
       final resolvedUnit = await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath) as ResolvedUnitResult;
 
       final config = makeConfig(inheritances: inheritances);
-      final lint = EnforcePortContract(config: config, layerResolver: LayerResolver(config));
+      final lint = EnforcePortContract(definition: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }

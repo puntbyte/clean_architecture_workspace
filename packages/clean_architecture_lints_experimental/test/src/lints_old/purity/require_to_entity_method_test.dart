@@ -60,7 +60,7 @@ void main() {
           .getResolvedUnit(fullPath) as ResolvedUnitResult;
 
       final config = makeConfig();
-      final lint = RequireToEntityMethod(config: config, layerResolver: LayerResolver(config));
+      final lint = RequireToEntityMethod(definition: config, layerResolver: LayerResolver(config));
 
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();

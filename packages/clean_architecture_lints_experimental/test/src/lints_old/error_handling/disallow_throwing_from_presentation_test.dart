@@ -82,7 +82,7 @@ void main() {
       );
 
       final lint = DisallowThrowingFromPresentation(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

@@ -59,7 +59,7 @@ void main() {
           .getResolvedUnit(fullPath) as ResolvedUnitResult;
 
       final config = makeConfig(inheritances: inheritances);
-      final lint = EnforceCustomInheritance(config: config, layerResolver: LayerResolver(config));
+      final lint = EnforceCustomInheritance(definition: config, layerResolver: LayerResolver(config));
 
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();

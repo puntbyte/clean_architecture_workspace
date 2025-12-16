@@ -62,7 +62,7 @@ void main() {
       }
 
       final config = makeConfig(inheritances: inheritances);
-      final lint = EnforceEntityContract(config: config, layerResolver: LayerResolver(config));
+      final lint = EnforceEntityContract(definition: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }

@@ -72,7 +72,7 @@ void main() {
       final config = makeConfig();
 
       final lint = EnforceAbstractRepositoryDependency(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

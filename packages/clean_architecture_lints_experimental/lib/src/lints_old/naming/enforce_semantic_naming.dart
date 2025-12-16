@@ -33,7 +33,7 @@ class EnforceSemanticNaming extends ArchitectureRule {
       final component = layerResolver.getComponent(resolver.source.fullName, className: className);
       if (component == ArchComponent.unknown) return;
 
-      final rule = config.namingConventions.ruleFor(component);
+      final rule = definition.namingConventions.ruleFor(component);
       final grammar = rule?.grammar;
       if (grammar == null || grammar.isEmpty) return;
 

@@ -105,7 +105,7 @@ void main() {
       const componentConfig = ComponentDefinition(id: 'domain', paths: ['domain']);
       const componentContext = ComponentContext(
         filePath: '/lib/domain/user.dart',
-        config: componentConfig,
+        definition: componentConfig,
         debugScoreLog: 'Test Log',
       );
 

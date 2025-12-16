@@ -38,7 +38,7 @@ class EnforceEntityContract extends ArchitectureRule {
       final element = node.declaredFragment?.element;
       if (element == null) return;
 
-      final customRule = config.inheritances.ruleFor(ArchComponent.entity);
+      final customRule = definition.inheritances.ruleFor(ArchComponent.entity);
       final requiredSupertypes = customRule?.required.isNotEmpty ?? false
           ? customRule!.required
           : [

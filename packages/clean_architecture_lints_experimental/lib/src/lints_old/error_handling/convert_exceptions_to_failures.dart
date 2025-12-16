@@ -42,8 +42,8 @@ class ConvertExceptionsToFailures extends ArchitectureRule {
 
     // 1. Config Lookup
     final rule =
-        config.errorHandlers.ruleFor(component) ??
-        config.errorHandlers.ruleFor(component.layer);
+        definition.errorHandlers.ruleFor(component) ??
+        definition.errorHandlers.ruleFor(component.layer);
 
     if (rule == null || rule.conversions.isEmpty) return;
 
@@ -56,7 +56,7 @@ class ConvertExceptionsToFailures extends ArchitectureRule {
       if (conversion == null) return; // No rule for this exception type
 
       // Resolve the expected Failure type name for the message
-      final expectedFailureDef = config.typeDefinitions.get(conversion.toType);
+      final expectedFailureDef = definition.typeDefinitions.get(conversion.toType);
       final expectedFailureName = expectedFailureDef?.name ?? conversion.toType;
       final caughtExceptionName = exceptionType?.element?.name ?? 'Exception';
 
@@ -91,7 +91,7 @@ class ConvertExceptionsToFailures extends ArchitectureRule {
   /// Finds the matching conversion rule for the caught exception type.
   ConversionDetail? _findConversion(DartType? caughtType, List<ConversionDetail> conversions) {
     for (final conversion in conversions) {
-      final fromTypeDef = config.typeDefinitions.get(conversion.fromType);
+      final fromTypeDef = definition.typeDefinitions.get(conversion.fromType);
 
       // If caughtType is null (generic `catch(e)`), matching a rule for 'dynamic'/'Object'
       // or a base Exception type logic would go here. For now, we check explicit types.
@@ -110,7 +110,7 @@ class ConvertExceptionsToFailures extends ArchitectureRule {
     final expression = node.expression;
     if (expression == null) return false;
 
-    final targetTypeDef = config.typeDefinitions.get(targetTypeKey);
+    final targetTypeDef = definition.typeDefinitions.get(targetTypeKey);
     if (targetTypeDef == null) return false;
 
     // Case A: Direct Return (e.g. `return ServerFailure();`)

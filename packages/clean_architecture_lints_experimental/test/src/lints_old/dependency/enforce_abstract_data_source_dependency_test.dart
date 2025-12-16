@@ -81,7 +81,7 @@ void main() {
       );
 
       final lint = EnforceAbstractDataSourceDependency(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

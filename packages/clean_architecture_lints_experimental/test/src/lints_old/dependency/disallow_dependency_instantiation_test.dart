@@ -60,7 +60,7 @@ void main() {
 
       final config = makeConfig();
       final lint = DisallowDependencyInstantiation(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

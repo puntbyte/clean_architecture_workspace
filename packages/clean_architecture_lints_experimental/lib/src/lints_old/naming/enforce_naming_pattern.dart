@@ -34,7 +34,7 @@ class EnforceNamingPattern extends ArchitectureRule {
       final actualComponent = layerResolver.getComponent(filePath, className: className);
       if (actualComponent == ArchComponent.unknown) return;
 
-      final rule = config.namingConventions.ruleFor(actualComponent);
+      final rule = definition.namingConventions.ruleFor(actualComponent);
       if (rule == null) return;
 
       // Check if inheritance is valid (e.g. Model extends Entity)
@@ -63,7 +63,7 @@ class EnforceNamingPattern extends ArchitectureRule {
 
   // --- Inheritance Check Logic (Shared Logic) ---
   bool _satisfiesInheritanceRule(ClassElement element, ArchComponent targetComponent) {
-    final rule = config.inheritances.ruleFor(targetComponent);
+    final rule = definition.inheritances.ruleFor(targetComponent);
     if (rule == null || rule.required.isEmpty) return false;
     return rule.required.any((detail) => _hasSupertype(element, detail));
   }

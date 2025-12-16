@@ -1,26 +1,20 @@
 import 'package:analyzer/dart/ast/ast.dart' hide Expression;
+import 'package:architecture_lints/src/engines/expression/expression.dart';
 import 'package:architecture_lints/src/schema/config/architecture_config.dart';
+import 'package:architecture_lints/src/schema/constants/regexps.dart';
 import 'package:architecture_lints/src/schema/definitions/type_definition.dart';
-import 'package:architecture_lints/src/engines/expression/wrappers/config_wrapper.dart';
-import 'package:architecture_lints/src/engines/expression/wrappers/generic_wrapper.dart';
-import 'package:architecture_lints/src/engines/expression/wrappers/list_wrapper.dart';
-import 'package:architecture_lints/src/engines/expression/wrappers/method_wrapper.dart';
-import 'package:architecture_lints/src/engines/expression/wrappers/node_wrapper.dart';
-import 'package:architecture_lints/src/engines/expression/wrappers/parameter_wrapper.dart';
-import 'package:architecture_lints/src/engines/expression/wrappers/string_wrapper.dart';
-import 'package:architecture_lints/src/engines/expression/wrappers/type_wrapper.dart';
+import 'package:architecture_lints/src/utils/token_syntax.dart';
 import 'package:expressions/expressions.dart';
 
 class ExpressionEngine {
   final ExpressionEvaluator _evaluator;
   final Map<String, dynamic> rootContext;
-  final RegExp _interpolationRegex = RegExp(r'\{\{([^}]+)\}\}');
 
   ExpressionEngine({
     required AstNode node,
     required ArchitectureConfig config,
   }) : _evaluator = evaluator(),
-       rootContext = _rootContext(node, config);
+      rootContext = _rootContext(node, config);
 
   static ExpressionEvaluator evaluator() => ExpressionEvaluator(
     memberAccessors: [
@@ -51,8 +45,8 @@ class ExpressionEngine {
 
   dynamic evaluate(String input, Map<String, dynamic> context) {
     // 1. Interpolation: "prefix_{{expr}}_suffix"
-    if (input.contains('{{')) {
-      return input.replaceAllMapped(_interpolationRegex, (match) {
+    if (input.contains(TokenSyntax.open)) {
+      return input.replaceAllMapped(RegexConstants.interpolation, (match) {
         final expr = match.group(1);
         if (expr == null) return '';
 

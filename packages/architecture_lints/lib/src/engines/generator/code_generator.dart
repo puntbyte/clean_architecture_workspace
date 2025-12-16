@@ -1,11 +1,11 @@
-// lib/src/actions/code_generator.dart
+// lib/src/engines/generator/code_generator.dart
 
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:architecture_lints/src/engines/variable/variable_resolver.dart';
 import 'package:architecture_lints/src/engines/template/mustache_renderer.dart';
 import 'package:architecture_lints/src/engines/template/template_loader.dart';
-import 'package:architecture_lints/src/schema/definitions/action_definition.dart';
+import 'package:architecture_lints/src/engines/variable/variable_resolver.dart';
 import 'package:architecture_lints/src/schema/config/architecture_config.dart';
+import 'package:architecture_lints/src/schema/definitions/action_definition.dart';
 
 class CodeGenerator {
   final ArchitectureConfig config;

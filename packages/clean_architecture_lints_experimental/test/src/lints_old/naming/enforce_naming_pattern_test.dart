@@ -51,7 +51,7 @@ void main() {
       final resolvedUnit = await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath) as ResolvedUnitResult;
 
       final config = makeConfig(namingRules: namingRules, inheritances: inheritances);
-      final lint = EnforceNamingPattern(config: config, layerResolver: LayerResolver(config));
+      final lint = EnforceNamingPattern(definition: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }

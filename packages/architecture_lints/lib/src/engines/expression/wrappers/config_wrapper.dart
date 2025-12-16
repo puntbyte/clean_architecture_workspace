@@ -1,8 +1,8 @@
-import 'package:architecture_lints/src/schema/constraints/annotation_constraint.dart';
+
+import 'package:architecture_lints/src/engines/expression/expression.dart';
 import 'package:architecture_lints/src/schema/config/architecture_config.dart';
+import 'package:architecture_lints/src/schema/constraints/annotation_constraint.dart';
 import 'package:architecture_lints/src/schema/definitions/type_definition.dart';
-import 'package:architecture_lints/src/engines/expression/wrappers/list_wrapper.dart';
-import 'package:architecture_lints/src/engines/expression/wrappers/string_wrapper.dart';
 import 'package:collection/collection.dart';
 import 'package:expressions/expressions.dart';
 

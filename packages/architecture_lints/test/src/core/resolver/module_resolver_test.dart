@@ -34,7 +34,7 @@ void main() {
       final result = resolver.resolve(filePath);
 
       expect(result, isNotNull);
-      expect(result?.config.key, 'feature');
+      expect(result?.definition.key, 'feature');
       expect(result?.name, 'auth'); // Extracted {{name}}
     });
 
@@ -43,7 +43,7 @@ void main() {
       final result = resolver.resolve(filePath);
 
       expect(result, isNotNull);
-      expect(result?.config.key, 'core');
+      expect(result?.definition.key, 'core');
       expect(result?.name, 'core'); // Static name
     });
 
@@ -60,7 +60,7 @@ void main() {
       final result = resolver.resolve(filePath);
 
       expect(result, isNotNull);
-      expect(result?.config.key, 'feature');
+      expect(result?.definition.key, 'feature');
       expect(result?.name, 'payment');
     });
 
@@ -91,11 +91,11 @@ void main() {
 
       // 1. Exact match for core_ui
       var result = complexResolver.resolve('lib/core_ui/widget.dart');
-      expect(result?.config.key, 'core_ui');
+      expect(result?.definition.key, 'core_ui');
 
       // 2. Exact match for core (should not be confused by partial match of core_ui)
       result = complexResolver.resolve('lib/core/util.dart');
-      expect(result?.config.key, 'core');
+      expect(result?.definition.key, 'core');
     });
   });
 }

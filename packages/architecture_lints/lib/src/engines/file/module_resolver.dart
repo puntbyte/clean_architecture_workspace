@@ -1,14 +1,16 @@
-// lib/src/core/resolver/module_resolver.dart
+// lib/src/engines/file/module_resolver.dart
+
 import 'package:architecture_lints/src/context/module_context.dart';
-import 'package:architecture_lints/src/engines/file/path_matcher.dart';
-import 'package:architecture_lints/src/schema/constants/config_keys.dart';
+import 'package:architecture_lints/src/schema/constants/regexps.dart';
 import 'package:architecture_lints/src/schema/definitions/module_definition.dart';
+import 'package:architecture_lints/src/schema/enums/placeholder_token.dart';
 
 class ModuleResolver {
   final List<ModuleDefinition> modules;
 
   const ModuleResolver(this.modules);
 
+  /// Resolves the module context for a specific file path.
   ModuleContext? resolve(String filePath) {
     final normalizedFile = filePath.replaceAll(r'\', '/');
 
@@ -17,15 +19,25 @@ class ModuleResolver {
     final libIndex = normalizedFile.indexOf('/lib/');
     final searchStart = libIndex == -1 ? 0 : libIndex;
 
-    final placeholder = ConfigKeys.placeholder.name; // r'${name}'
+    final placeholder = PlaceholderToken.name.template; // {{name}}
 
     for (final module in modules) {
-      // 1. Dynamic Modules (e.g. features/${name})
+      // 1. Dynamic Modules (e.g. features/{{name}})
       if (module.path.contains(placeholder)) {
-        // Build Regex: features/${name} -> features/([^/]+)
-        final pattern = PathMatcher.escapeRegex(module.path)
-            .replaceAll(PathMatcher.escapeRegex(placeholder), '([^/]+)');
+        // Step A: Escape the config path (turns 'features/{{name}}' into 'features/\{\{name\}\}')
+        final escapedPath = RegexConstants.escape(module.path);
 
+        // Step B: Escape the placeholder itself to match the escaped path
+        final escapedPlaceholder = RegexConstants.escape(placeholder);
+
+        // Step C: Replace the placeholder with a capture group
+        // Pattern becomes: features/([^/]+)
+        final pattern = escapedPath.replaceAll(
+          escapedPlaceholder,
+          '(${RegexConstants.pathSegment})', // Capture Group around pathSegment
+        );
+
+        // Step D: Match against file path
         // We look for the pattern surrounded by slashes OR at the start of a relative path
         // e.g. /features/auth/
         final regex = RegExp('/$pattern/');
@@ -33,17 +45,18 @@ class ModuleResolver {
 
         if (match != null && match.groupCount >= 1) {
           return ModuleContext(
-            config: module,
+            definition: module,
             name: match.group(1)!,
           );
         }
       }
       // 2. Static Modules (e.g. core)
       else {
-        // Strict directory match
+        // Strict directory match: must be surrounded by slashes to avoid partials
+        // e.g. /core/ matches, but /score/ does not.
         if (normalizedFile.indexOf('/${module.path}/', searchStart) != -1) {
           return ModuleContext(
-            config: module,
+            definition: module,
             name: module.key,
           );
         }

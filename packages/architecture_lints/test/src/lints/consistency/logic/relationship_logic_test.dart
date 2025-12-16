@@ -30,7 +30,7 @@ void main() {
     test('extractCoreName should extract name from pattern', () {
       const context = ComponentContext(
         filePath: '',
-        config: ComponentDefinition(
+        definition: ComponentDefinition(
           id: 'entity',
           // FIX: Use raw string r'${name}'
           patterns: [r'${name}Entity'],
@@ -92,7 +92,7 @@ void main() {
         final currentContext = ComponentContext(
           // Simulate being in correct path
           filePath: p.join('root', 'lib', 'domain', 'ports', 'auth_port.dart'),
-          config: sourceConfig,
+          definition: sourceConfig,
         );
 
         // 3. Run

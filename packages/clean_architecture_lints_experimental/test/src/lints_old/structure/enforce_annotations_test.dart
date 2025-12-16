@@ -64,7 +64,7 @@ void main() {
               as ResolvedUnitResult;
 
       final config = makeConfig(annotations: annotations);
-      final lint = EnforceAnnotations(config: config, layerResolver: LayerResolver(config));
+      final lint = EnforceAnnotations(definition: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }

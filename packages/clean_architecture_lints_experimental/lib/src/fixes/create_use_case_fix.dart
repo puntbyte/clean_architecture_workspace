@@ -45,7 +45,7 @@ class CreateUseCaseFix extends DartFix {
       final useCaseFilePath = PathUtils.getUseCaseFilePath(
         methodName: methodNode.name.lexeme,
         repoPath: diagnostic.source.fullName,
-        config: config,
+        definition: config,
         resourceProvider: resourceProvider,
       );
       if (useCaseFilePath == null) return;

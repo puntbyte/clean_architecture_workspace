@@ -66,7 +66,7 @@ void main() {
 
       final config = makeConfig(errorHandlers: errorHandlers);
       final lint = EnforceTryCatchInRepository(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

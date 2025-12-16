@@ -59,12 +59,9 @@ class ArchitectureFix extends DartFix {
     final config = context.sharedState[ArchitectureConfig] as ArchitectureConfig?;
     final unitResult = context.sharedState[ResolvedUnitResult] as ResolvedUnitResult?;
 
-    if (config == null) {
-      return;
-    }
-    if (unitResult == null) {
-      return;
-    }
+    if (config == null) return;
+
+    if (unitResult == null) return;
 
     final errorCode = analysisError.diagnosticCode.name;
 
@@ -116,9 +113,7 @@ class ArchitectureFix extends DartFix {
     // A. Generate Code
     final code = generator.generate(action: action, sourceNode: sourceNode);
 
-    if (code == null) {
-      return;
-    }
+    if (code == null) return;
 
     // B. Calculate Target Path
     String? targetPath;
@@ -204,7 +199,7 @@ class ArchitectureFix extends DartFix {
 
     final currentDir = p.dirname(currentPath);
 
-    for (final path in currentContext.config.paths) {
+    for (final path in currentContext.definition.paths) {
       final configPath = path.replaceAll('/', p.separator);
       if (currentDir.endsWith(configPath)) {
         final moduleRoot = currentDir.substring(0, currentDir.lastIndexOf(configPath));

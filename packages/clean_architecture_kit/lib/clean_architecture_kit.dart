@@ -45,29 +45,29 @@ class CleanArchitectureKitPlugin extends PluginBase {
     // 5. Create and return the list of all lints, now using the local 'config' variable.
     return [
       // Purity Rules
-      DomainLayerPurity(config: config, layerResolver: layerResolver),
-      DataSourcePurity(config: config, layerResolver: layerResolver),
-      PresentationLayerPurity(config: config, layerResolver: layerResolver),
-      RepositoryImplementationPurity(config: config, layerResolver: layerResolver),
-      DisallowFlutterImportsInDomain(config: config, layerResolver: layerResolver),
-      DisallowFlutterTypesInDomain(config: config, layerResolver: layerResolver),
+      DomainLayerPurity(definition: config, layerResolver: layerResolver),
+      DataSourcePurity(definition: config, layerResolver: layerResolver),
+      PresentationLayerPurity(definition: config, layerResolver: layerResolver),
+      RepositoryImplementationPurity(definition: config, layerResolver: layerResolver),
+      DisallowFlutterImportsInDomain(definition: config, layerResolver: layerResolver),
+      DisallowFlutterTypesInDomain(definition: config, layerResolver: layerResolver),
 
-      DisallowUseCaseInPresentation(config: config, layerResolver: layerResolver),
-      EnforceModelToEntityMapping(config: config, layerResolver: layerResolver),
+      DisallowUseCaseInPresentation(definition: config, layerResolver: layerResolver),
+      EnforceModelToEntityMapping(definition: config, layerResolver: layerResolver),
 
       // Dependency & Structure Rules
-      EnforceLayerIndependence(config: config, layerResolver: layerResolver),
-      EnforceAbstractDataSourceDependency(config: config, layerResolver: layerResolver),
-      EnforceFileAndFolderLocation(config: config),
+      EnforceLayerIndependence(definition: config, layerResolver: layerResolver),
+      EnforceAbstractDataSourceDependency(definition: config, layerResolver: layerResolver),
+      EnforceFileAndFolderLocation(definition: config),
 
       // Naming, Type Safety & Inheritance Rules
-      EnforceNamingConventions(config: config, layerResolver: layerResolver),
-      EnforceCustomReturnType(config: config, layerResolver: layerResolver),
-      EnforceUseCaseInheritance(config: config, layerResolver: layerResolver),
-      EnforceRepositoryInheritance(config: config, layerResolver: layerResolver),
+      EnforceNamingConventions(definition: config, layerResolver: layerResolver),
+      EnforceCustomReturnType(definition: config, layerResolver: layerResolver),
+      EnforceUseCaseInheritance(definition: config, layerResolver: layerResolver),
+      EnforceRepositoryInheritance(definition: config, layerResolver: layerResolver),
 
       // Code Generation Rule
-      MissingUseCase(config: config, layerResolver: layerResolver),
+      MissingUseCase(definition: config, layerResolver: layerResolver),
     ];
   }
 }

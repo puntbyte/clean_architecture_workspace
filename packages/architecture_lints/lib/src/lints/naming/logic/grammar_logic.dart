@@ -1,4 +1,4 @@
-import 'package:architecture_lints/src/schema/constants/grammar_token.dart';
+import 'package:architecture_lints/src/schema/enums/grammar_token.dart';
 import 'package:architecture_lints/src/utils/extensions/string_extension.dart';
 import 'package:architecture_lints/src/engines/language/language_analyzer.dart';
 

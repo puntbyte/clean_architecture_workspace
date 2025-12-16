@@ -189,7 +189,7 @@ void main() {
           if (p.normalize(pathArg) == p.normalize(superPath)) {
             return ComponentContext(
               filePath: pathArg,
-              config: const ComponentDefinition(id: 'domain.entity', paths: []),
+              definition: const ComponentDefinition(id: 'domain.entity', paths: []),
             );
           }
           return null;

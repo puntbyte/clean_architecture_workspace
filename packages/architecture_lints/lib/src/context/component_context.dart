@@ -7,26 +7,26 @@ import 'package:meta/meta.dart';
 @immutable
 class ComponentContext {
   final String filePath;
-  final ComponentDefinition config;
+  final ComponentDefinition definition;
   final ModuleContext? module;
   final String? debugScoreLog;
 
   const ComponentContext({
     required this.filePath,
-    required this.config,
+    required this.definition,
     this.module,
     this.debugScoreLog,
   });
 
-  String get id => config.id;
+  String get id => definition.id;
 
-  String get displayName => config.displayName;
+  String get displayName => definition.displayName;
 
-  List<String> get patterns => config.patterns;
+  List<String> get patterns => definition.patterns;
 
-  List<String> get antipatterns => config.antipatterns;
+  List<String> get antipatterns => definition.antipatterns;
 
-  List<String> get grammar => config.grammar;
+  List<String> get grammar => definition.grammar;
 
   bool matchesReference(String referenceId) {
     if (module != null && module!.key == referenceId) return true;

@@ -142,7 +142,7 @@ void main() {
     final path = PathUtils.getUseCaseFilePath(
       methodName: 'fetchUser',
       repoPath: repoFilePath,
-      config: config,
+      definition: config,
     );
 
     expect(path, isNotNull);

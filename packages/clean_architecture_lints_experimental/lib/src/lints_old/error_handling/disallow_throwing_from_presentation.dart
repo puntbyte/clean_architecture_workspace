@@ -37,8 +37,8 @@ class DisallowThrowingFromPresentation extends ArchitectureRule {
 
     // 2. Config Lookup: Find the error handler rule for this component/layer
     final rule =
-        config.errorHandlers.ruleFor(component) ??
-        config.errorHandlers.ruleFor(component.layer);
+        definition.errorHandlers.ruleFor(component) ??
+        definition.errorHandlers.ruleFor(component.layer);
 
     if (rule == null) return;
 
@@ -69,7 +69,7 @@ class DisallowThrowingFromPresentation extends ArchitectureRule {
       if (thrownType == null) return true;
 
       // Check if the thrown type matches the configured target type (e.g. 'exception.raw')
-      final targetTypeDef = config.typeDefinitions.get(forbidden.targetType!);
+      final targetTypeDef = definition.typeDefinitions.get(forbidden.targetType!);
       if (targetTypeDef != null && _matchesType(thrownType, targetTypeDef)) {
         return true;
       }

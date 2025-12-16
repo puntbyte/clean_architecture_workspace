@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:architecture_lints/src/schema/constants/config_keys.dart';
-import 'package:architecture_lints/src/schema/config/architecture_config.dart';
 import 'package:architecture_lints/src/engines/configuration/yaml_merger.dart';
+import 'package:architecture_lints/src/schema/config/architecture_config.dart';
+import 'package:architecture_lints/src/schema/constants/config_keys.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 

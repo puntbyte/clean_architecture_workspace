@@ -69,7 +69,7 @@ void main() {
 
       final config = makeConfig();
       final lint = DisallowUseCaseInWidget(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

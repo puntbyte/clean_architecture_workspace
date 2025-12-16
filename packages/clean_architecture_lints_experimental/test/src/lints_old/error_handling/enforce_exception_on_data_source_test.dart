@@ -69,7 +69,7 @@ void main() {
       );
 
       final lint = EnforceExceptionOnDataSource(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

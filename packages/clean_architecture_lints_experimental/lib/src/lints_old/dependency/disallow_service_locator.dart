@@ -28,7 +28,7 @@ class DisallowServiceLocator extends ArchitectureRule {
     final component = layerResolver.getComponent(resolver.source.fullName);
     if (component == ArchComponent.unknown) return;
 
-    final rule = config.services.serviceLocator;
+    final rule = definition.services.serviceLocator;
     final locatorNames = rule.names.toSet();
     final locatorImport = rule.import;
 

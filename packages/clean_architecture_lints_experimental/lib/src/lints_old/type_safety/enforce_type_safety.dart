@@ -24,7 +24,7 @@ class EnforceTypeSafety extends ArchitectureRule {
   @override
   @override
   void run(CustomLintResolver resolver, DiagnosticReporter reporter, CustomLintContext context) {
-    if (config.typeSafeties.rules.isEmpty) return;
+    if (definition.typeSafeties.rules.isEmpty) return;
 
     context.registry.addMethodDeclaration((node) {
       // Get the resolved method element - this is crucial for type resolution
@@ -36,7 +36,7 @@ class EnforceTypeSafety extends ArchitectureRule {
       final component = layerResolver.getComponent(resolver.source.fullName, className: className);
       if (component == ArchComponent.unknown) return;
 
-      final rules = config.typeSafeties.rulesFor(component);
+      final rules = definition.typeSafeties.rulesFor(component);
       if (rules.isEmpty) return;
 
       // 1. Check Return Type using the RESOLVED element type
@@ -152,7 +152,7 @@ class EnforceTypeSafety extends ArchitectureRule {
 
   String _getTypeName(TypeSafetyDetail detail) {
     if (detail.definition != null) {
-      final typeDef = config.typeDefinitions.get(detail.definition!);
+      final typeDef = definition.typeDefinitions.get(detail.definition!);
       if (typeDef != null) return typeDef.name;
       return detail.definition!;
     }
@@ -215,7 +215,7 @@ class EnforceTypeSafety extends ArchitectureRule {
     String? checkImport;
 
     if (detail.definition != null) {
-      final typeDef = config.typeDefinitions.get(detail.definition!);
+      final typeDef = definition.typeDefinitions.get(detail.definition!);
       checkName = typeDef?.name;
       checkImport = typeDef?.import;
     } else {

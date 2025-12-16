@@ -6,18 +6,18 @@ import 'package:meta/meta.dart';
 @immutable
 class ModuleContext {
   /// The configuration definition (e.g. for 'features').
-  final ModuleDefinition config;
+  final ModuleDefinition definition;
 
   /// The specific instance name extracted from the path (e.g. 'auth').
   final String name;
 
   const ModuleContext({
-    required this.config,
+    required this.definition,
     required this.name,
   });
 
-  String get key => config.key; // e.g. 'features'
-  bool get isStrict => config.strict;
+  String get key => definition.key; // e.g. 'features'
+  bool get isStrict => definition.strict;
 
   /// Determines if this module is allowed to import [other] based on isolation rules.
   ///
@@ -39,10 +39,10 @@ class ModuleContext {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ModuleContext && other.config.key == config.key && other.name == name;
+      other is ModuleContext && other.definition.key == definition.key && other.name == name;
 
   @override
-  int get hashCode => config.key.hashCode ^ name.hashCode;
+  int get hashCode => definition.key.hashCode ^ name.hashCode;
 
   @override
   String toString() => '$key($name)';

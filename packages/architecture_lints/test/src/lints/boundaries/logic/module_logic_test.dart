@@ -18,7 +18,7 @@ void main() {
       final context = tester.resolveModuleContext('lib/features/auth/domain/user.dart', modules);
 
       expect(context, isNotNull);
-      expect(context?.config.key, 'feature');
+      expect(context?.definition.key, 'feature');
       expect(context?.name, 'auth');
     });
 
@@ -26,7 +26,7 @@ void main() {
       final context = tester.resolveModuleContext('lib/core/error/failure.dart', modules);
 
       expect(context, isNotNull);
-      expect(context?.config.key, 'core');
+      expect(context?.definition.key, 'core');
       expect(context?.name, 'core');
     });
 

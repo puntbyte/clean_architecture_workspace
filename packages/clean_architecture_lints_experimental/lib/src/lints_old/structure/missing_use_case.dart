@@ -23,7 +23,7 @@ class MissingUseCase extends ArchitectureRule {
   }) : super(code: _code);
 
   @override
-  List<Fix> getFixes() => [CreateUseCaseFix(config: config)];
+  List<Fix> getFixes() => [CreateUseCaseFix(config: definition)];
 
   @override
   void run(
@@ -72,7 +72,7 @@ class MissingUseCase extends ArchitectureRule {
     final expectedFilePath = PathUtils.getUseCaseFilePath(
       methodName: methodName,
       repoPath: repoPath,
-      config: config,
+      definition: definition,
       resourceProvider: resourceProvider,
     );
 
@@ -83,7 +83,7 @@ class MissingUseCase extends ArchitectureRule {
     final file = resourceProvider.getFile(expectedFilePath);
 
     if (!file.exists) {
-      final expectedClassName = NamingUtils.getExpectedUseCaseClassName(methodName, config);
+      final expectedClassName = NamingUtils.getExpectedUseCaseClassName(methodName, definition);
       reporter.atToken(
         method.name,
         _code,

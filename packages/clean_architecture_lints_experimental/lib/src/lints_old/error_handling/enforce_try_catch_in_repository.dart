@@ -67,7 +67,7 @@ class EnforceTryCatchInRepository extends ArchitectureRule {
   }
 
   bool _requiresTryCatch(ArchComponent component) {
-    final rule = config.errorHandlers.ruleFor(component);
+    final rule = definition.errorHandlers.ruleFor(component);
 
     // Case A: Explicit Config exists.
     if (rule != null) {

@@ -1,4 +1,6 @@
 import 'package:architecture_lints/src/schema/constants/config_keys.dart';
+import 'package:architecture_lints/src/schema/constants/regexps.dart';
+import 'package:architecture_lints/src/schema/enums/placeholder_token.dart';
 // Note: PathMatcher is no longer needed for escaping if we want to support regex syntax
 
 mixin NamingLogic {
@@ -6,8 +8,8 @@ mixin NamingLogic {
 
   bool validateName(String className, String pattern) {
     // Optimization for the common case where pattern is just "${name}"
-    if (pattern == ConfigKeys.placeholder.name) {
-      return RegExp('^${ConfigKeys.regex.pascalCaseGroup}\$').hasMatch(className);
+    if (pattern == PlaceholderToken.name.template) {
+      return RegExp('^${RegexConstants.pascalCaseGroup}\$').hasMatch(className);
     }
     final regex = _getRegex(pattern);
     return regex.hasMatch(className);
@@ -23,25 +25,28 @@ mixin NamingLogic {
   RegExp _getRegex(String pattern) => _regexCache.putIfAbsent(pattern, () => _buildRegex(pattern));
 
   RegExp _buildRegex(String pattern) {
-    // FIX: Do NOT escape the input pattern. 
+    // FIX: Do NOT escape the input pattern.
     // We want to support Regex syntax like '(Bloc|Cubit)' in the config.
     var regexStr = pattern;
 
     // Replace ${name} -> ([A-Z][a-zA-Z0-9]*)
     // We use literal replacement since the input is a string.
-    regexStr = regexStr.replaceAll(ConfigKeys.placeholder.name, ConfigKeys.regex.pascalCaseGroup);
+    regexStr = regexStr.replaceAll(
+      PlaceholderToken.name.template,
+      RegexConstants.pascalCaseGroup,
+    );
 
     // Replace ${affix} -> .*
-    regexStr = regexStr.replaceAll(ConfigKeys.placeholder.affix, ConfigKeys.regex.wildcard);
+    regexStr = regexStr.replaceAll(PlaceholderToken.affix.template, RegexConstants.wildcard);
 
     return RegExp('^$regexStr\$');
   }
 
   String generateExample(String pattern) {
     return pattern
-        .replaceAll(ConfigKeys.placeholder.name, 'Login')
-        .replaceAll(ConfigKeys.placeholder.affix, 'My')
-    // Clean up regex artifacts for display if present
+        .replaceAll(PlaceholderToken.name.template, 'Login')
+        .replaceAll(PlaceholderToken.affix.template, 'My')
+        // Clean up regex artifacts for display if present
         .replaceAll(RegExp(r'[\(\)\|]'), '') // Remove ( ) |
         .replaceAll(r'\', '') // Remove escapes
         .replaceAll('?', '') // Remove quantifiers

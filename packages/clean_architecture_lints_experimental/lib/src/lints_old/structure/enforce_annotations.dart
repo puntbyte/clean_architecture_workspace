@@ -29,7 +29,7 @@ class EnforceAnnotations extends ArchitectureRule {
     final component = layerResolver.getComponent(resolver.source.fullName);
     if (component == ArchComponent.unknown) return;
 
-    final rule = config.annotations.ruleFor(component);
+    final rule = definition.annotations.ruleFor(component);
     if (rule == null) return;
 
     // 1) Flag forbidden imports (simple, based on import uri)

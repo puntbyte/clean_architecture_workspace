@@ -59,7 +59,7 @@ void main() {
 
       final config = makeConfig(errorHandlers: errorHandlers);
       final lint = DisallowThrowingFromRepository(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

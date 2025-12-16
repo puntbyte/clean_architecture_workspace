@@ -69,7 +69,7 @@ void main() {
 
       final config = makeConfig(portDir: portDir, repositoryDir: repositoryDir);
       final lint = EnforceRepositoryContract(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

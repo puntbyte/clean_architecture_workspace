@@ -47,7 +47,7 @@ MockDiagnosticReporter runTest({
 }) {
   final reporter = MockDiagnosticReporter();
   final layerResolver = MockLayerResolver();
-  final rule = DisallowUseCaseInPresentation(config: config, layerResolver: layerResolver);
+  final rule = DisallowUseCaseInPresentation(definition: config, layerResolver: layerResolver);
   final resolver = FakeCustomLintResolver(path: path, content: content);
   final registry = TestLintRuleNodeRegistry();
   final context = makeContext(registry);

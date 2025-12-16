@@ -80,7 +80,7 @@ void main() {
           .getResolvedUnit(fullPath) as ResolvedUnitResult;
 
       final config = makeConfig();
-      final lint = DisallowFlutterInDomain(config: config, layerResolver: LayerResolver(config));
+      final lint = DisallowFlutterInDomain(definition: config, layerResolver: LayerResolver(config));
 
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();

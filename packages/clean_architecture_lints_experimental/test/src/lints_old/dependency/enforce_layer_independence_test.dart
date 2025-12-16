@@ -59,7 +59,7 @@ void main() {
           await contextCollection.contextFor(fullPath).currentSession.getResolvedUnit(fullPath)
               as ResolvedUnitResult;
       final config = makeConfig(dependencies: dependencies);
-      final lint = EnforceLayerIndependence(config: config, layerResolver: LayerResolver(config));
+      final lint = EnforceLayerIndependence(definition: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }

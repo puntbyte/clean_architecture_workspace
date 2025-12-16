@@ -149,7 +149,7 @@ void main() {
         final result = PathUtils.getUseCaseFilePath(
           methodName: 'loginUser',
           repoPath: repoPath,
-          config: config,
+          definition: config,
           resourceProvider: provider,
         );
 
@@ -168,7 +168,7 @@ void main() {
         final result = PathUtils.getUseCaseFilePath(
           methodName: 'getProfile',
           repoPath: repoPath,
-          config: config,
+          definition: config,
           resourceProvider: provider,
         );
 
@@ -187,7 +187,7 @@ void main() {
         final result = PathUtils.getUseCaseFilePath(
           methodName: 'getJSONData',
           repoPath: repoPath,
-          config: config,
+          definition: config,
           resourceProvider: provider,
         );
 

@@ -53,7 +53,7 @@ void main() {
     ComponentContext createComponent(String id, String name) {
       return ComponentContext(
         filePath: 'lib/$id.dart',
-        config: ComponentDefinition(id: id, name: name),
+        definition: ComponentDefinition(id: id, name: name),
       );
     }
 

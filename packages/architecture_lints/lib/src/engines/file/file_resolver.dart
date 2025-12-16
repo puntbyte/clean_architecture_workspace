@@ -1,11 +1,10 @@
-// lib/src/core/resolver/file_resolver.dart
+// lib/src/engines/file/file_resolver.dart
 
-import 'package:architecture_lints/src/schema/config/architecture_config.dart';
-import 'package:architecture_lints/src/schema/definitions/component_definition.dart';
-import 'package:architecture_lints/src/engines/file/module_resolver.dart';
 import 'package:architecture_lints/src/context/component_context.dart';
 import 'package:architecture_lints/src/context/module_context.dart';
-import 'package:architecture_lints/src/engines/file/path_matcher.dart';
+import 'package:architecture_lints/src/engines/file/file.dart';
+import 'package:architecture_lints/src/schema/config/architecture_config.dart';
+import 'package:architecture_lints/src/schema/definitions/component_definition.dart';
 
 class FileResolver {
   final ArchitectureConfig config;
@@ -35,7 +34,7 @@ class FileResolver {
 
     return ComponentContext(
       filePath: filePath,
-      config: componentConfig,
+      definition: componentConfig,
       module: moduleContext,
     );
   }

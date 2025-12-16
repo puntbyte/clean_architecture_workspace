@@ -105,40 +105,40 @@ class CleanArchitectureLintsPlugin extends PluginBase {
     ArchitectureConfig config,
     LayerResolver resolver,
   ) => [
-    DisallowDependencyInstantiation(config: config, layerResolver: resolver),
-    DisallowRepositoryInPresentation(config: config, layerResolver: resolver),
-    DisallowServiceLocator(config: config, layerResolver: resolver),
-    DisallowUseCaseInWidget(config: config, layerResolver: resolver),
-    EnforceAbstractDataSourceDependency(config: config, layerResolver: resolver),
-    EnforceAbstractRepositoryDependency(config: config, layerResolver: resolver),
-    EnforceLayerIndependence(config: config, layerResolver: resolver),
+    DisallowDependencyInstantiation(definition: config, layerResolver: resolver),
+    DisallowRepositoryInPresentation(definition: config, layerResolver: resolver),
+    DisallowServiceLocator(definition: config, layerResolver: resolver),
+    DisallowUseCaseInWidget(definition: config, layerResolver: resolver),
+    EnforceAbstractDataSourceDependency(definition: config, layerResolver: resolver),
+    EnforceAbstractRepositoryDependency(definition: config, layerResolver: resolver),
+    EnforceLayerIndependence(definition: config, layerResolver: resolver),
   ];
 
   List<ArchitectureRule> _contractRules(
     ArchitectureConfig config,
     LayerResolver resolver,
   ) => [
-    EnforceCustomInheritance(config: config, layerResolver: resolver),
-    EnforceEntityContract(config: config, layerResolver: resolver),
-    EnforcePortContract(config: config, layerResolver: resolver),
-    EnforceRepositoryContract(config: config, layerResolver: resolver),
-    EnforceUsecaseContract(config: config, layerResolver: resolver),
+    EnforceCustomInheritance(definition: config, layerResolver: resolver),
+    EnforceEntityContract(definition: config, layerResolver: resolver),
+    EnforcePortContract(definition: config, layerResolver: resolver),
+    EnforceRepositoryContract(definition: config, layerResolver: resolver),
+    EnforceUsecaseContract(definition: config, layerResolver: resolver),
   ];
 
   List<ArchitectureRule> _errorHandlingRules(
     ArchitectureConfig config,
     LayerResolver resolver,
   ) => [
-    DisallowThrowingFromRepository(config: config, layerResolver: resolver),
-    EnforceExceptionOnDataSource(config: config, layerResolver: resolver),
-    EnforceTryCatchInRepository(config: config, layerResolver: resolver),
+    DisallowThrowingFromRepository(definition: config, layerResolver: resolver),
+    EnforceExceptionOnDataSource(definition: config, layerResolver: resolver),
+    EnforceTryCatchInRepository(definition: config, layerResolver: resolver),
   ];
 
   List<ArchitectureRule> _locationRules(
     ArchitectureConfig config,
     LayerResolver resolver,
   ) => [
-    EnforceFileAndFolderLocation(config: config, layerResolver: resolver),
+    EnforceFileAndFolderLocation(definition: config, layerResolver: resolver),
   ];
 
   List<ArchitectureRule> _namingRules(
@@ -146,29 +146,29 @@ class CleanArchitectureLintsPlugin extends PluginBase {
     LayerResolver resolver,
     LanguageAnalyzer analyzer,
   ) => [
-    EnforceNamingAntipattern(config: config, layerResolver: resolver),
-    EnforceNamingPattern(config: config, layerResolver: resolver),
-    EnforceSemanticNaming(config: config, layerResolver: resolver, analyzer: analyzer),
+    EnforceNamingAntipattern(definition: config, layerResolver: resolver),
+    EnforceNamingPattern(definition: config, layerResolver: resolver),
+    EnforceSemanticNaming(definition: config, layerResolver: resolver, analyzer: analyzer),
   ];
 
   List<ArchitectureRule> _purityRules(
     ArchitectureConfig config,
     LayerResolver resolver,
   ) => [
-    DisallowEntityInDataSource(config: config, layerResolver: resolver),
-    DisallowFlutterInDomain(config: config, layerResolver: resolver),
-    DisallowModelInDomain(config: config, layerResolver: resolver),
-    DisallowModelReturnFromRepository(config: config, layerResolver: resolver),
-    EnforceContractApi(config: config, layerResolver: resolver),
-    RequireToEntityMethod(config: config, layerResolver: resolver),
+    DisallowEntityInDataSource(definition: config, layerResolver: resolver),
+    DisallowFlutterInDomain(definition: config, layerResolver: resolver),
+    DisallowModelInDomain(definition: config, layerResolver: resolver),
+    DisallowModelReturnFromRepository(definition: config, layerResolver: resolver),
+    EnforceContractApi(definition: config, layerResolver: resolver),
+    RequireToEntityMethod(definition: config, layerResolver: resolver),
   ];
 
   List<ArchitectureRule> _structureRules(
     ArchitectureConfig config,
     LayerResolver resolver,
   ) => [
-    EnforceAnnotations(config: config, layerResolver: resolver),
-    EnforceTypeSafety(config: config, layerResolver: resolver),
-    MissingUseCase(config: config, layerResolver: resolver),
+    EnforceAnnotations(definition: config, layerResolver: resolver),
+    EnforceTypeSafety(definition: config, layerResolver: resolver),
+    MissingUseCase(definition: config, layerResolver: resolver),
   ];
 }

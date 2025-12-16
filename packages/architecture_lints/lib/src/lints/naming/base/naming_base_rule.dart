@@ -27,7 +27,7 @@ abstract class NamingBaseRule extends ArchitectureRule with InheritanceLogic {
       // (This requires InheritanceLogic mixin)
       final inheritanceId = findComponentIdByInheritance(node, config, fileResolver);
 
-      var effectiveConfig = component?.config;
+      var effectiveConfig = component?.definition;
 
       // If inheritance dictates a specific component type, override the file-path based type.
       if (inheritanceId != null) {

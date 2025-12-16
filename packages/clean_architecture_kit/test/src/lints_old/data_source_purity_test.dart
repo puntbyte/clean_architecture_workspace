@@ -54,7 +54,7 @@ MockDiagnosticReporter runTest({
     () => layerResolver.getLayer(any(that: isNot(contains('/domain/entities/')))),
   ).thenReturn(ArchLayer.data);
 
-  final rule = DataSourcePurity(config: config, layerResolver: layerResolver);
+  final rule = DataSourcePurity(definition: config, layerResolver: layerResolver);
   final resolver = FakeCustomLintResolver(path: path, content: content);
   final registry = TestLintRuleNodeRegistry();
   final context = makeContext(registry);

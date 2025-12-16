@@ -37,7 +37,7 @@ class EnforceUsecaseContract extends ArchitectureRule {
       if (element == null) return;
 
       // 1. Determine Required Supertypes (Custom > Default)
-      final customRule = config.inheritances.ruleFor(ArchComponent.usecase);
+      final customRule = definition.inheritances.ruleFor(ArchComponent.usecase);
       final List<InheritanceDetail> requiredSupertypes;
 
       if (customRule != null && customRule.required.isNotEmpty) {

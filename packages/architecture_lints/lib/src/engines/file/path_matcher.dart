@@ -1,4 +1,7 @@
-import 'package:architecture_lints/src/schema/constants/config_keys.dart';
+// lib/src/engines/file/path_matcher.dart
+
+import 'package:architecture_lints/src/schema/constants/regexps.dart';
+import 'package:architecture_lints/src/schema/enums/placeholder_token.dart';
 
 class PathMatcher {
   /// Returns the start index of the match in [filePath], or -1 if no match.
@@ -6,14 +9,15 @@ class PathMatcher {
     final normalizedFile = filePath.replaceAll(r'\', '/');
     final normalizedConfig = configPath.replaceAll(r'\', '/');
 
-    final namePlaceholder = ConfigKeys.placeholder.name; // r'${name}'
+    final nameTemplate = PlaceholderToken.name.template; // "{{name}}"
 
-    // 1. Handle ${name} wildcard
-    if (normalizedConfig.contains(namePlaceholder)) {
-      final escapedConfig = escapeRegex(normalizedConfig);
-      final escapedPlaceholder = escapeRegex(namePlaceholder);
+    // 1. Handle {{name}} wildcard
+    if (normalizedConfig.contains(nameTemplate)) {
+      final escapedConfig = RegexConstants.escape(normalizedConfig);
+      final escapedPlaceholder = RegexConstants.escape(nameTemplate);
 
-      final pattern = escapedConfig.replaceAll(escapedPlaceholder, '[^/]+');
+      // Use centralized pathSegment pattern
+      final pattern = escapedConfig.replaceAll(escapedPlaceholder, RegexConstants.pathSegment);
 
       final regex = RegExp(pattern);
       final match = regex.firstMatch(normalizedFile);
@@ -22,7 +26,11 @@ class PathMatcher {
 
     // 2. Handle standard Glob wildcard (*)
     if (normalizedConfig.contains('*')) {
-      final pattern = escapeRegex(normalizedConfig).replaceAll(r'\*', '.*');
+      // Use centralized wildcard
+      final pattern = RegexConstants.escape(normalizedConfig)
+          .replaceAll(r'\*', RegexConstants.wildcard);
+      // Note: wildcard in paths usually means "anything", not non-greedy
+
       final regex = RegExp(pattern);
       final match = regex.firstMatch(normalizedFile);
       return match?.start ?? -1;
@@ -57,10 +65,5 @@ class PathMatcher {
       return filePath.endsWith(extension);
     }
     return getMatchIndex(filePath, configPath) != -1;
-  }
-
-  /// Escapes all regex special characters.
-  static String escapeRegex(String text) {
-    return text.replaceAllMapped(RegExp(r'[.*+?^${}()|[\]\\]'), (match) => '\\${match.group(0)}');
   }
 }

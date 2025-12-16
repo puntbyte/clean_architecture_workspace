@@ -30,8 +30,8 @@ class EnforceLayerIndependence extends ArchitectureRule {
     final sourceComponent = layerResolver.getComponent(resolver.source.fullName);
     if (sourceComponent == ArchComponent.unknown) return;
 
-    final componentRule = config.dependencies.ruleFor(sourceComponent);
-    final layerRule = config.dependencies.ruleFor(sourceComponent.layer);
+    final componentRule = definition.dependencies.ruleFor(sourceComponent);
+    final layerRule = definition.dependencies.ruleFor(sourceComponent.layer);
 
     final rules = [if (componentRule != null) componentRule, if (layerRule != null) layerRule];
     if (rules.isEmpty) return;

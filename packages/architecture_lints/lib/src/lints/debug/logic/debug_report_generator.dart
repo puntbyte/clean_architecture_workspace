@@ -166,7 +166,7 @@ class DebugReportGenerator {
       } else {
         sb.writeln('   • Module: <Global/Core>');
       }
-      sb.writeln('   • Mode:   ${component!.config.mode.name.toUpperCase()}');
+      sb.writeln('   • Mode:   ${component!.definition.mode.name.toUpperCase()}');
     } else {
       sb.writeln('❌ COMPONENT: <NULL> (Orphan)');
     }

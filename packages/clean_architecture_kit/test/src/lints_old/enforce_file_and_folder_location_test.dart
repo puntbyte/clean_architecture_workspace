@@ -20,7 +20,7 @@ MockDiagnosticReporter runTest({
   required String content,
 }) {
   final reporter = MockDiagnosticReporter();
-  final rule = EnforceFileAndFolderLocation(config: config);
+  final rule = EnforceFileAndFolderLocation(definition: config);
   final resolver = FakeCustomLintResolver(path: path, content: content);
   final registry = TestLintRuleNodeRegistry();
   final context = makeContext(registry);

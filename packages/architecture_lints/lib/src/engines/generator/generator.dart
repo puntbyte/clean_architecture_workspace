@@ -1,2 +1,1 @@
-//GENERATED BARREL FILE 
-export 'code_generator.dart'; 
+export 'code_generator.dart';

@@ -64,7 +64,7 @@ void main() {
               as ResolvedUnitResult;
 
       final config = makeConfig(inheritances: inheritances);
-      final lint = EnforceUsecaseContract(config: config, layerResolver: LayerResolver(config));
+      final lint = EnforceUsecaseContract(definition: config, layerResolver: LayerResolver(config));
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();
     }

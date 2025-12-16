@@ -51,7 +51,7 @@ class MissingUseCase extends DartLintRule {
           final expectedFilePath = PathUtils.getUseCaseFilePath(
             methodName: methodName,
             repoPath: resolver.source.fullName,
-            config: config,
+            definition: config,
           );
 
           if (expectedFilePath != null) {

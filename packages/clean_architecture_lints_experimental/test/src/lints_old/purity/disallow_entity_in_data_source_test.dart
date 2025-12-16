@@ -62,7 +62,7 @@ void main() {
           .getResolvedUnit(fullPath) as ResolvedUnitResult;
 
       final config = makeConfig();
-      final lint = DisallowEntityInDataSource(config: config, layerResolver: LayerResolver(config));
+      final lint = DisallowEntityInDataSource(definition: config, layerResolver: LayerResolver(config));
 
       final lints = await lint.testRun(resolvedUnit);
       return lints.cast<Diagnostic>();

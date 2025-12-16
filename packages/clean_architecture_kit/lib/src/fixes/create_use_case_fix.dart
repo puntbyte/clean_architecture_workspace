@@ -48,7 +48,7 @@ class CreateUseCaseFix extends Fix {
       final useCaseFilePath = PathUtils.getUseCaseFilePath(
         methodName: methodNode.name.lexeme,
         repoPath: diagnostic.problemMessage.filePath,
-        config: config,
+        definition: config,
       );
       if (useCaseFilePath == null) return;
 

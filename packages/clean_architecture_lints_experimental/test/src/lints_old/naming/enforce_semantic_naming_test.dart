@@ -61,7 +61,7 @@ void main() {
 
       final config = makeConfig(namingRules: namingRules);
       final lint = EnforceSemanticNaming(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
         analyzer: analyzer,
       );

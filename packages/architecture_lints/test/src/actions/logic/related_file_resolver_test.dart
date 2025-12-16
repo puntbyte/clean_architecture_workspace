@@ -80,7 +80,7 @@ void main() {
 
       final sourceContext = ComponentContext(
         filePath: project.sourcePath,
-        config: config.components.firstWhere((c) => c.id == 'domain.entity'),
+        definition: config.components.firstWhere((c) => c.id == 'domain.entity'),
       );
 
       final result = await resolver.resolveRelated(
@@ -104,7 +104,7 @@ void main() {
 
       final sourceContext = ComponentContext(
         filePath: project.sourcePath,
-        config: config.components.firstWhere((c) => c.id == 'domain.entity'),
+        definition: config.components.firstWhere((c) => c.id == 'domain.entity'),
       );
 
       final result = await resolver.resolveRelated(
@@ -137,7 +137,7 @@ void main() {
 
       final sourceContext = ComponentContext(
         filePath: project.sourcePath,
-        config: configNoPattern.components[0],
+        definition: configNoPattern.components[0],
       );
 
       final result = await resolverNoPattern.resolveRelated(

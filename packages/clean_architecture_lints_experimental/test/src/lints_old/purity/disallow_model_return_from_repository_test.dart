@@ -89,7 +89,7 @@ void main() {
         ],
       );
       final lint = DisallowModelReturnFromRepository(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

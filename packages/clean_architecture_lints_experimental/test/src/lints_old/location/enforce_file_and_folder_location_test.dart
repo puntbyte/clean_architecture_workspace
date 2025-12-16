@@ -64,7 +64,7 @@ void main() {
       );
 
       final lint = EnforceFileAndFolderLocation(
-        config: config,
+        definition: config,
         layerResolver: LayerResolver(config),
       );
 

@@ -191,7 +191,7 @@ void main() {
       when(() => mockResolver.resolve(any())).thenAnswer((_) {
         return ComponentContext(
           filePath: 'auth_source.dart',
-          config: cInterface.component,
+          definition: cInterface.component,
         );
       });
 
