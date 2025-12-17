@@ -48,6 +48,7 @@ class ConfigWrapper {
   }
 
   /// Helper to find required annotations for a specific component ID.
+  /// Returns plain Maps so templates can do dotted lookups (e.g. `{{item.type}}`).
   Map<String, dynamic> annotationsFor(String componentId) {
     final rule = _config.annotations.firstWhereOrNull((r) {
       if (r.onIds.contains(componentId)) return true;
@@ -57,33 +58,28 @@ class ConfigWrapper {
 
     if (rule == null) {
       return {
-        'required': <TypeDefinition>[],
-        'forbidden': <TypeDefinition>[],
-        'allowed': <TypeDefinition>[],
+        'required': <Map<String, dynamic>>[],
+        'forbidden': <Map<String, dynamic>>[],
+        'allowed': <Map<String, dynamic>>[],
       };
     }
 
-    List<TypeDefinition> mapConstraints(List<AnnotationConstraint> constraints) {
-      final definitions = <TypeDefinition>[];
+    List<Map<String, dynamic>> mapConstraints(List<AnnotationConstraint> constraints) {
+      final definitions = <Map<String, dynamic>>[];
 
       for (final constraint in constraints) {
         for (final type in constraint.types) {
-          definitions.add(
-            TypeDefinition(
-              types: [type],
-              imports: constraint.import != null ? [constraint.import!] : [],
-            ),
+          final td = TypeDefinition(
+            types: [type],
+            imports: constraint.import != null ? [constraint.import!] : [],
           );
+          definitions.add(td.toMap());
         }
       }
 
       return definitions;
     }
 
-    // Note: If you want these lists to support .hasMany/.isEmpty in templates,
-    // you might want to wrap these lists in ListWrapper here, or ensure
-    // Definition.toMap() is sufficient for your template needs.
-    // Currently returns List<Definition> which works for iteration.
     return {
       'required': mapConstraints(rule.required),
       'forbidden': mapConstraints(rule.forbidden),

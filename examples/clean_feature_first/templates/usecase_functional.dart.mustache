@@ -13,10 +13,10 @@ typedef {{paramsClassName}} = ({
 {{#requiredAnnotations.items}}
 @{{type}}()
 {{/requiredAnnotations.items}}
-class {{usecaseName}}UseCase implements {{baseClassName}}<{{classGenerics}}> {
+class {{usecaseName}} implements {{baseClassName}}<{{classGenerics}}> {
   final {{repoName}} {{repoVar}};
 
-  const {{usecaseName}}UseCase(this.{{repoVar}});
+  const {{usecaseName}}(this.{{repoVar}});
 
   @override
   {{methodReturnType}} call({{params.argument}}) {

@@ -177,16 +177,18 @@ class ExpressionEngine {
     return value.toString();
   }
 
-
-
   /// Helper to map common Dart String methods to the evaluator
   static dynamic _getStringMethod(String obj, String name) => switch (name) {
-  // FIX: Accept dynamic args and toString() them to handle Wrappers
-    'replace' => (dynamic from, dynamic replace) =>
-        obj.replaceAll(from.toString(), replace.toString()),
+    // FIX: Accept dynamic args and toString() them to handle Wrappers
+    'replace' => (dynamic from, dynamic replace) => obj.replaceAll(
+      from.toString(),
+      replace.toString(),
+    ),
 
-    'replaceAll' => (dynamic from, dynamic replace) =>
-        obj.replaceAll(from.toString(), replace.toString()),
+    'replaceAll' => (dynamic from, dynamic replace) => obj.replaceAll(
+      from.toString(),
+      replace.toString(),
+    ),
 
     'contains' => (dynamic other) => obj.contains(other.toString()),
     'startsWith' => (dynamic other) => obj.startsWith(other.toString()),

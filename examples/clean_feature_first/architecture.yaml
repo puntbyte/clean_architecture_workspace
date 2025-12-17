@@ -1300,7 +1300,9 @@ actions:
   create_usecase:
     description: 'Generate Functional UseCase'
     template_id: 'usecase_functional'
-    debug: true
+    format: true
+    format_line_length: 100
+    debug: false
 
     # [A] Trigger: When does this appear?
     trigger:
@@ -1321,11 +1323,9 @@ actions:
 
     # [D] Write Strategy: How to save it?
     # Create a new file (or overwrite).
-    write2:
+    write:
       strategy: file
       filename: '{{source.name.snakeCase}}.dart'
-      #filename: 'test.dart'
-
 
     variables:
       # 1. Base Class Selection
@@ -1340,7 +1340,7 @@ actions:
       usecasePattern: "{{config.namesFor('domain.usecase').pattern.first}}"
 
       # 1b. Usecase name derived from source name
-      usecaseName: '{{source.name.pascalCase}}'
+      usecaseName: '{{usecasePattern.replace("{{name}}", source.name.pascalCase)}}'
       repoName: '{{source.parent.name}}'
       repoVar: '_{{source.parent.name.camelCase}}'
       paramsClassName: '_{{usecaseName}}Params'
@@ -1366,7 +1366,7 @@ actions:
         type: list
         from: config.annotationsFor('domain.usecase').required
         map:
-          .type: item.type.value
+          .type: item.type
           .import: item.import
 
       # 5. Parameters Logic

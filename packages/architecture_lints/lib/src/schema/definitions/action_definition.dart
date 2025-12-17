@@ -19,6 +19,8 @@ class ActionDefinition {
   final Map<String, VariableDefinition> variables;
   final String templateId;
   final bool debug;
+  final bool format;
+  final int? formatLineLength;
 
   const ActionDefinition({
     required this.id,
@@ -30,20 +32,33 @@ class ActionDefinition {
     required this.variables,
     required this.templateId,
     this.debug = false,
+    this.format = false,
+    this.formatLineLength,
   });
 
-  factory ActionDefinition.fromMap(String id, Map<dynamic, dynamic> map) => ActionDefinition(
-    id: id,
-    description: map.getString('description', fallback: 'Fix issue'),
-    trigger: ActionTrigger.fromMap(map.getMap('trigger')),
-    source: ActionSource.fromMap(map.getMap('source')),
-    target: ActionTarget.fromMap(map.getMap('target')),
-    write: ActionWrite.fromMap(map.getMap('write')),
-    variables: _parseVariables(map['variables']),
-    templateId: map.mustGetString('template_id'),
-    debug: map.getBool('debug'),
-  );
+  factory ActionDefinition.fromMap(String id, Map<dynamic, dynamic> map) {
+    // parse optional int for line length
+    int? parseLineLength(dynamic raw) {
+      if (raw == null) return null;
+      if (raw is int) return raw;
+      final s = raw.toString();
+      return int.tryParse(s);
+    }
 
+    return ActionDefinition(
+      id: id,
+      description: map.getString('description', fallback: 'Fix issue'),
+      trigger: ActionTrigger.fromMap(map.getMap('trigger')),
+      source: ActionSource.fromMap(map.getMap('source')),
+      target: ActionTarget.fromMap(map.getMap('target')),
+      write: ActionWrite.fromMap(map.getMap('write')),
+      variables: _parseVariables(map['variables']),
+      templateId: map.mustGetString('template_id'),
+      debug: map.getBool('debug'),
+      format: map.getBool('format'),
+      formatLineLength: parseLineLength(map.tryGetString('format_line_length')),
+    );
+  }
 
   static List<ActionDefinition> parseMap(Map<String, dynamic> map) =>
       map.entries.map((e) => ActionDefinition.fromMap(e.key, e.value as Map)).toList();

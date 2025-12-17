@@ -6,12 +6,10 @@ import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
 
 // Extends Port, returns FutureEither, naming is correct.
 abstract interface class AuthPort implements Port {
-
   FutureEither<User> login(String username, String password);
+
 
   FutureEither<User> currentUser(IntId id);
 
   FutureEither<void> logout();
 }
-
-
