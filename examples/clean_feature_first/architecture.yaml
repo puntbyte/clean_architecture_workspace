@@ -1052,7 +1052,7 @@ members:
         identifier: [ 'createdAt', 'updatedAt' ]
       - kind: 'method'
         identifier: 'toEntity'
-        action: 'create_to_entity_for_model'
+        action: 'create_to_entity'
 
     # Encapsulation: Whitelist public methods.
     allowed:
@@ -1420,6 +1420,8 @@ actions:
     description: 'Generate toEntity() method'
     template_id: 'model_to_entity_method'
 
+    debug: true
+
     # Triggered by MemberStructureRule (assuming it flags missing required methods)
     trigger:
       error_code: 'arch_member_missing'
@@ -1430,7 +1432,7 @@ actions:
     source:
       scope: related
       component: 'domain.entity'
-      element: class # We want the class node from that file
+      element: field # We want the class node from that file
 
     # TARGET: We write back to the CURRENT file (the Model)
     target:
@@ -1442,16 +1444,17 @@ actions:
       placement: end # Insert before the closing brace '}'
 
     variables:
-      # source.name is now the Entity name (e.g. "User")
-      entityName: '{{source.name}}'
+      # source.name is the Entity name or Model name depending on scope.
+      # Try to derive the Entity base name by removing trailing 'Model' if present.
+      entityName: "{{source.name.value.replace('Model','')}}"
 
-      # We assume Model naming convention matches Entity + Model
-      modelName: '{{source.name}}Model'
+      # Build modelName from entityName to avoid doubling 'Model'
+      modelName: '{{entityName}}Model'
 
       # Extract fields from the Entity to map them
       fields:
         type: list
-        from: source.fields # Assuming NodeWrapper supports .fields for ClassDeclaration
+        from: source.fields
         map:
           .name: item.name
           .type: item.type
@@ -1513,11 +1516,12 @@ templates:
     @override
     {{entityName}} toEntity() {
       return {{entityName}}(
-        {{#fields}}
+        {{#fields.items}}
         {{name}}: {{name}},
-        {{/fields}}
+        {{/fields.items}}
       );
     }
+  
 
   repository_impl:
     file: 'templates/repository_impl.dart.mustache'

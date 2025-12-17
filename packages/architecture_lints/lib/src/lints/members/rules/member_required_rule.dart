@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/error/error.dart' show DiagnosticSeverity;
 import 'package:analyzer/error/listener.dart';
+import 'package:architecture_lints/src/lints/architecture_fix.dart';
 import 'package:architecture_lints/src/schema/config/architecture_config.dart';
 import 'package:architecture_lints/src/schema/policies/member_policy.dart';
 import 'package:architecture_lints/src/schema/constraints/member_constraint.dart';
@@ -17,6 +18,9 @@ class MemberRequiredRule extends MemberBaseRule {
   );
 
   const MemberRequiredRule() : super(code: _code);
+
+  @override
+  List<Fix> getFixes() => [ ArchitectureFix() ];
 
   @override
   void checkMembers({

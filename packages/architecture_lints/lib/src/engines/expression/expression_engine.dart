@@ -22,6 +22,7 @@ class ExpressionEngine {
       // 1. Wrappers
       MethodWrapper.accessor,
       ParameterWrapper.accessor,
+      FieldWrapper.accessor,
       NodeWrapper.accessor,
       TypeWrapper.accessor,
       StringWrapper.accessor,

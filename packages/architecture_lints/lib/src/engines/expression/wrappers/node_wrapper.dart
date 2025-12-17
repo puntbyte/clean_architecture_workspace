@@ -17,6 +17,7 @@ class NodeWrapper {
   factory NodeWrapper.create(AstNode node, [Map<String, TypeDefinition> definitions = const {}]) {
     if (node is MethodDeclaration) return MethodWrapper(node, definitions: definitions);
     if (node is FormalParameter) return ParameterWrapper(node, definitions: definitions);
+    if (node is VariableDeclaration) return FieldWrapper(node, definitions: definitions);
     return NodeWrapper(node, definitions: definitions);
   }
 

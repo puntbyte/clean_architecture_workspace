@@ -6,7 +6,9 @@ import 'package:clean_feature_first/features/auth/domain/entities/user.dart';
 // 1. Naming: Matches `{{name}}Model` (UserModel).
 // 2. Grammar: `User` is a Noun Phrase.
 // 3. Inheritance: Extends the corresponding Domain Entity (`User`).
+
 class UserModel extends User {
+
   // Models often have extra fields for serialization that aren't in the Entity
   final String? internalApiId;
   final DateTime? createdAt;
@@ -28,5 +30,8 @@ class UserModel extends User {
 
   // CORRECT:
   // 4. Mapping: Implements `toEntity()` to convert back to the pure Domain object.
-  User toEntity() => User(id: id, name: name);
+  //User toEntity() => User(id: id, name: name);
+
+
+
 }
